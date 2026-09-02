@@ -16,8 +16,9 @@ function minutesLeft(endsAt) {
 	return Math.max(0, Math.ceil(ms / 60000));
 }
 
-// PIN EACH COURT ON THE MAP (RUNS ONCE)
+// CREATE THE MAP AND ONE MARKER PER COURT (RUNS ONCE); VISIBILITY IS SYNCED SEPARATELY
 let map = null;
+const markersByCourtId = {};
 function initMap(courts) {
 	if (map) return;
 
@@ -34,19 +35,39 @@ function initMap(courts) {
 
 	points.forEach(court => {
 		const markerLabel = court.city ? `${court.name} — ${court.city}` : court.name;
-		new maplibregl.Marker()
+		const marker = new maplibregl.Marker()
 			.setLngLat([court.lng, court.lat])
-			.setPopup(new maplibregl.Popup({ offset: 25 }).setText(markerLabel))
-			.addTo(map);
+			.setPopup(new maplibregl.Popup({ offset: 25 }).setText(markerLabel));
+		markersByCourtId[court.id] = { marker, court };
+	});
+}
+
+// SHOW ONLY THE MARKERS FOR ACTIVE CITIES, AND FIT THE VIEW TO WHAT'S VISIBLE
+function updateMapVisibility() {
+	if (!map) return;
+
+	const visiblePoints = [];
+	Object.values(markersByCourtId).forEach(({ marker, court }) => {
+		if (activeCities.has(court.city || "Other")) {
+			marker.addTo(map);
+			visiblePoints.push([court.lng, court.lat]);
+		} else {
+			marker.remove();
+		}
 	});
 
-	if (points.length > 1) {
-		const bounds = points.reduce(
-			(b, c) => b.extend([c.lng, c.lat]),
-			new maplibregl.LngLatBounds([points[0].lng, points[0].lat], [points[0].lng, points[0].lat])
-		);
-		map.fitBounds(bounds, { padding: 40 });
+	if (visiblePoints.length === 0) return;
+
+	if (visiblePoints.length === 1) {
+		map.flyTo({ center: visiblePoints[0], zoom: 13 });
+		return;
 	}
+
+	const bounds = visiblePoints.reduce(
+		(b, pt) => b.extend(pt),
+		new maplibregl.LngLatBounds(visiblePoints[0], visiblePoints[0])
+	);
+	map.fitBounds(bounds, { padding: 40 });
 }
 
 // RENDER A SINGLE COURT CARD, AVAILABLE OR IN USE
@@ -97,6 +118,7 @@ function updateFilterTags(courts) {
 			activeCities.has(city) ? activeCities.delete(city) : activeCities.add(city);
 			btn.classList.toggle("active");
 			renderGrid();
+			updateMapVisibility();
 		});
 	});
 }
@@ -134,6 +156,7 @@ async function load() {
 
 	updateFilterTags(courts);
 	renderGrid();
+	updateMapVisibility();
 }
 
 load();
