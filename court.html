@@ -303,6 +303,45 @@
 		const courtId = parseInt(params.get("court"));
 		let selectedDuration = 60;
 
+		const MAX_DISTANCE_METERS = 100;
+
+		// DISTANCE BETWEEN TWO COORDINATES IN METERS
+		function distanceMeters(lat1, lon1, lat2, lon2) {
+			const R = 6371000;
+			const toRad = d => d * Math.PI / 180;
+			const dLat = toRad(lat2 - lat1);
+			const dLon = toRad(lon2 - lon1);
+			const a = Math.sin(dLat / 2) ** 2 +
+				Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
+			return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+		}
+
+		// RESOLVE THE DEVICE'S CURRENT COORDINATES
+		function getCurrentPosition() {
+			return new Promise((resolve, reject) => {
+				if (!navigator.geolocation) {
+					reject(new Error("Geolocation not supported"));
+					return;
+				}
+				navigator.geolocation.getCurrentPosition(resolve, reject, {
+					enableHighAccuracy: true,
+					timeout: 10000,
+					maximumAge: 0,
+				});
+			});
+		}
+
+		// RENDER A BLOCKING SCREEN WHEN LOCATION CAN'T BE VERIFIED
+		function renderLocationBlocked(courtName, message) {
+			app.innerHTML = `
+      <p class="court-label">${courtName}</p>
+      <p class="status-heading">Location required</p>
+      <p class="status-sub">${message}</p>
+      <button class="submit" id="retry-btn">Try again</button>
+    `;
+			document.getElementById("retry-btn").addEventListener("click", () => load());
+		}
+
 		// RENDER AVAILABLE STATE WITH CHECK-IN FORM
 		function renderAvailable(courtName) {
 			app.innerHTML = `
@@ -410,10 +449,30 @@
 			}
 
 			const { data: court, error: courtErr } = await db
-				.from("courts").select("name").eq("id", courtId).single();
+				.from("courts").select("name, lat, lng").eq("id", courtId).single();
 
 			if (courtErr || !court) {
 				app.innerHTML = `<p class="message error">Court not found.</p>`;
+				return;
+			}
+
+			app.innerHTML = `<p class="message">Checking your location...</p>`;
+
+			let position;
+			try {
+				position = await getCurrentPosition();
+			} catch (e) {
+				renderLocationBlocked(court.name, "Enable location access in your browser to check in or finish a game, then try again.");
+				return;
+			}
+
+			const distance = distanceMeters(
+				position.coords.latitude, position.coords.longitude,
+				court.lat, court.lng
+			);
+
+			if (distance > MAX_DISTANCE_METERS) {
+				renderLocationBlocked(court.name, "You need to be at the court to check in or finish a game.");
 				return;
 			}
 
