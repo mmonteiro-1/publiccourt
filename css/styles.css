@@ -219,6 +219,10 @@ body.page-dashboard {
 	background: var(--surface);
 }
 
+.page-dashboard .marker-occupied {
+	filter: grayscale(1) opacity(0.6);
+}
+
 .page-dashboard .maplibregl-popup-content {
 	background: var(--surface);
 	color: var(--text);

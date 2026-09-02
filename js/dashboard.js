@@ -70,6 +70,14 @@ function updateMapVisibility() {
 	map.fitBounds(bounds, { padding: 40 });
 }
 
+// GRAY OUT MAP PINS FOR COURTS THAT ARE CURRENTLY OCCUPIED
+function updateMarkerStatus() {
+	Object.values(markersByCourtId).forEach(({ marker, court }) => {
+		const occupied = Boolean(latestActiveMap[court.id]);
+		marker.getElement().classList.toggle("marker-occupied", occupied);
+	});
+}
+
 // RENDER A SINGLE COURT CARD, AVAILABLE OR IN USE
 function renderCourtCard(court, res) {
 	if (res) {
@@ -156,6 +164,7 @@ async function load() {
 
 	updateFilterTags(courts);
 	renderGrid();
+	updateMarkerStatus();
 	updateMapVisibility();
 }
 
