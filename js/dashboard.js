@@ -12,12 +12,6 @@ const activeCities = new Set();
 let latestCourts = [];
 let latestActiveMap = {};
 
-// MINUTES REMAINING UNTIL A RESERVATION ENDS
-function minutesLeft(endsAt) {
-	const ms = new Date(endsAt) - Date.now();
-	return Math.max(0, Math.ceil(ms / 60000));
-}
-
 // CREATE THE MAP AND ONE MARKER PER COURT (RUNS ONCE); VISIBILITY IS SYNCED SEPARATELY
 let map = null;
 const markersByCourtId = {};
@@ -106,38 +100,32 @@ function updateMarkerStatus() {
 	});
 }
 
-// BUILD THE COURT NAME LINE: NAME · CITY (DESCRIPTION)
-function courtLabel(court) {
-	let label = court.name;
-	if (court.city) label += ` · ${court.city}`;
-	if (court.description) label += ` (${court.description})`;
-	return label;
-}
-
 // RENDER A SINGLE COURT CARD, AVAILABLE OR IN USE
 function renderCourtCard(court, res) {
+	const descriptionLine = court.description ? `<p class="card-sub">${court.description}</p>` : "";
+
 	if (res) {
 		const mins = minutesLeft(res.ends_at);
 		return `
-      <div class="court-card inuse">
-        <p class="court-number">${courtLabel(court)}</p>
+      <a class="court-card inuse" href="court.html?court=${court.id}">
+        <p class="court-number">${court.city || ""}</p>
         <div class="badge-row">
           <span class="badge inuse"><span class="dot blink"></span> In use</span>
           <span class="badge time">Started ${formatTime(res.started_at)}</span>
-          <span class="badge time">Ends ${formatTime(res.ends_at)}</span>
+          <span class="badge time">${mins > 0 ? `${mins}min left` : "Ending"}</span>
         </div>
-        <p class="card-status inuse">${mins > 0 ? `${mins}m left` : "Ending"}</p>
-        <p class="card-sub">These are estimated times set by the player — there are no obligations whatsoever.</p>
-      </div>
+        <p class="card-status inuse">${court.name}</p>
+        ${descriptionLine}
+      </a>
     `;
 	}
 	return `
-      <div class="court-card available">
-        <p class="court-number">${courtLabel(court)}</p>
+      <a class="court-card available" href="court.html?court=${court.id}">
+        <p class="court-number">${court.city || ""}</p>
         <span class="badge available"><span class="dot"></span> Available</span>
-        <p class="card-status available">Available</p>
-        <p class="card-sub">Scan the court's QR code before using it</p>
-      </div>
+        <p class="card-status available">${court.name}</p>
+        ${descriptionLine}
+      </a>
     `;
 }
 
