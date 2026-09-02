@@ -1,0 +1,6 @@
+// SUPABASE PROJECT CREDENTIALS, SHARED BY EVERY PAGE
+const SUPABASE_URL = "https://xfshczzojvbkfxkmsvsn.supabase.co";
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhmc2hjenpvanZia2Z4a21zdnNuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgzNTA3NDEsImV4cCI6MjEwMzkyNjc0MX0.J3LYlMo37rlX5MVswjtCv_r-lO8_6UiuXAVZMM1WwNI";
+
+// SHARED SUPABASE CLIENT INSTANCE
+const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
