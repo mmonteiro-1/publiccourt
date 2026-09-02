@@ -260,7 +260,7 @@
 
 			const [{ data: courts }, { data: reservations }] = await Promise.all([
 				db.from("courts").select("*").order("id"),
-				db.from("reservations").select("*").gt("ends_at", now),
+				db.from("reservations").select("*").is("manual_finished_at", null).gt("ends_at", now),
 			]);
 
 			if (!courts || courts.length === 0) {

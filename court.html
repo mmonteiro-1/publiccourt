@@ -364,7 +364,7 @@
 			btn.textContent = "Finishing...";
 
 			const { error } = await db.from("reservations")
-				.update({ ends_at: new Date().toISOString() })
+				.update({ manual_finished_at: new Date().toISOString() })
 				.eq("id", reservationId);
 
 			if (error) {
@@ -422,6 +422,7 @@
 				.from("reservations")
 				.select("*")
 				.eq("court_id", courtId)
+				.is("manual_finished_at", null)
 				.gt("ends_at", now)
 				.order("ends_at", { ascending: false })
 				.limit(1);
