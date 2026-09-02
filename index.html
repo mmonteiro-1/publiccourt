@@ -353,7 +353,7 @@
 				const mins = minutesLeft(res.ends_at);
 				return `
         <div class="court-card inuse">
-          <p class="court-number">${court.name}</p>
+          <p class="court-number">${court.name}${court.city ? ` · ${court.city}` : ""}</p>
           <div class="badge-row">
             <span class="badge inuse"><span class="dot blink"></span> In use</span>
             <span class="badge time">Started ${formatTime(res.started_at)}</span>
@@ -365,7 +365,7 @@
 			}
 			return `
         <div class="court-card available">
-          <p class="court-number">${court.name}</p>
+          <p class="court-number">${court.name}${court.city ? ` · ${court.city}` : ""}</p>
           <span class="badge available"><span class="dot"></span> Available</span>
           <p class="card-status available">Ready</p>
           <p class="card-sub">Scan the QR code to check in</p>
