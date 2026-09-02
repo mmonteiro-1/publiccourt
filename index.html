@@ -7,7 +7,7 @@
 	<title>PublicCourt</title>
 	<link rel="preconnect" href="https://fonts.googleapis.com">
 	<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
-	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+	<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/maplibre-gl@5.24.0/dist/maplibre-gl.css">
 	<style>
 		:root {
 			--bg: #0D1F12;
@@ -231,25 +231,21 @@
 			background: var(--surface);
 		}
 
-		/* FAKE A DARK MAP STYLE BY INVERTING THE STANDARD OSM TILES (KEEPS MARKERS/POPUPS UNAFFECTED) */
-		#map .leaflet-tile-pane {
-			filter: invert(1) hue-rotate(180deg) brightness(0.95) contrast(0.9);
-		}
-
-		.leaflet-popup-content-wrapper,
-		.leaflet-popup-tip {
+		.maplibregl-popup-content {
 			background: var(--surface);
 			color: var(--text);
-		}
-
-		.leaflet-popup-content {
-			margin: 10px 14px;
 			font-family: 'Inter', sans-serif;
 			font-size: 13px;
 			font-weight: 600;
+			padding: 10px 14px;
 		}
 
-		.leaflet-container a.leaflet-popup-close-button {
+		.maplibregl-popup-tip {
+			border-top-color: var(--surface);
+			border-bottom-color: var(--surface);
+		}
+
+		.maplibregl-popup-close-button {
 			color: var(--muted);
 		}
 
@@ -282,7 +278,7 @@
 	<footer>Auto-refreshes every 30 seconds</footer>
 
 	<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-	<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+	<script src="https://cdn.jsdelivr.net/npm/maplibre-gl@5.24.0/dist/maplibre-gl.js"></script>
 	<script>
 		const SUPABASE_URL = "https://xfshczzojvbkfxkmsvsn.supabase.co";
 		const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhmc2hjenpvanZia2Z4a21zdnNuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgzNTA3NDEsImV4cCI6MjEwMzkyNjc0MX0.J3LYlMo37rlX5MVswjtCv_r-lO8_6UiuXAVZMM1WwNI";
@@ -311,20 +307,27 @@
 			const points = courts.filter(c => c.lat != null && c.lng != null);
 			if (points.length === 0) return;
 
-			map = L.map("map", { scrollWheelZoom: false });
-			L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-				attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-				maxZoom: 19,
-			}).addTo(map);
+			map = new maplibregl.Map({
+				container: "map",
+				style: "https://tiles.openfreemap.org/styles/dark",
+				center: [points[0].lng, points[0].lat],
+				zoom: 13,
+				scrollZoom: false,
+			});
 
 			points.forEach(court => {
-				L.marker([court.lat, court.lng]).addTo(map).bindPopup(court.name);
+				new maplibregl.Marker()
+					.setLngLat([court.lng, court.lat])
+					.setPopup(new maplibregl.Popup({ offset: 25 }).setText(court.name))
+					.addTo(map);
 			});
 
 			if (points.length > 1) {
-				map.fitBounds(points.map(c => [c.lat, c.lng]), { padding: [30, 30] });
-			} else {
-				map.setView([points[0].lat, points[0].lng], 15);
+				const bounds = points.reduce(
+					(b, c) => b.extend([c.lng, c.lat]),
+					new maplibregl.LngLatBounds([points[0].lng, points[0].lat], [points[0].lng, points[0].lat])
+				);
+				map.fitBounds(bounds, { padding: 40 });
 			}
 		}
 
