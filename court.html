@@ -469,7 +469,7 @@
 			console.log(`Distance to court: ${Math.round(distance)}m, accuracy: ${Math.round(position.coords.accuracy || 0)}m, threshold: ${Math.round(threshold)}m`);
 
 			if (distance > threshold) {
-				renderLocationBlocked(court.name, "It seems that you are not at the court. You need to be at the court to reserve it.");
+				renderLocationBlocked(court.name, "It seems that you're not at the court. Reservations can only be made on the premises.");
 				return;
 			}
 
