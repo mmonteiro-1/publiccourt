@@ -304,6 +304,7 @@
 		let selectedDuration = 60;
 
 		const MAX_DISTANCE_METERS = 100;
+		const MAX_ACCURACY_ALLOWANCE = 500;
 
 		// DISTANCE BETWEEN TWO COORDINATES IN METERS
 		function distanceMeters(lat1, lon1, lat2, lon2) {
@@ -470,8 +471,12 @@
 				position.coords.latitude, position.coords.longitude,
 				court.lat, court.lng
 			);
+			// GIVE SLACK FOR LOW-CONFIDENCE READINGS (E.G. DESKTOP WIFI-BASED LOCATION), CAPPED SO THE CHECK STAYS MEANINGFUL
+			const allowance = Math.min(position.coords.accuracy || 0, MAX_ACCURACY_ALLOWANCE);
+			const threshold = MAX_DISTANCE_METERS + allowance;
+			console.log(`Distance to court: ${Math.round(distance)}m, accuracy: ${Math.round(position.coords.accuracy || 0)}m, threshold: ${Math.round(threshold)}m`);
 
-			if (distance > MAX_DISTANCE_METERS) {
+			if (distance > threshold) {
 				renderLocationBlocked(court.name, "You need to be at the court to check in or finish a game.");
 				return;
 			}
