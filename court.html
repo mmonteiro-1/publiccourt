@@ -258,6 +258,31 @@
 		.message.error {
 			color: var(--inuse);
 		}
+
+		.finish-btn {
+			width: 100%;
+			margin-top: 28px;
+			padding: 14px;
+			border: 1.5px solid var(--border);
+			border-radius: 12px;
+			background: transparent;
+			color: var(--muted);
+			font-family: inherit;
+			font-size: 15px;
+			font-weight: 600;
+			cursor: pointer;
+			transition: all 0.15s;
+		}
+
+		.finish-btn:hover {
+			border-color: var(--inuse);
+			color: var(--inuse);
+		}
+
+		.finish-btn:disabled {
+			opacity: 0.5;
+			cursor: not-allowed;
+		}
 	</style>
 </head>
 
@@ -324,7 +349,32 @@
       <span class="badge inuse"><span class="dot pulse"></span> In use</span>
       <p class="time-big">${timeStr}</p>
       <p class="status-sub">${who} until ${timeStr}.</p>
+      <button class="finish-btn" id="finish-btn">Finish the game</button>
     `;
+
+			document.getElementById("finish-btn").addEventListener("click", () => finishGame(reservation.id));
+		}
+
+		// END THE CURRENT RESERVATION EARLY
+		async function finishGame(reservationId) {
+			if (!confirm("Finish this game and free up the court?")) return;
+
+			const btn = document.getElementById("finish-btn");
+			btn.disabled = true;
+			btn.textContent = "Finishing...";
+
+			const { error } = await db.from("reservations")
+				.update({ ends_at: new Date().toISOString() })
+				.eq("id", reservationId);
+
+			if (error) {
+				btn.disabled = false;
+				btn.textContent = "Finish the game";
+				alert("Something went wrong. Please try again.");
+				return;
+			}
+
+			load();
 		}
 
 		// SUBMIT CHECK-IN TO SUPABASE
