@@ -275,13 +275,12 @@
 				const res = activeMap[court.id];
 				if (res) {
 					const remaining = timeRemaining(res.ends_at);
-					const who = res.player_name || "Someone";
 					return `
           <div class="court-card inuse">
             <p class="court-number">${court.name}</p>
             <span class="badge inuse"><span class="dot blink"></span> In use</span>
             <p class="card-status inuse">${endTime(res.ends_at)}</p>
-            <p class="card-sub">${who} · ${remaining || "finishing soon"}</p>
+            <p class="card-sub">${remaining || "finishing soon"}</p>
           </div>
         `;
 				} else {

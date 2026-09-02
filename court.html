@@ -197,7 +197,7 @@
 
 		.duration-grid {
 			display: grid;
-			grid-template-columns: repeat(4, 1fr);
+			grid-template-columns: repeat(3, 1fr);
 			gap: 8px;
 		}
 
@@ -352,16 +352,11 @@
       <p class="status-sub">Check in below to reserve this court.</p>
       <div class="divider"></div>
       <div class="field">
-        <label>Your name (optional)</label>
-        <input type="text" id="player-name" placeholder="e.g. João Silva">
-      </div>
-      <div class="field">
         <label>How long?</label>
         <div class="duration-grid">
           <button class="dur-btn" data-mins="30">30m</button>
+          <button class="dur-btn" data-mins="45">45m</button>
           <button class="dur-btn selected" data-mins="60">1h</button>
-          <button class="dur-btn" data-mins="90">1h30</button>
-          <button class="dur-btn" data-mins="120">2h</button>
         </div>
       </div>
       <button class="submit" id="checkin-btn">Start playing</button>
@@ -382,13 +377,12 @@
 		function renderInUse(courtName, reservation) {
 			const endsAt = new Date(reservation.ends_at);
 			const timeStr = endsAt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-			const who = reservation.player_name ? `${reservation.player_name} is playing` : "Court is occupied";
 
 			app.innerHTML = `
       <p class="court-label">${courtName}</p>
       <span class="badge inuse"><span class="dot pulse"></span> In use</span>
       <p class="time-big">${timeStr}</p>
-      <p class="status-sub">${who} until ${timeStr}.</p>
+      <p class="status-sub">Court is occupied until ${timeStr}.</p>
       <button class="finish-btn" id="finish-btn">Finish the game</button>
     `;
 
@@ -423,12 +417,10 @@
 			btn.disabled = true;
 			btn.textContent = "Checking in...";
 
-			const playerName = document.getElementById("player-name").value.trim();
 			const endsAt = new Date(Date.now() + selectedDuration * 60 * 1000).toISOString();
 
 			const { error } = await db.from("reservations").insert({
 				court_id: courtId,
-				player_name: playerName || null,
 				ends_at: endsAt,
 			});
 
