@@ -78,13 +78,21 @@ function updateMarkerStatus() {
 	});
 }
 
+// BUILD THE COURT NAME LINE: NAME · CITY (DESCRIPTION)
+function courtLabel(court) {
+	let label = court.name;
+	if (court.city) label += ` · ${court.city}`;
+	if (court.description) label += ` (${court.description})`;
+	return label;
+}
+
 // RENDER A SINGLE COURT CARD, AVAILABLE OR IN USE
 function renderCourtCard(court, res) {
 	if (res) {
 		const mins = minutesLeft(res.ends_at);
 		return `
       <div class="court-card inuse">
-        <p class="court-number">${court.name}${court.city ? ` · ${court.city}` : ""}</p>
+        <p class="court-number">${courtLabel(court)}</p>
         <div class="badge-row">
           <span class="badge inuse"><span class="dot blink"></span> In use</span>
           <span class="badge time">Started ${formatTime(res.started_at)}</span>
@@ -97,7 +105,7 @@ function renderCourtCard(court, res) {
 	}
 	return `
       <div class="court-card available">
-        <p class="court-number">${court.name}${court.city ? ` · ${court.city}` : ""}</p>
+        <p class="court-number">${courtLabel(court)}</p>
         <span class="badge available"><span class="dot"></span> Available</span>
         <p class="card-status available">Available</p>
         <p class="card-sub">Scan the court's QR code before using it</p>
