@@ -90,8 +90,8 @@ function renderCourtCard(court, res) {
       <div class="court-card available">
         <p class="court-number">${court.name}${court.city ? ` · ${court.city}` : ""}</p>
         <span class="badge available"><span class="dot"></span> Available</span>
-        <p class="card-status available">Ready</p>
-        <p class="card-sub">Scan the QR code to check in</p>
+        <p class="card-status available">Available</p>
+        <p class="card-sub">Scan the court's QR code before using it</p>
       </div>
     `;
 }
