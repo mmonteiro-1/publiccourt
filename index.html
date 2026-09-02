@@ -7,6 +7,7 @@
 	<title>PublicCourt</title>
 	<link rel="preconnect" href="https://fonts.googleapis.com">
 	<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 	<style>
 		:root {
 			--bg: #0D1F12;
@@ -213,6 +214,39 @@
 			padding: 60px 0;
 		}
 
+		.map-heading {
+			font-size: 11px;
+			font-weight: 600;
+			letter-spacing: 0.1em;
+			text-transform: uppercase;
+			color: var(--muted);
+			margin: 40px 0 12px;
+		}
+
+		#map {
+			height: 280px;
+			border-radius: 20px;
+			border: 1px solid var(--border);
+			overflow: hidden;
+		}
+
+		.leaflet-popup-content-wrapper,
+		.leaflet-popup-tip {
+			background: var(--surface);
+			color: var(--text);
+		}
+
+		.leaflet-popup-content {
+			margin: 10px 14px;
+			font-family: 'Inter', sans-serif;
+			font-size: 13px;
+			font-weight: 600;
+		}
+
+		.leaflet-container a.leaflet-popup-close-button {
+			color: var(--muted);
+		}
+
 		footer {
 			margin-top: 40px;
 			font-size: 12px;
@@ -236,9 +270,13 @@
 		<p class="empty">Loading courts...</p>
 	</div>
 
+	<p class="map-heading">Court locations</p>
+	<div id="map"></div>
+
 	<footer>Auto-refreshes every 30 seconds</footer>
 
 	<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 	<script>
 		const SUPABASE_URL = "https://xfshczzojvbkfxkmsvsn.supabase.co";
 		const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhmc2hjenpvanZia2Z4a21zdnNuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgzNTA3NDEsImV4cCI6MjEwMzkyNjc0MX0.J3LYlMo37rlX5MVswjtCv_r-lO8_6UiuXAVZMM1WwNI";
@@ -259,6 +297,31 @@
 			return new Date(ts).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 		}
 
+		// PIN EACH COURT ON THE MAP (RUNS ONCE)
+		let map = null;
+		function initMap(courts) {
+			if (map) return;
+
+			const points = courts.filter(c => c.lat != null && c.lng != null);
+			if (points.length === 0) return;
+
+			map = L.map("map", { scrollWheelZoom: false });
+			L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
+				attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+				maxZoom: 19,
+			}).addTo(map);
+
+			points.forEach(court => {
+				L.marker([court.lat, court.lng]).addTo(map).bindPopup(court.name);
+			});
+
+			if (points.length > 1) {
+				map.fitBounds(points.map(c => [c.lat, c.lng]), { padding: [30, 30] });
+			} else {
+				map.setView([points[0].lat, points[0].lng], 15);
+			}
+		}
+
 		// LOAD ALL COURTS AND THEIR ACTIVE RESERVATIONS
 		async function load() {
 			const now = new Date().toISOString();
@@ -272,6 +335,8 @@
 				grid.innerHTML = `<p class="empty">No courts found.</p>`;
 				return;
 			}
+
+			initMap(courts);
 
 			const activeMap = {};
 			(reservations || []).forEach(r => { activeMap[r.court_id] = r; });
