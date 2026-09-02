@@ -124,6 +124,13 @@
 			margin-bottom: 20px;
 		}
 
+		.badge-row {
+			display: flex;
+			flex-wrap: wrap;
+			gap: 8px;
+			margin-bottom: 20px;
+		}
+
 		.badge {
 			display: inline-flex;
 			align-items: center;
@@ -134,18 +141,23 @@
 			font-weight: 700;
 			letter-spacing: 0.04em;
 			text-transform: uppercase;
-			margin-bottom: 20px;
 			width: fit-content;
 		}
 
 		.badge.available {
 			background: var(--available-bg);
 			color: var(--available);
+			margin-bottom: 20px;
 		}
 
 		.badge.inuse {
 			background: var(--inuse-bg);
 			color: var(--inuse);
+		}
+
+		.badge.time {
+			background: var(--border);
+			color: var(--muted);
 		}
 
 		.dot {
@@ -236,22 +248,15 @@
 		const rdot = document.getElementById("rdot");
 		const label = document.getElementById("refresh-label");
 
-		// FORMAT MINUTES REMAINING AS "Xh Ym" OR "Ym"
-		function timeRemaining(endsAt) {
+		// MINUTES REMAINING UNTIL A RESERVATION ENDS
+		function minutesLeft(endsAt) {
 			const ms = new Date(endsAt) - Date.now();
-			if (ms <= 0) return null;
-			const mins = Math.ceil(ms / 60000);
-			if (mins >= 60) {
-				const h = Math.floor(mins / 60);
-				const m = mins % 60;
-				return m > 0 ? `${h}h ${m}m left` : `${h}h left`;
-			}
-			return `${mins}m left`;
+			return Math.max(0, Math.ceil(ms / 60000));
 		}
 
-		// FORMAT END TIME AS HH:MM
-		function endTime(endsAt) {
-			return new Date(endsAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+		// FORMAT A TIMESTAMP AS HH:MM
+		function formatTime(ts) {
+			return new Date(ts).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 		}
 
 		// LOAD ALL COURTS AND THEIR ACTIVE RESERVATIONS
@@ -274,13 +279,16 @@
 			grid.innerHTML = courts.map(court => {
 				const res = activeMap[court.id];
 				if (res) {
-					const remaining = timeRemaining(res.ends_at);
+					const mins = minutesLeft(res.ends_at);
 					return `
           <div class="court-card inuse">
             <p class="court-number">${court.name}</p>
-            <span class="badge inuse"><span class="dot blink"></span> In use</span>
-            <p class="card-status inuse">${endTime(res.ends_at)}</p>
-            <p class="card-sub">${remaining || "finishing soon"}</p>
+            <div class="badge-row">
+              <span class="badge inuse"><span class="dot blink"></span> In use</span>
+              <span class="badge time">Started ${formatTime(res.started_at)}</span>
+              <span class="badge time">Ends ${formatTime(res.ends_at)}</span>
+            </div>
+            <p class="card-status inuse">${mins > 0 ? `${mins}m left` : "Ending"}</p>
           </div>
         `;
 				} else {
