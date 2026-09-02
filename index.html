@@ -1,11 +1,388 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
+
 <head>
-	<meta charset="utf-8">
-	<meta name="viewport" content="width=device-width, initial-scale=1">
-	<title>Public Court</title>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>PublicCourt</title>
+	<link rel="preconnect" href="https://fonts.googleapis.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+	<style>
+		:root {
+			--bg: #F4F8F5;
+			--surface: #FFFFFF;
+			--border: #D8E8DC;
+			--text: #1A2E20;
+			--muted: #6B8072;
+			--accent: #1A5C3A;
+			--accent-fg: #FFFFFF;
+			--available-bg: #EBF5EF;
+			--available: #1A5C3A;
+			--inuse-bg: #FEF3C7;
+			--inuse: #B45309;
+		}
+
+		@media (prefers-color-scheme: dark) {
+			:root:not([data-theme="light"]) {
+				--bg: #0F1F14;
+				--surface: #1A2E1E;
+				--border: #2A3F2E;
+				--text: #E8F5EC;
+				--muted: #7A9E82;
+				--accent: #2D8A57;
+				--available-bg: #0F2E1A;
+				--available: #2D8A57;
+				--inuse-bg: #2A1800;
+				--inuse: #D97706;
+			}
+		}
+
+		:root[data-theme="dark"] {
+			--bg: #0F1F14;
+			--surface: #1A2E1E;
+			--border: #2A3F2E;
+			--text: #E8F5EC;
+			--muted: #7A9E82;
+			--accent: #2D8A57;
+			--available-bg: #0F2E1A;
+			--available: #2D8A57;
+			--inuse-bg: #2A1800;
+			--inuse: #D97706;
+		}
+
+		*,
+		*::before,
+		*::after {
+			box-sizing: border-box;
+			margin: 0;
+			padding: 0;
+		}
+
+		body {
+			font-family: 'Inter', -apple-system, sans-serif;
+			background: var(--bg);
+			color: var(--text);
+			min-height: 100vh;
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+			justify-content: center;
+			padding: 24px 16px;
+		}
+
+		.card {
+			background: var(--surface);
+			border: 1px solid var(--border);
+			border-radius: 20px;
+			padding: 32px 28px;
+			width: 100%;
+			max-width: 380px;
+			box-shadow: 0 2px 12px rgba(0, 0, 0, 0.07);
+		}
+
+		.court-label {
+			font-size: 12px;
+			font-weight: 600;
+			letter-spacing: 0.1em;
+			text-transform: uppercase;
+			color: var(--muted);
+			margin-bottom: 16px;
+		}
+
+		.badge {
+			display: inline-flex;
+			align-items: center;
+			gap: 7px;
+			padding: 6px 14px;
+			border-radius: 100px;
+			font-size: 13px;
+			font-weight: 600;
+			margin-bottom: 20px;
+		}
+
+		.badge.available {
+			background: var(--available-bg);
+			color: var(--available);
+		}
+
+		.badge.inuse {
+			background: var(--inuse-bg);
+			color: var(--inuse);
+		}
+
+		.dot {
+			width: 7px;
+			height: 7px;
+			border-radius: 50%;
+			background: currentColor;
+		}
+
+		.dot.pulse {
+			animation: pulse 2s ease-in-out infinite;
+		}
+
+		@keyframes pulse {
+
+			0%,
+			100% {
+				opacity: 1
+			}
+
+			50% {
+				opacity: .35
+			}
+		}
+
+		.status-heading {
+			font-size: 26px;
+			font-weight: 700;
+			line-height: 1.25;
+			margin-bottom: 8px;
+			text-wrap: balance;
+		}
+
+		.status-sub {
+			font-size: 15px;
+			color: var(--muted);
+			line-height: 1.55;
+			margin-bottom: 28px;
+		}
+
+		.time-big {
+			font-size: 52px;
+			font-weight: 700;
+			font-variant-numeric: tabular-nums;
+			letter-spacing: -0.02em;
+			color: var(--inuse);
+			line-height: 1;
+			margin-bottom: 6px;
+		}
+
+		.divider {
+			height: 1px;
+			background: var(--border);
+			margin: 24px 0;
+		}
+
+		.field {
+			margin-bottom: 16px;
+		}
+
+		.field label {
+			display: block;
+			font-size: 12px;
+			font-weight: 600;
+			letter-spacing: 0.07em;
+			text-transform: uppercase;
+			color: var(--muted);
+			margin-bottom: 8px;
+		}
+
+		.field input {
+			width: 100%;
+			padding: 12px 14px;
+			border: 1.5px solid var(--border);
+			border-radius: 10px;
+			font-family: inherit;
+			font-size: 15px;
+			color: var(--text);
+			background: var(--bg);
+			outline: none;
+			transition: border-color 0.15s;
+		}
+
+		.field input:focus {
+			border-color: var(--accent);
+		}
+
+		.duration-grid {
+			display: grid;
+			grid-template-columns: repeat(4, 1fr);
+			gap: 8px;
+		}
+
+		.dur-btn {
+			padding: 11px 0;
+			border: 1.5px solid var(--border);
+			border-radius: 10px;
+			background: var(--bg);
+			color: var(--text);
+			font-family: inherit;
+			font-size: 14px;
+			font-weight: 500;
+			cursor: pointer;
+			transition: all 0.15s;
+		}
+
+		.dur-btn:hover {
+			border-color: var(--accent);
+			color: var(--accent);
+		}
+
+		.dur-btn.selected {
+			border-color: var(--accent);
+			background: var(--accent);
+			color: var(--accent-fg);
+		}
+
+		.submit {
+			width: 100%;
+			margin-top: 24px;
+			padding: 15px;
+			border: none;
+			border-radius: 12px;
+			background: var(--accent);
+			color: var(--accent-fg);
+			font-family: inherit;
+			font-size: 16px;
+			font-weight: 600;
+			cursor: pointer;
+			transition: opacity 0.15s;
+		}
+
+		.submit:hover {
+			opacity: 0.88;
+		}
+
+		.submit:disabled {
+			opacity: 0.45;
+			cursor: not-allowed;
+		}
+
+		.message {
+			text-align: center;
+			color: var(--muted);
+			font-size: 15px;
+		}
+
+		.message.error {
+			color: var(--inuse);
+		}
+	</style>
 </head>
+
 <body>
-	<div>Public Court</div>
+
+	<div class="card" id="app">
+		<p class="message">Loading...</p>
+	</div>
+
+	<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+	<script>
+		const SUPABASE_URL = "https://xfshczzojvbkfxkmsvn.supabase.co";
+		const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhmc2hjenpvanZia2Z4a21zdnNuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgzNTA3NDEsImV4cCI6MjEwMzkyNjc0MX0.J3LYlMo37rlX5MVswjtCv_r-lO8_6UiuXAVZMM1WwNI";
+
+		const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+		const app = document.getElementById("app");
+		const params = new URLSearchParams(location.search);
+		const courtId = parseInt(params.get("court"));
+		let selectedDuration = 60;
+
+		// RENDER AVAILABLE STATE WITH CHECK-IN FORM
+		function renderAvailable(courtName) {
+			app.innerHTML = `
+      <p class="court-label">${courtName}</p>
+      <span class="badge available"><span class="dot"></span> Available</span>
+      <p class="status-heading">Ready to play</p>
+      <p class="status-sub">Check in below to reserve this court.</p>
+      <div class="divider"></div>
+      <div class="field">
+        <label>Your name (optional)</label>
+        <input type="text" id="player-name" placeholder="e.g. João Silva">
+      </div>
+      <div class="field">
+        <label>How long?</label>
+        <div class="duration-grid">
+          <button class="dur-btn" data-mins="30">30m</button>
+          <button class="dur-btn selected" data-mins="60">1h</button>
+          <button class="dur-btn" data-mins="90">1h30</button>
+          <button class="dur-btn" data-mins="120">2h</button>
+        </div>
+      </div>
+      <button class="submit" id="checkin-btn">Start playing</button>
+    `;
+
+			document.querySelectorAll(".dur-btn").forEach(btn => {
+				btn.addEventListener("click", () => {
+					document.querySelectorAll(".dur-btn").forEach(b => b.classList.remove("selected"));
+					btn.classList.add("selected");
+					selectedDuration = parseInt(btn.dataset.mins);
+				});
+			});
+
+			document.getElementById("checkin-btn").addEventListener("click", () => checkIn());
+		}
+
+		// RENDER IN-USE STATE WITH COUNTDOWN
+		function renderInUse(courtName, reservation) {
+			const endsAt = new Date(reservation.ends_at);
+			const timeStr = endsAt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+			const who = reservation.player_name ? `${reservation.player_name} is playing` : "Court is occupied";
+
+			app.innerHTML = `
+      <p class="court-label">${courtName}</p>
+      <span class="badge inuse"><span class="dot pulse"></span> In use</span>
+      <p class="time-big">${timeStr}</p>
+      <p class="status-sub">${who} until ${timeStr}.</p>
+    `;
+		}
+
+		// SUBMIT CHECK-IN TO SUPABASE
+		async function checkIn() {
+			const btn = document.getElementById("checkin-btn");
+			btn.disabled = true;
+			btn.textContent = "Checking in...";
+
+			const playerName = document.getElementById("player-name").value.trim();
+			const endsAt = new Date(Date.now() + selectedDuration * 60 * 1000).toISOString();
+
+			const { error } = await db.from("reservations").insert({
+				court_id: courtId,
+				player_name: playerName || null,
+				ends_at: endsAt,
+			});
+
+			if (error) {
+				btn.disabled = false;
+				btn.textContent = "Start playing";
+				alert("Something went wrong. Please try again.");
+				return;
+			}
+
+			load();
+		}
+
+		// LOAD COURT STATUS FROM SUPABASE
+		async function load() {
+			if (!courtId) {
+				app.innerHTML = `<p class="message error">No court specified.<br>Add ?court=1 to the URL.</p>`;
+				return;
+			}
+
+			const { data: court, error: courtErr } = await db
+				.from("courts").select("name").eq("id", courtId).single();
+
+			if (courtErr || !court) {
+				app.innerHTML = `<p class="message error">Court not found.</p>`;
+				return;
+			}
+
+			const now = new Date().toISOString();
+			const { data: rows } = await db
+				.from("reservations")
+				.select("*")
+				.eq("court_id", courtId)
+				.gt("ends_at", now)
+				.order("ends_at", { ascending: false })
+				.limit(1);
+
+			const active = rows && rows.length > 0 ? rows[0] : null;
+			active ? renderInUse(court.name, active) : renderAvailable(court.name);
+		}
+
+		load();
+	</script>
+
 </body>
+
 </html>
