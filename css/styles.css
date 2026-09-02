@@ -50,59 +50,44 @@ body.page-dashboard {
 	color: var(--available);
 }
 
-.page-dashboard .refresh-indicator {
-	font-size: 12px;
-	font-weight: 500;
-	color: var(--muted);
+.page-dashboard .filter-tags {
 	display: flex;
-	align-items: center;
-	gap: 6px;
+	flex-wrap: wrap;
+	gap: 8px;
+	margin-bottom: 24px;
 }
 
-.page-dashboard .refresh-dot {
-	width: 6px;
-	height: 6px;
-	border-radius: 50%;
-	background: var(--muted);
+.page-dashboard .filter-tag {
+	padding: 7px 16px;
+	border-radius: 100px;
+	border: 1px solid var(--border);
+	background: transparent;
+	color: var(--muted);
+	font-family: inherit;
+	font-size: 12px;
+	font-weight: 700;
+	letter-spacing: 0.04em;
+	text-transform: uppercase;
+	cursor: pointer;
+	transition: all 0.15s;
 }
 
-.page-dashboard .refresh-dot.active {
-	background: var(--available);
-	animation: dashboard-refresh-pulse 1s ease-in-out 3;
+.page-dashboard .filter-tag:hover {
+	border-color: var(--available);
+	color: var(--available);
 }
 
-@keyframes dashboard-refresh-pulse {
-
-	0%,
-	100% {
-		opacity: 1
-	}
-
-	50% {
-		opacity: .3
-	}
+.page-dashboard .filter-tag.active {
+	background: var(--available-bg);
+	border-color: var(--available);
+	color: var(--available);
 }
 
 .page-dashboard .grid {
-	display: flex;
-	flex-direction: column;
-	gap: 32px;
-	flex: 1;
-}
-
-.page-dashboard .city-heading {
-	font-size: 11px;
-	font-weight: 600;
-	letter-spacing: 0.1em;
-	text-transform: uppercase;
-	color: var(--muted);
-	margin-bottom: 16px;
-}
-
-.page-dashboard .city-courts {
 	display: grid;
 	grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
 	gap: 20px;
+	flex: 1;
 }
 
 .page-dashboard .court-card {

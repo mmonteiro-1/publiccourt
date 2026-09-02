@@ -1,7 +1,14 @@
 // DOM REFERENCES
 const grid = document.getElementById("grid");
-const rdot = document.getElementById("rdot");
-const refreshLabel = document.getElementById("refresh-label");
+const filterTagsEl = document.getElementById("filterTags");
+
+// CITY FILTER STATE: EVERY CITY EVER SEEN, AND WHICH ONES ARE CURRENTLY VISIBLE
+const knownCities = new Set();
+const activeCities = new Set();
+
+// LATEST FETCHED DATA, CACHED SO TOGGLING A FILTER TAG DOESN'T NEED A NEW FETCH
+let latestCourts = [];
+let latestActiveMap = {};
 
 // MINUTES REMAINING UNTIL A RESERVATION ENDS
 function minutesLeft(endsAt) {
@@ -68,6 +75,41 @@ function renderCourtCard(court, res) {
     `;
 }
 
+// REBUILD THE FILTER TAG ROW FROM THE COURTS SEEN SO FAR, PRESERVING EXISTING TOGGLE STATE
+function updateFilterTags(courts) {
+	const cities = Array.from(new Set(courts.map(c => c.city || "Other"))).sort((a, b) => a.localeCompare(b));
+
+	// A CITY NOT SEEN BEFORE STARTS OUT VISIBLE; AN ALREADY-KNOWN CITY KEEPS ITS CURRENT ON/OFF STATE
+	cities.forEach(city => {
+		if (!knownCities.has(city)) {
+			knownCities.add(city);
+			activeCities.add(city);
+		}
+	});
+
+	filterTagsEl.innerHTML = cities.map(city => `
+      <button class="filter-tag${activeCities.has(city) ? " active" : ""}" data-city="${city}">${city}</button>
+    `).join("");
+
+	filterTagsEl.querySelectorAll(".filter-tag").forEach(btn => {
+		btn.addEventListener("click", () => {
+			const city = btn.dataset.city;
+			activeCities.has(city) ? activeCities.delete(city) : activeCities.add(city);
+			btn.classList.toggle("active");
+			renderGrid();
+		});
+	});
+}
+
+// RENDER THE COURT GRID FROM CACHED DATA, FILTERED BY THE ACTIVE CITY TAGS
+function renderGrid() {
+	const visible = latestCourts.filter(court => activeCities.has(court.city || "Other"));
+
+	grid.innerHTML = visible.length
+		? visible.map(court => renderCourtCard(court, latestActiveMap[court.id])).join("")
+		: `<p class="empty">No courts match the selected filters.</p>`;
+}
+
 // LOAD ALL COURTS AND THEIR ACTIVE RESERVATIONS
 async function load() {
 	const now = new Date().toISOString();
@@ -87,28 +129,11 @@ async function load() {
 	const activeMap = {};
 	(reservations || []).forEach(r => { activeMap[r.court_id] = r; });
 
-	// GROUP COURTS BY CITY, SORTED ALPHABETICALLY FOR A STABLE ORDER
-	const byCity = new Map();
-	courts.forEach(court => {
-		const city = court.city || "Other";
-		if (!byCity.has(city)) byCity.set(city, []);
-		byCity.get(city).push(court);
-	});
-	const sortedCities = Array.from(byCity.entries()).sort((a, b) => a[0].localeCompare(b[0]));
+	latestCourts = courts;
+	latestActiveMap = activeMap;
 
-	grid.innerHTML = sortedCities.map(([city, cityCourts]) => `
-      <div class="city-group">
-        <p class="city-heading">${city}</p>
-        <div class="city-courts">
-          ${cityCourts.map(court => renderCourtCard(court, activeMap[court.id])).join("")}
-        </div>
-      </div>
-    `).join("");
-
-	rdot.classList.remove("active");
-	void rdot.offsetWidth;
-	rdot.classList.add("active");
-	refreshLabel.textContent = `Updated ${formatTime(new Date())}`;
+	updateFilterTags(courts);
+	renderGrid();
 }
 
 load();
