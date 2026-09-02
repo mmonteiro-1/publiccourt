@@ -2,7 +2,6 @@
 const grid = document.getElementById("grid");
 const filterTagsEl = document.getElementById("filterTags");
 const mapEl = document.getElementById("map");
-const mapHeadingEl = document.getElementById("mapHeading");
 const viewToggleEl = document.getElementById("viewToggle");
 
 // CITY FILTER STATE: EVERY CITY EVER SEEN, AND WHICH ONES ARE CURRENTLY VISIBLE
@@ -78,7 +77,6 @@ function setView(view) {
 	const showMap = view === "map";
 
 	grid.hidden = showMap;
-	mapHeadingEl.hidden = !showMap;
 	mapEl.hidden = !showMap;
 
 	viewToggleEl.querySelectorAll(".view-toggle-btn").forEach(btn => {
