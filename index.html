@@ -6,48 +6,18 @@
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<title>PublicCourt</title>
 	<link rel="preconnect" href="https://fonts.googleapis.com">
-	<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
 	<style>
 		:root {
-			--bg: #F4F8F5;
-			--surface: #FFFFFF;
-			--border: #D8E8DC;
-			--text: #1A2E20;
-			--muted: #6B8072;
-			--accent: #1A5C3A;
-			--accent-fg: #FFFFFF;
-			--available-bg: #EBF5EF;
-			--available: #1A5C3A;
-			--inuse-bg: #FEF3C7;
-			--inuse: #B45309;
-		}
-
-		@media (prefers-color-scheme: dark) {
-			:root:not([data-theme="light"]) {
-				--bg: #0F1F14;
-				--surface: #1A2E1E;
-				--border: #2A3F2E;
-				--text: #E8F5EC;
-				--muted: #7A9E82;
-				--accent: #2D8A57;
-				--available-bg: #0F2E1A;
-				--available: #2D8A57;
-				--inuse-bg: #2A1800;
-				--inuse: #D97706;
-			}
-		}
-
-		:root[data-theme="dark"] {
-			--bg: #0F1F14;
-			--surface: #1A2E1E;
-			--border: #2A3F2E;
+			--bg: #0D1F12;
+			--surface: #142018;
+			--border: #1E3525;
 			--text: #E8F5EC;
-			--muted: #7A9E82;
-			--accent: #2D8A57;
+			--muted: #6B9275;
+			--available: #4ADE80;
 			--available-bg: #0F2E1A;
-			--available: #2D8A57;
-			--inuse-bg: #2A1800;
-			--inuse: #D97706;
+			--inuse: #FBBF24;
+			--inuse-bg: #2A1E00;
 		}
 
 		*,
@@ -65,39 +35,107 @@
 			min-height: 100vh;
 			display: flex;
 			flex-direction: column;
-			align-items: center;
-			justify-content: center;
-			padding: 24px 16px;
+			padding: 32px 24px;
 		}
 
-		.card {
+		header {
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			margin-bottom: 40px;
+		}
+
+		.logo {
+			font-size: 18px;
+			font-weight: 800;
+			letter-spacing: -0.02em;
+			color: var(--text);
+		}
+
+		.logo span {
+			color: var(--available);
+		}
+
+		.refresh-indicator {
+			font-size: 12px;
+			font-weight: 500;
+			color: var(--muted);
+			display: flex;
+			align-items: center;
+			gap: 6px;
+		}
+
+		.refresh-dot {
+			width: 6px;
+			height: 6px;
+			border-radius: 50%;
+			background: var(--muted);
+		}
+
+		.refresh-dot.active {
+			background: var(--available);
+			animation: pulse 1s ease-in-out 3;
+		}
+
+		@keyframes pulse {
+
+			0%,
+			100% {
+				opacity: 1
+			}
+
+			50% {
+				opacity: .3
+			}
+		}
+
+		.grid {
+			display: grid;
+			grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+			gap: 20px;
+			flex: 1;
+		}
+
+		.court-card {
 			background: var(--surface);
 			border: 1px solid var(--border);
 			border-radius: 20px;
-			padding: 32px 28px;
-			width: 100%;
-			max-width: 380px;
-			box-shadow: 0 2px 12px rgba(0, 0, 0, 0.07);
+			padding: 28px;
+			display: flex;
+			flex-direction: column;
+			gap: 0;
+			transition: border-color 0.3s;
 		}
 
-		.court-label {
-			font-size: 12px;
+		.court-card.available {
+			border-color: #1E3525;
+		}
+
+		.court-card.inuse {
+			border-color: #3A2800;
+		}
+
+		.court-number {
+			font-size: 11px;
 			font-weight: 600;
 			letter-spacing: 0.1em;
 			text-transform: uppercase;
 			color: var(--muted);
-			margin-bottom: 16px;
+			margin-bottom: 20px;
 		}
 
 		.badge {
 			display: inline-flex;
 			align-items: center;
 			gap: 7px;
-			padding: 6px 14px;
+			padding: 6px 13px;
 			border-radius: 100px;
-			font-size: 13px;
-			font-weight: 600;
+			font-size: 12px;
+			font-weight: 700;
+			letter-spacing: 0.04em;
+			text-transform: uppercase;
 			margin-bottom: 20px;
+			width: fit-content;
 		}
 
 		.badge.available {
@@ -111,17 +149,17 @@
 		}
 
 		.dot {
-			width: 7px;
-			height: 7px;
+			width: 6px;
+			height: 6px;
 			border-radius: 50%;
 			background: currentColor;
 		}
 
-		.dot.pulse {
-			animation: pulse 2s ease-in-out infinite;
+		.dot.blink {
+			animation: blink 2s ease-in-out infinite;
 		}
 
-		@keyframes pulse {
+		@keyframes blink {
 
 			0%,
 			100% {
@@ -129,143 +167,64 @@
 			}
 
 			50% {
-				opacity: .35
+				opacity: .25
 			}
 		}
 
-		.status-heading {
-			font-size: 26px;
-			font-weight: 700;
-			line-height: 1.25;
-			margin-bottom: 8px;
-			text-wrap: balance;
-		}
-
-		.status-sub {
-			font-size: 15px;
-			color: var(--muted);
-			line-height: 1.55;
-			margin-bottom: 28px;
-		}
-
-		.time-big {
-			font-size: 52px;
-			font-weight: 700;
-			font-variant-numeric: tabular-nums;
+		.card-status {
+			font-size: 32px;
+			font-weight: 800;
 			letter-spacing: -0.02em;
-			color: var(--inuse);
-			line-height: 1;
-			margin-bottom: 6px;
-		}
-
-		.divider {
-			height: 1px;
-			background: var(--border);
-			margin: 24px 0;
-		}
-
-		.field {
-			margin-bottom: 16px;
-		}
-
-		.field label {
-			display: block;
-			font-size: 12px;
-			font-weight: 600;
-			letter-spacing: 0.07em;
-			text-transform: uppercase;
-			color: var(--muted);
+			line-height: 1.1;
 			margin-bottom: 8px;
+			font-variant-numeric: tabular-nums;
 		}
 
-		.field input {
-			width: 100%;
-			padding: 12px 14px;
-			border: 1.5px solid var(--border);
-			border-radius: 10px;
-			font-family: inherit;
-			font-size: 15px;
+		.card-status.available {
 			color: var(--text);
-			background: var(--bg);
-			outline: none;
-			transition: border-color 0.15s;
 		}
 
-		.field input:focus {
-			border-color: var(--accent);
+		.card-status.inuse {
+			color: var(--inuse);
 		}
 
-		.duration-grid {
-			display: grid;
-			grid-template-columns: repeat(4, 1fr);
-			gap: 8px;
-		}
-
-		.dur-btn {
-			padding: 11px 0;
-			border: 1.5px solid var(--border);
-			border-radius: 10px;
-			background: var(--bg);
-			color: var(--text);
-			font-family: inherit;
+		.card-sub {
 			font-size: 14px;
-			font-weight: 500;
-			cursor: pointer;
-			transition: all 0.15s;
+			color: var(--muted);
+			line-height: 1.5;
 		}
 
-		.dur-btn:hover {
-			border-color: var(--accent);
-			color: var(--accent);
-		}
-
-		.dur-btn.selected {
-			border-color: var(--accent);
-			background: var(--accent);
-			color: var(--accent-fg);
-		}
-
-		.submit {
-			width: 100%;
-			margin-top: 24px;
-			padding: 15px;
-			border: none;
-			border-radius: 12px;
-			background: var(--accent);
-			color: var(--accent-fg);
-			font-family: inherit;
-			font-size: 16px;
-			font-weight: 600;
-			cursor: pointer;
-			transition: opacity 0.15s;
-		}
-
-		.submit:hover {
-			opacity: 0.88;
-		}
-
-		.submit:disabled {
-			opacity: 0.45;
-			cursor: not-allowed;
-		}
-
-		.message {
+		.empty {
 			text-align: center;
 			color: var(--muted);
 			font-size: 15px;
+			padding: 60px 0;
 		}
 
-		.message.error {
-			color: var(--inuse);
+		footer {
+			margin-top: 40px;
+			font-size: 12px;
+			color: var(--border);
+			text-align: center;
 		}
 	</style>
 </head>
 
 <body>
 
-	<div class="card" id="app">
-		<p class="message">Loading...</p>
+	<header>
+		<div class="logo">Public<span>Court</span></div>
+		<div class="refresh-indicator">
+			<div class="refresh-dot" id="rdot"></div>
+			<span id="refresh-label">Updating...</span>
+		</div>
+	</header>
+
+	<div class="grid" id="grid">
+		<p class="empty">Loading courts...</p>
 	</div>
+
+	<footer>Auto-refreshes every 30 seconds</footer>
 
 	<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 	<script>
@@ -273,114 +232,78 @@
 		const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhmc2hjenpvanZia2Z4a21zdnNuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgzNTA3NDEsImV4cCI6MjEwMzkyNjc0MX0.J3LYlMo37rlX5MVswjtCv_r-lO8_6UiuXAVZMM1WwNI";
 
 		const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-		const app = document.getElementById("app");
-		const params = new URLSearchParams(location.search);
-		const courtId = parseInt(params.get("court"));
-		let selectedDuration = 60;
+		const grid = document.getElementById("grid");
+		const rdot = document.getElementById("rdot");
+		const label = document.getElementById("refresh-label");
 
-		// RENDER AVAILABLE STATE WITH CHECK-IN FORM
-		function renderAvailable(courtName) {
-			app.innerHTML = `
-      <p class="court-label">${courtName}</p>
-      <span class="badge available"><span class="dot"></span> Available</span>
-      <p class="status-heading">Ready to play</p>
-      <p class="status-sub">Check in below to reserve this court.</p>
-      <div class="divider"></div>
-      <div class="field">
-        <label>Your name (optional)</label>
-        <input type="text" id="player-name" placeholder="e.g. João Silva">
-      </div>
-      <div class="field">
-        <label>How long?</label>
-        <div class="duration-grid">
-          <button class="dur-btn" data-mins="30">30m</button>
-          <button class="dur-btn selected" data-mins="60">1h</button>
-          <button class="dur-btn" data-mins="90">1h30</button>
-          <button class="dur-btn" data-mins="120">2h</button>
-        </div>
-      </div>
-      <button class="submit" id="checkin-btn">Start playing</button>
-    `;
-
-			document.querySelectorAll(".dur-btn").forEach(btn => {
-				btn.addEventListener("click", () => {
-					document.querySelectorAll(".dur-btn").forEach(b => b.classList.remove("selected"));
-					btn.classList.add("selected");
-					selectedDuration = parseInt(btn.dataset.mins);
-				});
-			});
-
-			document.getElementById("checkin-btn").addEventListener("click", () => checkIn());
-		}
-
-		// RENDER IN-USE STATE WITH COUNTDOWN
-		function renderInUse(courtName, reservation) {
-			const endsAt = new Date(reservation.ends_at);
-			const timeStr = endsAt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-			const who = reservation.player_name ? `${reservation.player_name} is playing` : "Court is occupied";
-
-			app.innerHTML = `
-      <p class="court-label">${courtName}</p>
-      <span class="badge inuse"><span class="dot pulse"></span> In use</span>
-      <p class="time-big">${timeStr}</p>
-      <p class="status-sub">${who} until ${timeStr}.</p>
-    `;
-		}
-
-		// SUBMIT CHECK-IN TO SUPABASE
-		async function checkIn() {
-			const btn = document.getElementById("checkin-btn");
-			btn.disabled = true;
-			btn.textContent = "Checking in...";
-
-			const playerName = document.getElementById("player-name").value.trim();
-			const endsAt = new Date(Date.now() + selectedDuration * 60 * 1000).toISOString();
-
-			const { error } = await db.from("reservations").insert({
-				court_id: courtId,
-				player_name: playerName || null,
-				ends_at: endsAt,
-			});
-
-			if (error) {
-				btn.disabled = false;
-				btn.textContent = "Start playing";
-				alert("Something went wrong. Please try again.");
-				return;
+		// FORMAT MINUTES REMAINING AS "Xh Ym" OR "Ym"
+		function timeRemaining(endsAt) {
+			const ms = new Date(endsAt) - Date.now();
+			if (ms <= 0) return null;
+			const mins = Math.ceil(ms / 60000);
+			if (mins >= 60) {
+				const h = Math.floor(mins / 60);
+				const m = mins % 60;
+				return m > 0 ? `${h}h ${m}m left` : `${h}h left`;
 			}
-
-			load();
+			return `${mins}m left`;
 		}
 
-		// LOAD COURT STATUS FROM SUPABASE
+		// FORMAT END TIME AS HH:MM
+		function endTime(endsAt) {
+			return new Date(endsAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+		}
+
+		// LOAD ALL COURTS AND THEIR ACTIVE RESERVATIONS
 		async function load() {
-			if (!courtId) {
-				app.innerHTML = `<p class="message error">No court specified.<br>Add ?court=1 to the URL.</p>`;
-				return;
-			}
-
-			const { data: court, error: courtErr } = await db
-				.from("courts").select("name").eq("id", courtId).single();
-
-			if (courtErr || !court) {
-				app.innerHTML = `<p class="message error">Court not found.</p>`;
-				return;
-			}
-
 			const now = new Date().toISOString();
-			const { data: rows } = await db
-				.from("reservations")
-				.select("*")
-				.eq("court_id", courtId)
-				.gt("ends_at", now)
-				.order("ends_at", { ascending: false })
-				.limit(1);
 
-			const active = rows && rows.length > 0 ? rows[0] : null;
-			active ? renderInUse(court.name, active) : renderAvailable(court.name);
+			const [{ data: courts }, { data: reservations }] = await Promise.all([
+				db.from("courts").select("*").order("id"),
+				db.from("reservations").select("*").gt("ends_at", now),
+			]);
+
+			if (!courts || courts.length === 0) {
+				grid.innerHTML = `<p class="empty">No courts found.</p>`;
+				return;
+			}
+
+			const activeMap = {};
+			(reservations || []).forEach(r => { activeMap[r.court_id] = r; });
+
+			grid.innerHTML = courts.map(court => {
+				const res = activeMap[court.id];
+				if (res) {
+					const remaining = timeRemaining(res.ends_at);
+					const who = res.player_name || "Someone";
+					return `
+          <div class="court-card inuse">
+            <p class="court-number">${court.name}</p>
+            <span class="badge inuse"><span class="dot blink"></span> In use</span>
+            <p class="card-status inuse">${endTime(res.ends_at)}</p>
+            <p class="card-sub">${who} · ${remaining || "finishing soon"}</p>
+          </div>
+        `;
+				} else {
+					return `
+          <div class="court-card available">
+            <p class="court-number">${court.name}</p>
+            <span class="badge available"><span class="dot"></span> Available</span>
+            <p class="card-status available">Ready</p>
+            <p class="card-sub">Scan the QR code to check in</p>
+          </div>
+        `;
+				}
+			}).join("");
+
+			rdot.classList.remove("active");
+			void rdot.offsetWidth;
+			rdot.classList.add("active");
+			label.textContent = `Updated ${new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`;
 		}
 
 		load();
+		setInterval(load, 30000);
 	</script>
 
 </body>
