@@ -91,6 +91,7 @@ function renderCourtCard(court, res) {
           <span class="badge time">Ends ${formatTime(res.ends_at)}</span>
         </div>
         <p class="card-status inuse">${mins > 0 ? `${mins}m left` : "Ending"}</p>
+        <p class="card-sub">These are estimated times set by the player — there are no obligations whatsoever.</p>
       </div>
     `;
 	}
