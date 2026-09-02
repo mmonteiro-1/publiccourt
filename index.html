@@ -17,14 +17,31 @@
 		<div class="logo">Public<span>Court</span></div>
 	</header>
 
-	<div class="filter-tags" id="filterTags"></div>
+	<div class="toolbar">
+		<div class="filter-tags" id="filterTags"></div>
+		<div class="view-toggle" id="viewToggle">
+			<button class="view-toggle-btn active" data-view="list" aria-label="Show list view" aria-pressed="true">
+				<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+					<line x1="4" y1="6" x2="20" y2="6"></line>
+					<line x1="4" y1="12" x2="20" y2="12"></line>
+					<line x1="4" y1="18" x2="20" y2="18"></line>
+				</svg>
+			</button>
+			<button class="view-toggle-btn" data-view="map" aria-label="Show map view" aria-pressed="false">
+				<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+					<path d="M12 21s-7-6.5-7-11a7 7 0 0 1 14 0c0 4.5-7 11-7 11z"></path>
+					<circle cx="12" cy="10" r="2.5"></circle>
+				</svg>
+			</button>
+		</div>
+	</div>
 
 	<div class="grid" id="grid" aria-live="polite">
 		<p class="empty">Loading courts...</p>
 	</div>
 
-	<p class="map-heading">Court locations</p>
-	<div id="map"></div>
+	<p class="map-heading" id="mapHeading" hidden>Court locations</p>
+	<div id="map" hidden></div>
 
 	<footer>Auto-refreshes every 30 seconds</footer>
 

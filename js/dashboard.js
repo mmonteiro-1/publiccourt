@@ -1,6 +1,9 @@
 // DOM REFERENCES
 const grid = document.getElementById("grid");
 const filterTagsEl = document.getElementById("filterTags");
+const mapEl = document.getElementById("map");
+const mapHeadingEl = document.getElementById("mapHeading");
+const viewToggleEl = document.getElementById("viewToggle");
 
 // CITY FILTER STATE: EVERY CITY EVER SEEN, AND WHICH ONES ARE CURRENTLY VISIBLE
 const knownCities = new Set();
@@ -69,6 +72,33 @@ function updateMapVisibility() {
 	);
 	map.fitBounds(bounds, { padding: 40 });
 }
+
+// SWITCH BETWEEN THE LIST AND MAP VIEWS; MAP IS CREATED LAZILY ON FIRST USE
+function setView(view) {
+	const showMap = view === "map";
+
+	grid.hidden = showMap;
+	mapHeadingEl.hidden = !showMap;
+	mapEl.hidden = !showMap;
+
+	viewToggleEl.querySelectorAll(".view-toggle-btn").forEach(btn => {
+		const isActive = btn.dataset.view === view;
+		btn.classList.toggle("active", isActive);
+		btn.setAttribute("aria-pressed", isActive);
+	});
+
+	if (showMap) {
+		initMap(latestCourts);
+		updateMapVisibility();
+		updateMarkerStatus();
+		// THE CONTAINER WAS HIDDEN (0x0) WHEN THE MAP WAS CREATED, SO ITS CANVAS NEEDS A RESIZE NOW THAT IT'S VISIBLE
+		if (map) map.resize();
+	}
+}
+
+viewToggleEl.querySelectorAll(".view-toggle-btn").forEach(btn => {
+	btn.addEventListener("click", () => setView(btn.dataset.view));
+});
 
 // GRAY OUT MAP PINS FOR COURTS THAT ARE CURRENTLY OCCUPIED
 function updateMarkerStatus() {
@@ -162,8 +192,6 @@ async function load() {
 		grid.innerHTML = `<p class="empty">No courts found.</p>`;
 		return;
 	}
-
-	initMap(courts);
 
 	const activeMap = {};
 	(reservations || []).forEach(r => { activeMap[r.court_id] = r; });
