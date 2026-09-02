@@ -477,7 +477,10 @@
 			console.log(`Distance to court: ${Math.round(distance)}m, accuracy: ${Math.round(position.coords.accuracy || 0)}m, threshold: ${Math.round(threshold)}m`);
 
 			if (distance > threshold) {
-				renderLocationBlocked(court.name, "You need to be at the court to check in or finish a game.");
+				renderLocationBlocked(
+					court.name,
+					`You need to be at the court to check in or finish a game. (You're ~${Math.round(distance)}m away, GPS accuracy ~${Math.round(position.coords.accuracy || 0)}m, allowed ${Math.round(threshold)}m)`
+				);
 				return;
 			}
 
