@@ -76,7 +76,7 @@ function renderPreview(court, active) {
     <div class="divider"></div>
     <p class="card-sub margin-bottom-25">To keep things fair for everyone, you can only reserve a court while you're physically there.</p>
     <button class="finish-btn" id="back-btn">Go back</button>
-    <button class="submit" id="here-btn">I'm at the court</button>
+    <button class="submit" id="here-btn">I'm at the court →</button>
     <p class="card-sub margin-top-10">Please allow this browser to access your location.</p>
   `;
 
@@ -100,10 +100,12 @@ function renderLocationBlocked(court, message) {
 // RENDER AVAILABLE STATE WITH CHECK-IN FORM
 function renderAvailable(court) {
 	app.innerHTML = `
-    <p class="court-label">${court.name}</p>
-    <div class="badge-row"><span class="badge available"><span class="dot"></span> Available</span></div>
+    <div class="card-header">
+      <p class="court-label">${court.name}</p>
+      <span class="badge available"><span class="dot"></span> Available</span>
+    </div>
     <p class="card-status">Ready to play</p>
-    <p class="card-sub">Check in below to reserve this court.</p>
+    <p class="card-sub">Let other players know how long you intend to use the court</p>
     <div class="divider"></div>
     <div class="field">
       <label>How long?</label>
@@ -127,19 +129,42 @@ function renderAvailable(court) {
 	document.getElementById("checkin-btn").addEventListener("click", () => checkIn(court));
 }
 
-// RENDER IN-USE STATE WITH COUNTDOWN
+// RENDER IN-USE STATE WITH LIVE COUNTDOWN
 function renderInUse(court, reservation) {
-	const timeStr = formatTime(reservation.ends_at);
+	const endsAt = new Date(reservation.ends_at).getTime();
+
+	function formatCountdown() {
+		const remaining = Math.max(0, endsAt - Date.now());
+		const totalSecs = Math.floor(remaining / 1000);
+		const h = Math.floor(totalSecs / 3600);
+		const m = Math.floor((totalSecs % 3600) / 60);
+		const s = totalSecs % 60;
+		return h > 0
+			? `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`
+			: `${m}:${String(s).padStart(2, "0")}`;
+	}
 
 	app.innerHTML = `
-    <p class="court-label">${court.name}</p>
-    <div class="badge-row"><span class="badge inuse"><span class="dot"></span> In use</span></div>
-    <p class="card-status inuse">${timeStr}</p>
-    <p class="card-sub">Court is occupied until ${timeStr}.</p>
-    <button class="finish-btn" id="finish-btn">Finish the game</button>
+    <div class="card-header">
+      <p class="court-label">${court.name}</p>
+      <span class="badge inuse"><span class="dot"></span> In use</span>
+    </div>
+    <p class="card-status inuse" id="countdown">${formatCountdown()}</p>
+    <p class="card-sub">Court is occupied until ${formatTime(reservation.ends_at)}. If its empty, please finish this session and start a new one.</p>
+    <button class="finish-btn margin-top-25" id="finish-btn">Finish this game</button>
   `;
 
-	document.getElementById("finish-btn").addEventListener("click", () => finishGame(court, reservation.id));
+	const timer = setInterval(() => {
+		const el = document.getElementById("countdown");
+		if (!el) { clearInterval(timer); return; }
+		el.textContent = formatCountdown();
+		if (Date.now() >= endsAt) clearInterval(timer);
+	}, 1000);
+
+	document.getElementById("finish-btn").addEventListener("click", () => {
+		clearInterval(timer);
+		finishGame(court, reservation.id);
+	});
 }
 
 // RE-FETCH THE RESERVATION STATUS AND RE-RENDER, WITHOUT REPEATING THE LOCATION CHECK
@@ -190,7 +215,8 @@ async function checkIn(court) {
 		return;
 	}
 
-	refreshStatus(court);
+	app.innerHTML = `<p class="card-status margin-bottom-30">Have fun!</p><p class="card-status">and thank you for considering other players.</p>`;
+	setTimeout(() => refreshStatus(court), 10000);
 }
 
 // VERIFY THE DEVICE IS ON-PREMISES, THEN SHOW THE CHECK-IN / FINISH FLOW

@@ -7,10 +7,14 @@
 	padding: 0;
 }
 
+button {
+	font-size: 1em;
+}
+
 /* SHARED THEME, USED BY BOTH PAGES */
 :root {
-	--bg: #0D1F12;
-	--surface: #142018;
+	--bg: #091B0E;
+	--surface: #05060536;
 	--border: #1E3525;
 	--text: #E8F5EC;
 	--muted: #6B9275;
@@ -26,7 +30,8 @@
 body {
 	font-family: 'Space Grotesk', monospace;
 	font-size: 16px;
-	background: var(--bg);
+	background: var(--bg) url('../css/floor.png') center / cover;
+	background-blend-mode: color-dodge;
 	color: var(--text);
 	min-height: 100dvh;
 }
@@ -248,11 +253,6 @@ header {
 	color: var(--muted);
 }
 
-/* ============================= */
-/* SHARED COMPONENTS, USED BY     */
-/* BOTH THE DASHBOARD GRID AND    */
-/* THE COURT PAGE                 */
-/* ============================= */
 
 .card {
 	background: var(--surface);
@@ -285,10 +285,6 @@ header {
 	letter-spacing: 0.1em;
 	text-transform: uppercase;
 	color: var(--muted);
-}
-
-.court-label {
-	margin-bottom: 15px;
 }
 
 .badge-row {

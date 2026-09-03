@@ -108,7 +108,7 @@ function renderCourtCard(court, res) {
 	if (res) {
 		const mins = minutesLeft(res.ends_at);
 		return `
-      <a class="card inuse" href="court.html?court=${court.id}">
+      <a class="card inuse" href="court?court=${court.id}">
         <div class="card-header">
           <p class="city">${court.city || ""}</p>
           <span class="badge inuse"><span class="dot"></span> In use</span>
@@ -123,7 +123,7 @@ function renderCourtCard(court, res) {
     `;
 	}
 	return `
-      <a class="card available" href="court.html?court=${court.id}">
+      <a class="card available" href="court?court=${court.id}">
         <div class="card-header">
           <p class="city">${court.city || ""}</p>
           <span class="badge available"><span class="dot"></span> Available</span>
