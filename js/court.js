@@ -52,24 +52,32 @@ async function fetchActiveReservation() {
 
 // RENDER THE STATUS PREVIEW SHOWN BEFORE ANY LOCATION CHECK
 function renderPreview(court, active) {
-	const statusBadges = active
-		? `<span class="badge inuse"><span class="dot pulse"></span> In use</span>
-       <span class="badge time">Started ${formatTime(active.started_at)}</span>
-       <span class="badge time">${minutesLeft(active.ends_at) > 0 ? `${minutesLeft(active.ends_at)}min left` : "Ending"}</span>`
+	const statusBadge = active
+		? `<span class="badge inuse"><span class="dot"></span> In use</span>`
 		: `<span class="badge available"><span class="dot"></span> Available</span>`;
 
-	const descriptionLine = court.description ? `<p class="status-sub">${court.description}</p>` : "";
+	const timeBadges = active
+		? `<div class="badge-row">
+         <span class="badge time">Started ${formatTime(active.started_at)}</span>
+         <span class="badge time">${minutesLeft(active.ends_at) > 0 ? `${minutesLeft(active.ends_at)}min left` : "Ending"}</span>
+       </div>`
+		: "";
+
+	const descriptionLine = court.description ? `<p class="card-sub">${court.description}</p>` : "";
 
 	app.innerHTML = `
-    <p class="court-label">${court.city || ""}</p>
-    <div class="badge-row">${statusBadges}</div>
-    <p class="status-heading">${court.name}</p>
+    <div class="card-header">
+      <p class="city">${court.city || ""}</p>
+      ${statusBadge}
+    </div>
+    ${timeBadges}
+    <p class="card-status">${court.name}</p>
     ${descriptionLine}
     <div class="divider"></div>
-    <p class="status-sub">To keep things fair for everyone, you can only reserve a court while you're physically there.</p>
-    <p class="status-sub">Please allow this browser to access your location.</p>
+    <p class="card-sub margin-bottom-25">To keep things fair for everyone, you can only reserve a court while you're physically there.</p>
     <button class="finish-btn" id="back-btn">Go back</button>
     <button class="submit" id="here-btn">I'm at the court</button>
+    <p class="card-sub margin-top-10">Please allow this browser to access your location.</p>
   `;
 
 	document.getElementById("back-btn").addEventListener("click", () => {
@@ -82,8 +90,8 @@ function renderPreview(court, active) {
 function renderLocationBlocked(court, message) {
 	app.innerHTML = `
     <p class="court-label">${court.name}</p>
-    <p class="status-heading">Location required</p>
-    <p class="status-sub">${message}</p>
+    <p class="card-status">Location required</p>
+    <p class="card-sub">${message}</p>
     <button class="submit" id="retry-btn">Try again</button>
   `;
 	document.getElementById("retry-btn").addEventListener("click", () => verifyLocationAndProceed(court));
@@ -94,8 +102,8 @@ function renderAvailable(court) {
 	app.innerHTML = `
     <p class="court-label">${court.name}</p>
     <div class="badge-row"><span class="badge available"><span class="dot"></span> Available</span></div>
-    <p class="status-heading">Ready to play</p>
-    <p class="status-sub">Check in below to reserve this court.</p>
+    <p class="card-status">Ready to play</p>
+    <p class="card-sub">Check in below to reserve this court.</p>
     <div class="divider"></div>
     <div class="field">
       <label>How long?</label>
@@ -125,9 +133,9 @@ function renderInUse(court, reservation) {
 
 	app.innerHTML = `
     <p class="court-label">${court.name}</p>
-    <div class="badge-row"><span class="badge inuse"><span class="dot pulse"></span> In use</span></div>
-    <p class="time-big">${timeStr}</p>
-    <p class="status-sub">Court is occupied until ${timeStr}.</p>
+    <div class="badge-row"><span class="badge inuse"><span class="dot"></span> In use</span></div>
+    <p class="card-status inuse">${timeStr}</p>
+    <p class="card-sub">Court is occupied until ${timeStr}.</p>
     <button class="finish-btn" id="finish-btn">Finish the game</button>
   `;
 

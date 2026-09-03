@@ -27,6 +27,7 @@ function initMap(courts) {
 		center: [points[0].lng, points[0].lat],
 		zoom: 13,
 		scrollZoom: false,
+		attributionControl: false,
 	});
 
 	points.forEach(court => {
@@ -107,10 +108,12 @@ function renderCourtCard(court, res) {
 	if (res) {
 		const mins = minutesLeft(res.ends_at);
 		return `
-      <a class="court-card inuse" href="court.html?court=${court.id}">
-        <p class="court-number">${court.city || ""}</p>
+      <a class="card inuse" href="court.html?court=${court.id}">
+        <div class="card-header">
+          <p class="city">${court.city || ""}</p>
+          <span class="badge inuse"><span class="dot"></span> In use</span>
+        </div>
         <div class="badge-row">
-          <span class="badge inuse"><span class="dot blink"></span> In use</span>
           <span class="badge time">Started ${formatTime(res.started_at)}</span>
           <span class="badge time">${mins > 0 ? `${mins}min left` : "Ending"}</span>
         </div>
@@ -120,9 +123,11 @@ function renderCourtCard(court, res) {
     `;
 	}
 	return `
-      <a class="court-card available" href="court.html?court=${court.id}">
-        <p class="court-number">${court.city || ""}</p>
-        <span class="badge available"><span class="dot"></span> Available</span>
+      <a class="card available" href="court.html?court=${court.id}">
+        <div class="card-header">
+          <p class="city">${court.city || ""}</p>
+          <span class="badge available"><span class="dot"></span> Available</span>
+        </div>
         <p class="card-status available">${court.name}</p>
         ${descriptionLine}
       </a>
@@ -142,7 +147,13 @@ function updateFilterTags(courts) {
 	});
 
 	filterTagsEl.innerHTML = cities.map(city => `
-      <button class="filter-tag${activeCities.has(city) ? " active" : ""}" data-city="${city}">${city}</button>
+      <button class="filter-tag${activeCities.has(city) ? " active" : ""}" data-city="${city}">
+        ${city}
+        <svg class="filter-tag-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round">
+          <line x1="12" y1="4" x2="12" y2="20"></line>
+          <line x1="4" y1="12" x2="20" y2="12"></line>
+        </svg>
+      </button>
     `).join("");
 
 	filterTagsEl.querySelectorAll(".filter-tag").forEach(btn => {
