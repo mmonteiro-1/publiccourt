@@ -7,28 +7,24 @@
 	padding: 0;
 }
 
-button {
+button, a {
 	font-size: 1em;
+	color: var(--text);
 }
 
 /* SHARED THEME, USED BY BOTH PAGES */
 :root {
-	--bg: #e6b5b2;
-	--text: #000;
-	--muted: #6B9275;
-	--available: #4ADE80;
-	--available-bg: #0F2E1A;
-	--inuse: #FF4C29;
-	--inuse-bg: #692213;
-	--inuse-border: #692213;
-	--accent: #4ADE80;
-	--accent-fg: #0D1F12;
+	--pink: #e6b5b2;
+	--green: #2c5745;
+	--orange: #e55604;
+	--white: #fff;
+	--black: #000;
 }
 
 body {
 	font-family: 'Space Grotesk', monospace;
 	font-size: 16px;
-	background: var(--bg);
+	background: var(--pink);
 	color: var(--text);
 	min-height: 100dvh;
 	font-weight: 700;
@@ -111,11 +107,20 @@ body {
 }
 
 .page-court {
-	display: flex;
+/* 	display: flex;
 	flex-direction: column;
 	align-items: center;
-	justify-content: center;
-	padding: 25px 15px;
+	justify-content: center; */
+	background: var(--green);
+}
+
+.page-court.inuse {
+	background: var(--orange);
+}
+
+.page-court .logo span {
+	color: var(--white);
+	-webkit-text-stroke: 4px var(--black);
 }
 
 header {
@@ -126,8 +131,8 @@ header {
 }
 
 .logo span {
-	color: #000;
-	-webkit-text-stroke: 1px #000;
+	color: var(--black);
+	-webkit-text-stroke: 2px var(--black);
 	paint-order: stroke fill;
 }
 
@@ -143,7 +148,7 @@ header {
 .filter-tags {
 	display: flex;
 	flex-wrap: wrap;
-	gap: 10px;
+	gap: 5px;
 }
 
 .view-toggle {
@@ -186,11 +191,9 @@ header {
 	border-radius: 100px;
 	border: 2px solid #000;
 	background: none;
-	color: #000;
 	font-family: inherit;
-	font-weight: 700;
+	font-weight: 600;
 	text-transform: uppercase;
-	cursor: pointer;
 	transition: all 0.15s;
 }
 
@@ -262,9 +265,6 @@ header {
 
 .card {
 	padding: 20px;
-	display: flex;
-	flex-direction: column;
-	gap: 10px;
 	text-decoration: none;
 	color: #fff;
 	width: 100%;
@@ -273,12 +273,12 @@ header {
 }
 
 .card.available {
-	background: #2c5745;
+	background: var(--green);
 	box-shadow: 4px 4px 0 #1d2e3e;
 }
 
 .card.inuse {
-	background: #e55604;
+	background: var(--orange);
 	box-shadow: 4px 4px 0 #501d00;
 }
 
@@ -355,23 +355,27 @@ header {
 
 .card-sub {
 	font-size: 16px;
-	color: rgba(255, 255, 255, 0.58);
+	color: #ffffff8f;
+	font-weight: 400;
 }
 
 .info-link {
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	gap: 8px;
-	padding: 20px;
-	color: #000;
+	gap: 10px;
+	padding: 10px;
+	padding-bottom: 20px;
 	font-weight: 700;
-	font-size: 18px;
 	text-decoration: underline;
 	text-underline-offset: 3px;
 	text-align: center;
+	position: fixed;
+	bottom: 0;
+	background: var(--pink);
+	width: 100%;
+	left: 0px;
 }
-
 
 .page-info .logo-pig {
 	opacity: 0;
