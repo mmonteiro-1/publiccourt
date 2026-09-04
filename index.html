@@ -4,7 +4,7 @@
 <head>
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<title>PublicCourt</title>
+	<title>Campo Livre</title>
 	<link rel="preconnect" href="https://fonts.googleapis.com">
 	<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300..700&display=swap" rel="stylesheet">
 	<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/maplibre-gl@5.24.0/dist/maplibre-gl.css">
@@ -14,7 +14,11 @@
 <body class="page-dashboard">
 
 	<header>
-		<div class="logo">Public<span>Court</span></div>
+		<div class="logo">
+			<span>CAMPO</span>
+			<img src="css/pig.svg" class="logo-pig" alt="">
+			<span>LIVRE</span>
+		</div>
 	</header>
 
 	<div class="toolbar">
@@ -37,10 +41,19 @@
 	</div>
 
 	<div class="grid" id="grid" aria-live="polite">
-		<p class="empty">Loading courts...</p>
+		<p class="empty">A carregar campos...</p>
 	</div>
 
 	<div id="map" hidden></div>
+
+	<a class="info-link" href="info.html">
+		<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+			<circle cx="12" cy="12" r="10"></circle>
+			<line x1="12" y1="8" x2="12" y2="12"></line>
+			<line x1="12" y1="16" x2="12.01" y2="16"></line>
+		</svg>
+		Como funciona o Campo Livre
+	</a>
 
 	<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 	<script src="https://cdn.jsdelivr.net/npm/maplibre-gl@5.24.0/dist/maplibre-gl.js"></script>

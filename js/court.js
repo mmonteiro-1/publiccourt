@@ -53,8 +53,8 @@ async function fetchActiveReservation() {
 // RENDER THE STATUS PREVIEW SHOWN BEFORE ANY LOCATION CHECK
 function renderPreview(court, active) {
 	const statusBadge = active
-		? `<span class="badge inuse"><span class="dot"></span> In use</span>`
-		: `<span class="badge available"><span class="dot"></span> Available</span>`;
+		? `<span class="badge inuse">In use</span>`
+		: `<span class="badge available">Available</span>`;
 
 	const timeBadges = active
 		? `<div class="badge-row">
@@ -76,7 +76,7 @@ function renderPreview(court, active) {
     <div class="divider"></div>
     <p class="card-sub margin-bottom-25">To keep things fair for everyone, you can only reserve a court while you're physically there.</p>
     <button class="finish-btn" id="back-btn">Go back</button>
-    <button class="submit" id="here-btn">I'm at the court →</button>
+    <button class="submit" id="here-btn">I'm at the court</button>
     <p class="card-sub margin-top-10">Please allow this browser to access your location.</p>
   `;
 
@@ -102,7 +102,7 @@ function renderAvailable(court) {
 	app.innerHTML = `
     <div class="card-header">
       <p class="court-label">${court.name}</p>
-      <span class="badge available"><span class="dot"></span> Available</span>
+      <span class="badge available">Available</span>
     </div>
     <p class="card-status">Ready to play</p>
     <p class="card-sub">Let other players know how long you intend to use the court</p>
@@ -147,7 +147,7 @@ function renderInUse(court, reservation) {
 	app.innerHTML = `
     <div class="card-header">
       <p class="court-label">${court.name}</p>
-      <span class="badge inuse"><span class="dot"></span> In use</span>
+      <span class="badge inuse">In use</span>
     </div>
     <p class="card-status inuse" id="countdown">${formatCountdown()}</p>
     <p class="card-sub">Court is occupied until ${formatTime(reservation.ends_at)}. If its empty, please finish this session and start a new one.</p>

@@ -103,22 +103,22 @@ function updateMarkerStatus() {
 
 // RENDER A SINGLE COURT CARD, AVAILABLE OR IN USE
 function renderCourtCard(court, res) {
-	const descriptionLine = court.description ? `<p class="card-sub">${court.description}</p>` : "";
+	const sub = court.description ? `<p class="card-sub">${court.description}</p>` : "";
 
 	if (res) {
 		const mins = minutesLeft(res.ends_at);
+		const timeLabel = mins > 0 ? `${mins}MIN REST` : "A ACABAR";
 		return `
       <a class="card inuse" href="court?court=${court.id}">
         <div class="card-header">
           <p class="city">${court.city || ""}</p>
-          <span class="badge inuse"><span class="dot"></span> In use</span>
-        </div>
-        <div class="badge-row">
-          <span class="badge time">Started ${formatTime(res.started_at)}</span>
-          <span class="badge time">${mins > 0 ? `${mins}min left` : "Ending"}</span>
+          <div class="badge-group">
+            <span class="badge inuse">OCUPADO</span>
+            <span class="badge time">${timeLabel}</span>
+          </div>
         </div>
         <p class="card-status inuse">${court.name}</p>
-        ${descriptionLine}
+        ${sub}
       </a>
     `;
 	}
@@ -126,10 +126,10 @@ function renderCourtCard(court, res) {
       <a class="card available" href="court?court=${court.id}">
         <div class="card-header">
           <p class="city">${court.city || ""}</p>
-          <span class="badge available"><span class="dot"></span> Available</span>
+          <span class="badge available">LIVRE</span>
         </div>
         <p class="card-status available">${court.name}</p>
-        ${descriptionLine}
+        ${sub}
       </a>
     `;
 }
@@ -173,7 +173,7 @@ function renderGrid() {
 
 	grid.innerHTML = visible.length
 		? visible.map(court => renderCourtCard(court, latestActiveMap[court.id])).join("")
-		: `<p class="empty">No courts match the selected filters.</p>`;
+		: `<p class="empty">Nenhum campo corresponde aos filtros.</p>`;
 }
 
 // LOAD ALL COURTS AND THEIR ACTIVE RESERVATIONS
@@ -186,7 +186,7 @@ async function load() {
 	]);
 
 	if (!courts || courts.length === 0) {
-		grid.innerHTML = `<p class="empty">No courts found.</p>`;
+		grid.innerHTML = `<p class="empty">Sem campos encontrados.</p>`;
 		return;
 	}
 
