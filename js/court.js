@@ -52,13 +52,13 @@ async function fetchActiveReservation() {
 
 // RENDER THE STATUS PREVIEW SHOWN BEFORE ANY LOCATION CHECK
 function renderPreview(court, active) {
+	document.body.classList.toggle("inuse", !!active);
 	const statusBadge = active
 		? `<span class="badge inuse">In use</span>`
 		: `<span class="badge available">Available</span>`;
 
 	const timeBadges = active
 		? `<div class="badge-row">
-         <span class="badge time">Started ${formatTime(active.started_at)}</span>
          <span class="badge time">${minutesLeft(active.ends_at) > 0 ? `${minutesLeft(active.ends_at)}min left` : "Ending"}</span>
        </div>`
 		: "";
@@ -99,6 +99,7 @@ function renderLocationBlocked(court, message) {
 
 // RENDER AVAILABLE STATE WITH CHECK-IN FORM
 function renderAvailable(court) {
+	document.body.classList.remove("inuse");
 	app.innerHTML = `
     <div class="card-header">
       <p class="court-label">${court.name}</p>
@@ -131,6 +132,7 @@ function renderAvailable(court) {
 
 // RENDER IN-USE STATE WITH LIVE COUNTDOWN
 function renderInUse(court, reservation) {
+	document.body.classList.add("inuse");
 	const endsAt = new Date(reservation.ends_at).getTime();
 
 	function formatCountdown() {
