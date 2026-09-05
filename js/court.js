@@ -1,7 +1,7 @@
 // DOM REFERENCES AND URL PARAMS
 const app = document.getElementById("app");
 const params = new URLSearchParams(location.search);
-const courtId = parseInt(params.get("court"));
+const courtId = params.get("court");
 let selectedDuration = 60;
 
 // HOW CLOSE (METERS) A DEVICE MUST BE TO THE COURT TO CHECK IN OR FINISH A GAME
@@ -108,35 +108,51 @@ function renderPreview(court, active) {
 // RENDER A BLOCKING SCREEN WHEN LOCATION CAN'T BE VERIFIED
 function renderLocationBlocked(court, message) {
 	app.innerHTML = `
-    <p class="court-label">${court.name}</p>
-    <p class="card-status">Location required</p>
-    <p class="card-sub">${message}</p>
-    <button class="submit" id="retry-btn">Try again</button>
-  `;
+		<p class="court-label">${court.name}</p>
+		<p class="card-status">Tas onde?</p>
+		<p class="card-sub margin-top-10 margin-bottom-20">${message}</p>
+		<button class="finish-btn" id="retry-btn">Tentar outra vez</button>
+		<button class="submit" id="back-btn">Voltar</button>
+	`;
 	document.getElementById("retry-btn").addEventListener("click", () => verifyLocationAndProceed(court));
+	document.getElementById("back-btn").addEventListener("click", () => { location.href = "index.html"; });
 }
 
 // RENDER AVAILABLE STATE WITH CHECK-IN FORM
 function renderAvailable(court) {
 	document.body.classList.remove("inuse");
+	app.classList.add("available");
+	app.classList.remove("inuse");
+
+	const descriptionLine = court.description ? `<p class="card-sub">${court.description}</p>` : "";
+
+	const runnerIcon = `<svg viewBox="0 0 15 20" width="15" height="20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="2.5" r="2"/><path d="M5.5 10 8 6l3.5 2-2 3.5"/><path d="M3.5 20 6 15l3 2.5 2.5-5 2.5 7.5"/></svg>`;
+
+	const backIcon = `<svg viewBox="0 0 20 20" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="10" r="8.5"/><polyline points="11 7 8 10 11 13"/></svg>`;
+
 	app.innerHTML = `
-    <div class="card-header">
-      <p class="court-label">${court.name}</p>
-      <span class="badge available">Available</span>
-    </div>
-    <p class="card-status">Ready to play</p>
-    <p class="card-sub">Let other players know how long you intend to use the court</p>
-    <div class="divider"></div>
-    <div class="field">
-      <label>How long?</label>
-      <div class="duration-grid">
-        <button class="dur-btn" data-mins="30">30m</button>
-        <button class="dur-btn" data-mins="45">45m</button>
-        <button class="dur-btn selected" data-mins="60">1h</button>
-      </div>
-    </div>
-    <button class="submit" id="checkin-btn">Start playing</button>
-  `;
+		<div class="card-header">
+			<p class="city">${court.city || ""}</p>
+			<span class="badge">LIVRE</span>
+		</div>
+		<p class="card-status">${court.name}</p>
+		${descriptionLine}
+		<div class="divider"></div>
+		<p class="margin-bottom-20 card-sub">Informe aos outros jogadores quanto tempo pretendes usar o campo</p>
+		<div class="duration-grid margin-bottom-10">
+			<button class="dur-btn" data-mins="30">30MIN</button>
+			<button class="dur-btn" data-mins="45">45MIN</button>
+			<button class="dur-btn selected" data-mins="60">1H</button>
+		</div>
+		<button class="finish-btn" id="checkin-btn">${runnerIcon} Começar jogo</button>
+	`;
+
+	document.getElementById("court-footer").innerHTML = `
+		<a class="info-link" id="back-link" href="#">
+			${backIcon}
+			Voltar
+		</a>
+	`;
 
 	document.querySelectorAll(".dur-btn").forEach(btn => {
 		btn.addEventListener("click", () => {
@@ -147,6 +163,10 @@ function renderAvailable(court) {
 	});
 
 	document.getElementById("checkin-btn").addEventListener("click", () => checkIn(court));
+	document.getElementById("back-link").addEventListener("click", e => {
+		e.preventDefault();
+		location.href = "index.html";
+	});
 }
 
 // RENDER IN-USE STATE WITH LIVE COUNTDOWN
@@ -231,13 +251,23 @@ async function checkIn(court) {
 
 	if (error) {
 		btn.disabled = false;
-		btn.textContent = "Start playing";
-		alert("Something went wrong. Please try again.");
+		btn.textContent = "Começar jogo";
+		alert("Algo correu mal. Tenta outra vez.");
 		return;
 	}
 
-	app.innerHTML = `<p class="card-status margin-bottom-30">Have fun!</p><p class="card-status">and thank you for considering other players.</p>`;
-	setTimeout(() => refreshStatus(court), 10000);
+	document.body.classList.remove("inuse");
+	document.body.classList.add("success");
+	app.classList.remove("available", "inuse");
+	document.getElementById("court-footer").innerHTML = "";
+
+	app.innerHTML = `
+		<div class="info-hero">
+			<img src="css/pig.svg" class="info-pig" alt="">
+		</div>
+		<p class="bom-jogo">BOM<br>JOGO</p>
+		<p class="info-sub1 margin-top-10">Os outros jogadores agradecem a tua consideração</p>
+	`;
 }
 
 // VERIFY THE DEVICE IS ON-PREMISES, THEN SHOW THE CHECK-IN / FINISH FLOW
@@ -248,7 +278,7 @@ async function verifyLocationAndProceed(court) {
 	try {
 		position = await getCurrentPosition();
 	} catch (e) {
-		renderLocationBlocked(court, "Enable location access in your browser to check in or finish a game, then try again.");
+		renderLocationBlocked(court, "Ativa a localização no teu browser e tenta outra vez.");
 		return;
 	}
 
@@ -261,7 +291,7 @@ async function verifyLocationAndProceed(court) {
 	const threshold = MAX_DISTANCE_METERS + allowance;
 
 	if (distance > threshold) {
-		renderLocationBlocked(court, "It seems that you're not at the court. Reservations can only be made on the premises.");
+		renderLocationBlocked(court, "Parece que não estás no campo, ou então a localização falhou. Tente ler o QR Code fixado na entrada do campo.");
 		return;
 	}
 

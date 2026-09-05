@@ -127,12 +127,23 @@ body {
 	box-shadow: 4px 4px 0 var(--black);
 }
 
-.page-court {
+.page-court:not(.success) {
 	background: var(--green);
 }
 
 .page-court.inuse {
 	background: var(--orange);
+}
+
+.page-court.success .card {
+	background: transparent;
+	border-radius: 0;
+	padding: 0;
+	box-shadow: none;
+}
+
+.page-court.success .card::after {
+	content: none;
 }
 
 .page-court .logo span {
@@ -142,6 +153,38 @@ body {
 
 .page-court .card {
 	border: 2px solid var(--black);
+}
+
+.page-court.success {
+	background: var(--pink);
+}
+
+.page-court.success .card {
+	background: transparent;
+	border: none;
+	box-shadow: none;
+	padding: 0;
+}
+
+.page-court.success .card::after {
+	content: none;
+}
+
+.page-court.success .logo-pig {
+	opacity: 0;
+}
+
+.page-court.success .logo span {
+	color: var(--black);
+	-webkit-text-stroke: 2px var(--black);
+}
+
+.bom-jogo {
+	font-size: 5em;
+	font-weight: 800;
+	color: var(--black);
+	line-height: 1;
+	letter-spacing: -0.02em;
 }
 
 .page-court .finish-btn {
@@ -159,6 +202,18 @@ body {
 	background: transparent;
 	border: 2px solid var(--black);
 	color: var(--white);
+}
+
+.page-court .dur-btn {
+	border: 2px solid var(--black);
+	background: transparent;
+	color: var(--white);
+}
+
+.page-court .dur-btn.selected {
+	background: var(--white);
+	color: var(--black);
+	box-shadow: 4px 4px 0 var(--black);
 }
 
 .page-court .info-link {
@@ -445,7 +500,7 @@ header {
 	left: 0px;
 }
 
-.page-info .logo-pig {
+.page-info .logo-pig, .page-court.success .logo-pig {
 	opacity: 0;
 }
 
@@ -516,9 +571,6 @@ header {
 	text-transform: uppercase;
 }
 
-/* ============================= */
-/* COURT-PAGE-ONLY COMPONENTS     */
-/* ============================= */
 
 .divider {
 	height: 1.5px;
