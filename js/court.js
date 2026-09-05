@@ -53,36 +53,55 @@ async function fetchActiveReservation() {
 // RENDER THE STATUS PREVIEW SHOWN BEFORE ANY LOCATION CHECK
 function renderPreview(court, active) {
 	document.body.classList.toggle("inuse", !!active);
-	const statusBadge = active
-		? `<span class="badge inuse">In use</span>`
-		: `<span class="badge available">Available</span>`;
+	app.classList.toggle("available", !active);
+	app.classList.toggle("inuse", !!active);
 
-	const timeBadges = active
-		? `<div class="badge-row">
-         <span class="badge time">${minutesLeft(active.ends_at) > 0 ? `${minutesLeft(active.ends_at)}min left` : "Ending"}</span>
-       </div>`
-		: "";
+	const statusBadge = `<span class="badge">LIVRE</span>`;
+	const occupiedBadges = active
+		? `<div class="badge-group">
+			<span class="badge">OCUPADO</span>
+			<span class="badge">${minutesLeft(active.ends_at) > 0 ? `${minutesLeft(active.ends_at)}MIN REST` : "A TERMINAR"}</span>
+		</div>`
+		: statusBadge;
 
 	const descriptionLine = court.description ? `<p class="card-sub">${court.description}</p>` : "";
 
-	app.innerHTML = `
-    <div class="card-header">
-      <p class="city">${court.city || ""}</p>
-      ${statusBadge}
-    </div>
-    ${timeBadges}
-    <p class="card-status">${court.name}</p>
-    ${descriptionLine}
-    <div class="divider"></div>
-    <p class="card-sub margin-bottom-25">To keep things fair for everyone, you can only reserve a court while you're physically there.</p>
-    <button class="finish-btn" id="back-btn">Go back</button>
-    <button class="submit" id="here-btn">I'm at the court</button>
-    <p class="card-sub margin-top-10">Please allow this browser to access your location.</p>
-  `;
+	const bodyText = active
+		? "Parece que este campo está ocupado no momento. Caso não esteja, podes começar um jogo novo"
+		: "Para manter as coisas justas, não é possível iniciar um jogo sem que o jogador esteja no campo.";
 
-	document.getElementById("back-btn").addEventListener("click", () => {
-		location.href = "index.html";
-	});
+	const actionLabel = active ? "Começar novo jogo" : "Estou no campo";
+
+	const locationIcon = `<svg viewBox="0 0 15 15" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="7.5" cy="6" r="2.5"/><path d="M7.5 14s-5-4-5-8a5 5 0 0 1 10 0c0 4-5 8-5 8z"/></svg>`;
+
+	app.innerHTML = `
+		<div class="card-header">
+			<p class="city">${court.city || ""}</p>
+			${occupiedBadges}
+		</div>
+		<p class="card-status">${court.name}</p>
+		${descriptionLine}
+		<div class="divider"></div>
+		<p class="margin-bottom-20 card-sub">${bodyText}</p>
+		<button class="finish-btn" id="here-btn">${locationIcon} ${actionLabel}</button>
+		<button class="submit" id="back-btn">Voltar</button>
+		<p class="card-sub margin-top-10" style="font-size:0.75em">Por favor permita que este navegador confirme a tua localização</p>
+	`;
+
+	const mapsUrl = court.lat && court.lng
+		? `https://maps.google.com/?daddr=${court.lat},${court.lng}`
+		: `https://maps.google.com/?q=${encodeURIComponent(court.name)}`;
+
+	const navIcon = `<svg viewBox="0 0 20 20" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="10,1 19,19 10,14 1,19"/></svg>`;
+
+	document.getElementById("court-footer").innerHTML = `
+		<a class="info-link" href="${mapsUrl}" target="_blank" rel="noopener">
+			${navIcon}
+			Navegar para o campo
+		</a>
+	`;
+
+	document.getElementById("back-btn").addEventListener("click", () => { location.href = "index.html"; });
 	document.getElementById("here-btn").addEventListener("click", () => verifyLocationAndProceed(court));
 }
 

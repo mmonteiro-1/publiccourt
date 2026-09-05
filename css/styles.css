@@ -106,11 +106,28 @@ body {
 	object-fit: cover;
 }
 
+#eye {
+	animation: eye-move 8s ease-out 2s 1;
+	transform-box: fill-box;
+	transform-origin: center;
+}
+
+@keyframes eye-move {
+	0%   { transform: translate(0, 0); }
+	12%  { transform: translate(8.38px, 0.36px); }
+	50%  { transform: translate(8.38px, 0.36px); }
+	62%  { transform: translate(0, 0); }
+	100% { transform: translate(0, 0); }
+}
+.page-dashboard .card::after {
+	content: none;
+}
+
+.page-dashboard .card {
+	box-shadow: 4px 4px 0 var(--black);
+}
+
 .page-court {
-/* 	display: flex;
-	flex-direction: column;
-	align-items: center;
-	justify-content: center; */
 	background: var(--green);
 }
 
@@ -121,6 +138,35 @@ body {
 .page-court .logo span {
 	color: var(--white);
 	-webkit-text-stroke: 4px var(--black);
+}
+
+.page-court .card {
+	border: 2px solid var(--black);
+}
+
+.page-court .finish-btn {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 10px;
+	border: 2px solid var(--black);
+	background: var(--white);
+	color: var(--black);
+	box-shadow: 4px 4px 0 var(--black);
+}
+
+.page-court .submit {
+	background: transparent;
+	border: 2px solid var(--black);
+	color: var(--white);
+}
+
+.page-court .info-link {
+	position: static;
+	background: transparent;
+	color: var(--white);
+	width: auto;
+	padding: 20px 0 0;
 }
 
 header {
@@ -161,6 +207,12 @@ header {
 	padding: 5px;
 	gap: 5px;
 	flex-shrink: 0;
+}
+
+.divider {
+	height: 0;
+	background: none;
+	border-top: 2px dashed var(--black);
 }
 
 .view-toggle-btn {
@@ -270,17 +322,34 @@ header {
 	width: 100%;
 	border: none;
 	border-radius: 20px 20px 20px 0;
+	position: relative;
+}
+
+.card::after {
+	content: '';
+	position: absolute;
+	inset: 0;
+	border-radius: inherit;
+	transform: translate(6px, 6px);
+	z-index: -1;
+	border: 2px solid var(--black);
 }
 
 .card.available {
 	background: var(--green);
-	box-shadow: 4px 4px 0 #1d2e3e;
 }
+
+/* .card.available::after {
+	border: 2px solid #1d2e3e;
+} */
 
 .card.inuse {
 	background: var(--orange);
-	box-shadow: 4px 4px 0 #501d00;
 }
+
+/* .card.inuse::after {
+	border: 2px solid #501d00;
+} */
 
 .card-header {
 	display: flex;
@@ -365,7 +434,6 @@ header {
 	justify-content: center;
 	gap: 10px;
 	padding: 10px;
-	padding-bottom: 20px;
 	font-weight: 700;
 	text-decoration: underline;
 	text-underline-offset: 3px;
@@ -403,6 +471,7 @@ header {
 	width: 100%;
 	height: 100%;
 	object-fit: contain;
+	overflow: visible;
 }
 
 .info-content {
