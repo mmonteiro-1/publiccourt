@@ -2,7 +2,7 @@
 const app = document.getElementById("app");
 const params = new URLSearchParams(location.search);
 const courtId = params.get("court");
-let selectedDuration = 60;
+let selectedDuration = 45;
 
 // HOW CLOSE (METERS) A DEVICE MUST BE TO THE COURT TO CHECK IN OR FINISH A GAME
 const MAX_DISTANCE_METERS = 500;
@@ -67,16 +67,18 @@ function renderPreview(court, active) {
 	const descriptionLine = court.description ? `<p class="card-sub">${court.description}</p>` : "";
 
 	const bodyText = active
-		? "Parece que este campo está ocupado no momento. Caso não esteja, podes começar um jogo novo"
-		: "Para manter as coisas justas, não é possível iniciar um jogo sem que o jogador esteja no campo.";
+		? "Parece que este campo está ocupado de momento. Caso não esteja, <b>se estiveres a beira do campo</b> podes terminar o jogo atual"
+		: "Para manter as coisas justas, não é possível iniciar um jogo sem que o jogador esteja a beira do campo.";
 
-	const actionLabel = active ? "Começar novo jogo" : "Estou no campo";
+	const actionLabel = active ? "Terminar jogo atual" : "Estou no campo";
 
-	const locationIcon = `<svg viewBox="0 0 15 15" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="7.5" cy="6" r="2.5"/><path d="M7.5 14s-5-4-5-8a5 5 0 0 1 10 0c0 4-5 8-5 8z"/></svg>`;
+	const locationIcon = active
+		? `<img src="images/icon_death.svg" class="link-icon" alt="">`
+		: `<img src="images/icon_ball.svg" class="link-icon" alt="">`;
 
 	app.innerHTML = `
 		<div class="card-header">
-			<p class="city">${court.city || ""}</p>
+			${cityHtml(court.city)}
 			${occupiedBadges}
 		</div>
 		<p class="card-status">${court.name}</p>
@@ -92,12 +94,12 @@ function renderPreview(court, active) {
 		? `https://maps.google.com/?daddr=${court.lat},${court.lng}`
 		: `https://maps.google.com/?q=${encodeURIComponent(court.name)}`;
 
-	const navIcon = `<svg viewBox="0 0 20 20" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="10,1 19,19 10,14 1,19"/></svg>`;
+	const navIcon = `<img src="images/icon_car.svg" class="link-icon" alt="">`;
 
 	document.getElementById("court-footer").innerHTML = `
 		<a class="info-link" href="${mapsUrl}" target="_blank" rel="noopener">
 			${navIcon}
-			Navegar para o campo
+			Enviar coordenadas ao GPS
 		</a>
 	`;
 
@@ -111,7 +113,7 @@ function renderLocationBlocked(court, message) {
 		<p class="court-label">${court.name}</p>
 		<p class="card-status">Tas onde?</p>
 		<p class="card-sub margin-top-10 margin-bottom-20">${message}</p>
-		<button class="finish-btn" id="retry-btn">Tentar outra vez</button>
+		<button class="finish-btn" id="retry-btn"><img src="images/icon_fall.svg" class="link-icon" alt=""> Tentar outra vez</button>
 		<button class="submit" id="back-btn">Voltar</button>
 	`;
 	document.getElementById("retry-btn").addEventListener("click", () => verifyLocationAndProceed(court));
@@ -126,13 +128,13 @@ function renderAvailable(court) {
 
 	const descriptionLine = court.description ? `<p class="card-sub">${court.description}</p>` : "";
 
-	const runnerIcon = `<svg viewBox="0 0 15 20" width="15" height="20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="2.5" r="2"/><path d="M5.5 10 8 6l3.5 2-2 3.5"/><path d="M3.5 20 6 15l3 2.5 2.5-5 2.5 7.5"/></svg>`;
+	const runnerIcon = `<img src="images/icon_run.svg" class="link-icon" alt="">`;
 
-	const backIcon = `<svg viewBox="0 0 20 20" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="10" r="8.5"/><polyline points="11 7 8 10 11 13"/></svg>`;
+	const backIcon = `<img src="images/icon_back.svg" class="link-icon" alt="">`;
 
 	app.innerHTML = `
 		<div class="card-header">
-			<p class="city">${court.city || ""}</p>
+			${cityHtml(court.city)}
 			<span class="badge">LIVRE</span>
 		</div>
 		<p class="card-status">${court.name}</p>
@@ -140,9 +142,9 @@ function renderAvailable(court) {
 		<div class="divider"></div>
 		<p class="margin-bottom-20 card-sub">Informe aos outros jogadores quanto tempo pretendes usar o campo</p>
 		<div class="duration-grid margin-bottom-10">
-			<button class="dur-btn" data-mins="30">30MIN</button>
-			<button class="dur-btn" data-mins="45">45MIN</button>
-			<button class="dur-btn selected" data-mins="60">1H</button>
+			<button class="dur-btn selected" data-mins="45">45MIN</button>
+			<button class="dur-btn" data-mins="60">60MIN</button>
+			<button class="dur-btn" data-mins="90">90MIN</button>
 		</div>
 		<button class="finish-btn" id="checkin-btn">${runnerIcon} Começar jogo</button>
 	`;
@@ -188,12 +190,26 @@ function renderInUse(court, reservation) {
 	app.innerHTML = `
     <div class="card-header">
       <p class="court-label">${court.name}</p>
-      <span class="badge inuse">In use</span>
+      <span class="badge inuse">Ocupado</span>
     </div>
     <p class="card-status inuse" id="countdown">${formatCountdown()}</p>
-    <p class="card-sub">Court is occupied until ${formatTime(reservation.ends_at)}. If its empty, please finish this session and start a new one.</p>
-    <button class="finish-btn margin-top-25" id="finish-btn">Finish this game</button>
+    <p class="card-sub">Os jogadores pararam mais cedo para ir aos copos. Podes terminar o jogo atual e começar um novo.</p>
+    <button class="finish-btn margin-top-25" id="finish-btn"><img src="images/icon_death.svg" class="link-icon" alt=""> Terminar jogo atual</button>
   `;
+
+	const backIcon = `<img src="images/icon_back.svg" class="link-icon" alt="">`;
+
+	document.getElementById("court-footer").innerHTML = `
+		<a class="info-link" id="back-link" href="#">
+			${backIcon}
+			Voltar
+		</a>
+	`;
+
+	document.getElementById("back-link").addEventListener("click", e => {
+		e.preventDefault();
+		location.href = "index.html";
+	});
 
 	const timer = setInterval(() => {
 		const el = document.getElementById("countdown");
@@ -216,11 +232,8 @@ async function refreshStatus(court) {
 
 // END THE CURRENT RESERVATION EARLY
 async function finishGame(court, reservationId) {
-	if (!confirm("Finish this game and free up the court?")) return;
-
 	const btn = document.getElementById("finish-btn");
 	btn.disabled = true;
-	btn.textContent = "Finishing...";
 
 	const { error } = await db.from("reservations")
 		.update({ manual_finished_at: new Date().toISOString() })
@@ -228,8 +241,6 @@ async function finishGame(court, reservationId) {
 
 	if (error) {
 		btn.disabled = false;
-		btn.textContent = "Finish the game";
-		alert("Something went wrong. Please try again.");
 		return;
 	}
 
@@ -266,13 +277,29 @@ async function checkIn(court) {
 			<img src="css/pig.svg" class="info-pig" alt="">
 		</div>
 		<p class="bom-jogo">BOM<br>JOGO</p>
-		<p class="info-sub1 margin-top-10">Os outros jogadores agradecem a tua consideração</p>
+		<p class="info-sub1 margin-top-10">Obrigado por avisar os outros jogadores</p>
 	`;
+
+	const countdownEl = document.createElement("div");
+	countdownEl.className = "bom-jogo-countdown";
+	let secs = 6;
+	countdownEl.textContent = secs;
+	document.body.appendChild(countdownEl);
+
+	const ticker = setInterval(() => {
+		secs--;
+		countdownEl.textContent = secs;
+	}, 1000);
+
+	setTimeout(() => {
+		clearInterval(ticker);
+		location.reload();
+	}, 7000);
 }
 
 // VERIFY THE DEVICE IS ON-PREMISES, THEN SHOW THE CHECK-IN / FINISH FLOW
 async function verifyLocationAndProceed(court) {
-	app.innerHTML = `<p class="message">Checking your location...</p>`;
+	app.innerHTML = `<p class="message">A verificar a tua localização...</p>`;
 
 	let position;
 	try {
