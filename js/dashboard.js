@@ -23,7 +23,7 @@ function initMap(courts) {
 
 	map = new maplibregl.Map({
 		container: "map",
-		style: "https://tiles.openfreemap.org/styles/dark",
+		style: "https://tiles.openfreemap.org/styles/liberty",
 		center: [points[0].lng, points[0].lat],
 		zoom: 13,
 		scrollZoom: false,
@@ -31,10 +31,17 @@ function initMap(courts) {
 	});
 
 	points.forEach(court => {
-		const markerLabel = court.city ? `${court.name} — ${court.city}` : court.name;
+		const extIcon = `<svg viewBox="0 0 20 20" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="7 4 13 10 7 16"/></svg>`;
+		const descHtml = court.description ? `<div class="popup-desc">${court.description}</div>` : "";
+		const popup = new maplibregl.Popup({ offset: 40 })
+			.setHTML(`<a class="popup-link" href="court.html?court=${court.id}"><div class="popup-body"><div><div class="popup-name">${court.name}</div>${descHtml}</div>${extIcon}</div></a>`);
+		popup.on("open", () => {
+			const occupied = Boolean(latestActiveMap[court.id]);
+			popup.getElement()?.classList.toggle("popup-occupied", occupied);
+		});
 		const marker = new maplibregl.Marker()
 			.setLngLat([court.lng, court.lat])
-			.setPopup(new maplibregl.Popup({ offset: 25 }).setText(markerLabel));
+			.setPopup(popup);
 		markersByCourtId[court.id] = { marker, court };
 	});
 }
@@ -111,7 +118,7 @@ function renderCourtCard(court, res) {
 		return `
       <a class="card inuse" href="court.html?court=${court.id}">
         <div class="card-header">
-          <p class="city">${court.city || ""}</p>
+          ${cityHtml(court.city)}
           <div class="badge-group">
             <span class="badge inuse">OCUPADO</span>
             <span class="badge time">${timeLabel}</span>
@@ -125,7 +132,7 @@ function renderCourtCard(court, res) {
 	return `
       <a class="card available" href="court.html?court=${court.id}">
         <div class="card-header">
-          <p class="city">${court.city || ""}</p>
+          ${cityHtml(court.city)}
           <span class="badge available">LIVRE</span>
         </div>
         <p class="card-status available">${court.name}</p>
@@ -171,9 +178,14 @@ function updateFilterTags(courts) {
 function renderGrid() {
 	const visible = latestCourts.filter(court => activeCities.has(court.city || "Other"));
 
-	grid.innerHTML = visible.length
-		? visible.map(court => renderCourtCard(court, latestActiveMap[court.id])).join("")
-		: `<p class="empty">Nenhum campo corresponde aos filtros.</p>`;
+	const sorted = [...visible].sort((a, b) => {
+		const cityDiff = (a.city || "").localeCompare(b.city || "");
+		return cityDiff !== 0 ? cityDiff : (a.name || "").localeCompare(b.name || "");
+	});
+
+	grid.innerHTML = sorted.length
+		? sorted.map(court => renderCourtCard(court, latestActiveMap[court.id])).join("")
+		: `<p class="empty">Removeste todas as cidades dos filtros, Zé.</p>`;
 }
 
 // LOAD ALL COURTS AND THEIR ACTIVE RESERVATIONS
