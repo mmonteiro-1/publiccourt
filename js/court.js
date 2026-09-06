@@ -274,7 +274,7 @@ async function checkIn(court) {
 
 	app.innerHTML = `
 		<div class="info-hero">
-			<img src="css/pig.svg" class="info-pig" alt="">
+			<img src="images/pig.svg" class="info-pig" alt="">
 		</div>
 		<p class="bom-jogo">BOM<br>JOGO</p>
 		<p class="info-sub1 margin-top-10">Obrigado por avisar os outros jogadores</p>

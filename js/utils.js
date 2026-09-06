@@ -1,5 +1,5 @@
 // REPLACE pig <img> TAGS WITH INLINE SVG SO CSS ANIMATIONS REPLAY ON EVERY PAGE LOAD
-fetch("css/pig.svg")
+fetch("images/pig.svg")
 	.then(r => r.text())
 	.then(svg => {
 		document.querySelectorAll("img.logo-pig, img.info-pig").forEach(img => {
@@ -24,4 +24,13 @@ function formatTime(ts) {
 function minutesLeft(endsAt) {
 	const ms = new Date(endsAt) - Date.now();
 	return Math.max(0, Math.ceil(ms / 60000));
+}
+
+// CITY LABEL WITH AN OPTIONAL FLAG ICON PREPENDED, SHARED BY EVERY PAGE
+function cityHtml(city) {
+	const key = city && city.toLowerCase();
+	const flag = key === "aveiro" ? `<img src="images/flag_aveiro.svg" class="city-flag" alt="">`
+		: key === "vagos" ? `<img src="images/flag_vagos.svg" class="city-flag" alt="">`
+		: "";
+	return `<p class="city">${flag}${city || ""}</p>`;
 }
