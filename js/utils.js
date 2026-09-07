@@ -26,6 +26,48 @@ function minutesLeft(endsAt) {
 	return Math.max(0, Math.ceil(ms / 60000));
 }
 
+// PULL-TO-REFRESH FOR IOS STANDALONE MODE
+(function () {
+	const THRESHOLD = 80;
+	let startY = 0;
+	let pulling = false;
+	let indicator = null;
+
+	function getIndicator() {
+		if (!indicator) {
+			indicator = document.createElement("div");
+			indicator.style.cssText = "position:fixed;top:0;left:0;right:0;display:flex;justify-content:center;padding:12px;transform:translateY(-100%);transition:transform 0.2s;z-index:9999;pointer-events:none";
+			indicator.innerHTML = `<img src="images/icon_siren.svg" alt="" style="opacity:0.6">`;
+			document.body.appendChild(indicator);
+		}
+		return indicator;
+	}
+
+	document.addEventListener("touchstart", e => {
+		startY = e.touches[0].clientY;
+		pulling = window.scrollY === 0;
+	}, { passive: true });
+
+	document.addEventListener("touchmove", e => {
+		if (!pulling) return;
+		const dy = e.touches[0].clientY - startY;
+		if (dy <= 0) return;
+		const pct = Math.min(dy / THRESHOLD, 1);
+		getIndicator().style.transform = `translateY(${-100 + pct * 100}%)`;
+	}, { passive: true });
+
+	document.addEventListener("touchend", e => {
+		if (!pulling) return;
+		pulling = false;
+		const dy = e.changedTouches[0].clientY - startY;
+		if (dy >= THRESHOLD) {
+			location.reload();
+		} else {
+			getIndicator().style.transform = "translateY(-100%)";
+		}
+	}, { passive: true });
+})();
+
 // CITY LABEL WITH AN OPTIONAL FLAG ICON PREPENDED, SHARED BY EVERY PAGE
 function cityHtml(city) {
 	const key = city && city.toLowerCase();
