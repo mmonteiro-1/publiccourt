@@ -8,6 +8,7 @@ let selectedDuration = 45;
 const MAX_DISTANCE_METERS = 500;
 // EXTRA SLACK ADDED FOR LOW-CONFIDENCE GPS READINGS, CAPPED SO THE CHECK STAYS MEANINGFUL
 const MAX_ACCURACY_ALLOWANCE = 500;
+const MSG_LOCATION_FAILED = "Parece que não estás no campo, ou então a localização falhou. Tente ler o QR Code fixado na entrada do campo.";
 
 // DISTANCE BETWEEN TWO COORDINATES IN METERS
 function distanceMeters(lat1, lon1, lat2, lon2) {
@@ -114,10 +115,19 @@ function renderLocationBlocked(court, message) {
 		<p class="card-status">Tas onde?</p>
 		<p class="card-sub margin-top-10 margin-bottom-20">${message}</p>
 		<button class="finish-btn" id="retry-btn"><img src="images/icon_fall.svg" class="link-icon" alt=""> Tentar outra vez</button>
+		<button class="finish-btn" id="hint-btn"><img src="images/icon_info.svg" class="link-icon" alt=""> Não há QR Code na entrada</button>
 		<button class="submit" id="back-btn">Voltar</button>
 	`;
 	document.getElementById("retry-btn").addEventListener("click", () => verifyLocationAndProceed(court));
 	document.getElementById("back-btn").addEventListener("click", () => { location.href = "index.html"; });
+
+	const hintBtn = document.getElementById("hint-btn");
+	hintBtn.addEventListener("click", async () => {
+		hintBtn.disabled = true;
+		const { data } = await db.from("courts").select("missing_qr_hint").eq("id", courtId).single();
+		await db.from("courts").update({ missing_qr_hint: (data?.missing_qr_hint || 0) + 1 }).eq("id", courtId);
+		hintBtn.innerHTML = "Obrigado por avisar";
+	});
 }
 
 // RENDER AVAILABLE STATE WITH CHECK-IN FORM
@@ -305,7 +315,7 @@ async function verifyLocationAndProceed(court) {
 	try {
 		position = await getCurrentPosition();
 	} catch (e) {
-		renderLocationBlocked(court, "Ativa a localização no teu browser e tenta outra vez.");
+		renderLocationBlocked(court, MSG_LOCATION_FAILED);
 		return;
 	}
 
@@ -318,7 +328,7 @@ async function verifyLocationAndProceed(court) {
 	const threshold = MAX_DISTANCE_METERS + allowance;
 
 	if (distance > threshold) {
-		renderLocationBlocked(court, "Parece que não estás no campo, ou então a localização falhou. Tente ler o QR Code fixado na entrada do campo.");
+		renderLocationBlocked(court, MSG_LOCATION_FAILED);
 		return;
 	}
 

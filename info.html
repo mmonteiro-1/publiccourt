@@ -27,22 +27,60 @@
 		<div style="width:20px"></div>
 	</header>
 
-	<div class="info-hero">
-		<img src="images/pig.svg" class="info-pig" alt="">
+	<div class="info-toggle">
+		<div class="view-toggle" id="infoToggle">
+			<button class="view-toggle-btn active" data-panel="info" aria-label="Informação" aria-pressed="true">
+				<img src="images/icon_info.svg" alt="">
+				<span>Saber</span>
+			</button>
+			<button class="view-toggle-btn" data-panel="download" aria-label="Descarregar" aria-pressed="false">
+				<img src="images/icon_app.svg" alt="">
+				<span>Guardar</span>
+			</button>
+			<button class="view-toggle-btn" data-panel="mail" aria-label="Contacto" aria-pressed="false">
+				<img src="images/icon_mail.svg" alt="">
+				<span>Falar</span>
+			</button>
+		</div>
 	</div>
 
-	<div class="info-content">
+	<div class="info-content" id="panel-info">
 		<p class="info-heading">Campo Livre mostra aos jogadores de tenis quais campos estão livres ou não.</p>
 		<p class="info-sub1">Ao chegar ao campo, o jogador sinaliza na app por quanto tempo pretende jogar.</p>
 		<p class="info-sub2">Ao acederem a app, outros jogadores sabem quais campos estão ocupados e por quanto tempo.</p>
 		<p class="info-legal">
 			Esta ferramenta foi feita pelos jogadores para os jogadores. A precisão dos dados depende inteiramente de seus utilizadores, e não obriga ou pressiona nenhum jogador.
-			<br><br>
-			CONTATO: <a href="mailto:early-serve-duffel@duck.com">early-serve-duffel@duck.com</a>
+		</p>
+	</div>
+
+	<div class="info-content" id="panel-download" hidden>
+		<p class="info-heading">Não é preciso login, não é preciso descarregar.</p>
+		<p class="info-sub1">Guarda o Campo Livre na tua homescreen para voltares aqui com facilidade.</p>
+		<p class="info-sub2">No iOS: Partilhar > Adicionar ao Ecrã de Início. No Android: Menu > Adicionar ao Ecrã Principal.</p>
+	</div>
+
+	<div class="info-content" id="panel-mail" hidden>
+		<p class="info-heading">Fala connosco.</p>
+		<p class="info-sub1">Tens sugestões, encontraste um problema ou queres adicionar um campo?</p>
+		<p class="info-legal">
+			CONTACTO: <a href="mailto:early-serve-duffel@duck.com">early-serve-duffel@duck.com</a>
 		</p>
 	</div>
 
 	<script src="js/utils.js"></script>
+	<script>
+		const toggle = document.getElementById("infoToggle");
+		const btns = toggle.querySelectorAll(".view-toggle-btn");
+		btns.forEach(btn => {
+			btn.addEventListener("click", () => {
+				btns.forEach(b => { b.classList.remove("active"); b.setAttribute("aria-pressed", "false"); });
+				btn.classList.add("active");
+				btn.setAttribute("aria-pressed", "true");
+				document.querySelectorAll(".info-content").forEach(p => p.hidden = true);
+				document.getElementById("panel-" + btn.dataset.panel).hidden = false;
+			});
+		});
+	</script>
 </body>
 
 </html>
