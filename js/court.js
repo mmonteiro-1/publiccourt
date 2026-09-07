@@ -8,7 +8,7 @@ let selectedDuration = 45;
 const MAX_DISTANCE_METERS = 500;
 // EXTRA SLACK ADDED FOR LOW-CONFIDENCE GPS READINGS, CAPPED SO THE CHECK STAYS MEANINGFUL
 const MAX_ACCURACY_ALLOWANCE = 500;
-const MSG_LOCATION_FAILED = "Parece que não estás no campo, ou então a localização falhou. Tente ler o QR Code fixado na entrada do campo.";
+const MSG_LOCATION_FAILED = "Parece que não estás no campo, ou então a localização falhou. Tenta ler o QR Code fixado na entrada do campo.";
 
 // DISTANCE BETWEEN TWO COORDINATES IN METERS
 function distanceMeters(lat1, lon1, lat2, lon2) {
@@ -68,8 +68,8 @@ function renderPreview(court, active) {
 	const descriptionLine = court.description ? `<p class="card-sub">${court.description}</p>` : "";
 
 	const bodyText = active
-		? "Parece que este campo está ocupado de momento. Caso não esteja, <b>se estiveres a beira do campo</b> podes terminar o jogo atual"
-		: "Para manter as coisas justas, não é possível iniciar um jogo sem que o jogador esteja a beira do campo.";
+		? "Parece que este campo está ocupado de momento. Caso não esteja, <b>se estiveres à beira do campo</b> podes terminar o jogo atual"
+		: "Para manter as coisas justas, não é possível iniciar um jogo sem que o jogador esteja à beira do campo.";
 
 	const actionLabel = active ? "Terminar jogo atual" : "Estou no campo";
 
@@ -88,7 +88,7 @@ function renderPreview(court, active) {
 		<p class="margin-bottom-20 card-sub">${bodyText}</p>
 		<button class="finish-btn" id="here-btn">${locationIcon} ${actionLabel}</button>
 		<button class="submit" id="back-btn">Voltar</button>
-		<p class="card-sub margin-top-10" style="font-size:0.75em">Por favor permita que este navegador confirme a tua localização</p>
+		<p class="card-sub margin-top-10" style="font-size:0.75em">Por favor permite que este navegador confirme a tua localização</p>
 	`;
 
 	const mapsUrl = court.lat && court.lng
@@ -112,7 +112,7 @@ function renderPreview(court, active) {
 function renderLocationBlocked(court, message) {
 	app.innerHTML = `
 		<p class="court-label">${court.name}</p>
-		<p class="card-status">Tas onde?</p>
+		<p class="card-status">Tás onde?</p>
 		<p class="card-sub margin-top-10 margin-bottom-20">${message}</p>
 		<button class="finish-btn" id="retry-btn"><img src="images/icon_fall.svg" class="link-icon" alt=""> Tentar outra vez</button>
 		<button class="finish-btn" id="hint-btn"><img src="images/icon_siren.svg" class="link-icon" alt=""> Não há QR Code na entrada</button>
@@ -150,7 +150,7 @@ function renderAvailable(court) {
 		<p class="card-status">${court.name}</p>
 		${descriptionLine}
 		<div class="divider"></div>
-		<p class="margin-bottom-20 card-sub">Informe aos outros jogadores quanto tempo pretendes usar o campo</p>
+		<p class="margin-bottom-20 card-sub">Informa os outros jogadores quanto tempo pretendes usar o campo</p>
 		<div class="duration-grid margin-bottom-10">
 			<button class="dur-btn selected" data-mins="45">45MIN</button>
 			<button class="dur-btn" data-mins="60">60MIN</button>
