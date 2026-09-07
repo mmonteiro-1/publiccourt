@@ -5,6 +5,11 @@
 	box-sizing: border-box;
 	margin: 0;
 	padding: 0;
+	scrollbar-width: none;
+}
+
+*::-webkit-scrollbar {
+	display: none;
 }
 
 button, a {
@@ -121,6 +126,11 @@ body {
 	50%  { transform: translate(8.38px, 0.36px); }
 	62%  { transform: translate(0, 0); }
 	100% { transform: translate(0, 0); }
+}
+
+.page-dashboard {
+	padding: 0;
+	padding-top: 20px;
 }
 .page-dashboard .card::after {
 	content: none;
@@ -251,15 +261,16 @@ header {
 .toolbar {
 	display: flex;
 	align-items: center;
-	justify-content: space-between;
-	flex-wrap: wrap;
-	gap: 10px;
-	margin-bottom: 25px;
+/* 	justify-content: space-between;
+ */	flex-wrap: nowrap;
+	gap: 5px;
+	padding: 0 20px;
+	overflow-x: scroll;
 }
 
 .filter-tags {
 	display: flex;
-	flex-wrap: wrap;
+	flex-wrap: nowrap;
 	gap: 5px;
 }
 
@@ -347,7 +358,8 @@ header {
 	align-content: start;
 	gap: 10px;
 	flex: 1;
-	padding-bottom: 40px;
+	padding: 20px;
+	padding-bottom: 60px;
 }
 
 .grid[hidden] {
@@ -363,7 +375,8 @@ header {
 	flex: 1;
 	border: 2px solid var(--black);
 	overflow: hidden;
-	margin-bottom: 30px;
+	margin-bottom: 40px;
+	margin: 20px;
 }
 
 .maplibregl-marker svg path {
@@ -563,7 +576,7 @@ header {
 	align-items: center;
 	justify-content: center;
 	gap: 10px;
-	padding: 10px;
+	padding: 15px 10px;
 	font-weight: 700;
 	text-decoration: underline;
 	text-underline-offset: 3px;
@@ -616,7 +629,7 @@ header {
 	color: rgba(0, 0, 0, 0.69);
 }
 
-.info-sub2 {
+.info-sub2, .info-sub2 a {
 	font-size: 18px;
 	font-weight: 700;
 	color: rgba(0, 0, 0, 0.4);
