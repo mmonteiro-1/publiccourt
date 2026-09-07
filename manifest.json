@@ -1,0 +1,24 @@
+{
+  "name": "Campo Livre",
+  "short_name": "Campo Livre",
+  "description": "Vê quais campos de ténis estão livres em tempo real.",
+  "start_url": "/index.html",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#e6b5b2",
+  "theme_color": "#e6b5b2",
+  "icons": [
+    {
+      "src": "images/app_icon_192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "images/app_icon_512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
