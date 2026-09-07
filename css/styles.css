@@ -270,8 +270,7 @@ header {
 	background: #fff;
 	border: 2px solid #000;
 	border-radius: 100px;
-	padding: 5px;
-	gap: 5px;
+	padding: 3px;
 	flex-shrink: 0;
 }
 
@@ -286,10 +285,12 @@ header {
 	align-items: center;
 	justify-content: center;
 	width: 35px;
-	height: 30px;
+	height: 33px;
 	border: none;
 	background: transparent;
 	border-radius: 20px;
+	font-family: inherit;
+	text-transform: uppercase;
 }
 
 .view-toggle-btn.active {
@@ -578,13 +579,6 @@ header {
 	opacity: 0;
 }
 
-.back-link {
-	position: absolute;
-	left: 20px;
-	color: #000;
-	text-decoration: none;
-}
-
 .info-toggle {
 	display: flex;
 	justify-content: center;
@@ -604,7 +598,7 @@ header {
 }
 
 .info-content {
-	padding: 0 20px 40px;
+	padding: 0 20px;
 	display: flex;
 	flex-direction: column;
 	gap: 10px;

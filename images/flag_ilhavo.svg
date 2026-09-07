@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg id="OBJECTS" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 635.47 421.66">
+  <defs>
+    <style>
+      .cls-1 {
+        fill: #fff;
+      }
+
+      .cls-2 {
+        fill: #6b4871;
+      }
+    </style>
+  </defs>
+  <rect id="rect9364" class="cls-2" y="0" width="635.47" height="421.66"/>
+  <path id="path9366" class="cls-1" d="M317.73,210.83L0,421.66v-210.83h317.73Z"/>
+  <path id="path9382" class="cls-1" d="M317.73,210.83L635.47,0v210.83h-317.73Z"/>
+  <path id="path9384" class="cls-1" d="M0,0l317.73,210.83V0H0Z"/>
+  <path id="path9386" class="cls-1" d="M635.47,421.66l-317.73-210.83v210.83h317.73Z"/>
+</svg>

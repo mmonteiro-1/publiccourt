@@ -115,7 +115,7 @@ function renderLocationBlocked(court, message) {
 		<p class="card-status">Tas onde?</p>
 		<p class="card-sub margin-top-10 margin-bottom-20">${message}</p>
 		<button class="finish-btn" id="retry-btn"><img src="images/icon_fall.svg" class="link-icon" alt=""> Tentar outra vez</button>
-		<button class="finish-btn" id="hint-btn"><img src="images/icon_info.svg" class="link-icon" alt=""> Não há QR Code na entrada</button>
+		<button class="finish-btn" id="hint-btn"><img src="images/icon_siren.svg" class="link-icon" alt=""> Não há QR Code na entrada</button>
 		<button class="submit" id="back-btn">Voltar</button>
 	`;
 	document.getElementById("retry-btn").addEventListener("click", () => verifyLocationAndProceed(court));
