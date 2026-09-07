@@ -34,7 +34,7 @@ function initMap(courts) {
 		const extIcon = `<svg viewBox="0 0 20 20" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="7 4 13 10 7 16"/></svg>`;
 		const descHtml = court.description ? `<div class="popup-desc">${court.description}</div>` : "";
 		const popup = new maplibregl.Popup({ offset: 40 })
-			.setHTML(`<a class="popup-link" href="court?court=${court.id}"><div class="popup-body"><div><div class="popup-name">${court.name}</div>${descHtml}</div>${extIcon}</div></a>`);
+			.setHTML(`<a class="popup-link" href="court.html?court=${court.id}"><div class="popup-body"><div><div class="popup-name">${court.name}</div>${descHtml}</div>${extIcon}</div></a>`);
 		popup.on("open", () => {
 			const occupied = Boolean(latestActiveMap[court.id]);
 			popup.getElement()?.classList.toggle("popup-occupied", occupied);
@@ -116,7 +116,7 @@ function renderCourtCard(court, res) {
 		const mins = minutesLeft(res.ends_at);
 		const timeLabel = mins > 0 ? `${mins}MIN REST` : "A ACABAR";
 		return `
-      <a class="card inuse" href="court?court=${court.id}">
+      <a class="card inuse" href="court.html?court=${court.id}">
         <div class="card-header">
           ${cityHtml(court.city)}
           <div class="badge-group">
@@ -130,7 +130,7 @@ function renderCourtCard(court, res) {
     `;
 	}
 	return `
-      <a class="card available" href="court?court=${court.id}">
+      <a class="card available" href="court.html?court=${court.id}">
         <div class="card-header">
           ${cityHtml(court.city)}
           <span class="badge available">LIVRE</span>
