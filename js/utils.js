@@ -48,7 +48,8 @@ function minutesLeft(endsAt) {
 
 	document.addEventListener("touchstart", e => {
 		startY = e.touches[0].clientY;
-		pulling = window.scrollY === 0;
+		const mapEl = document.getElementById("map");
+		pulling = window.scrollY === 0 && !(mapEl && mapEl.contains(e.target));
 	}, { passive: true });
 
 	document.addEventListener("touchmove", e => {
