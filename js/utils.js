@@ -28,6 +28,9 @@ function minutesLeft(endsAt) {
 
 // PULL-TO-REFRESH FOR IOS STANDALONE MODE
 (function () {
+	const isStandalone = navigator.standalone || window.matchMedia("(display-mode: standalone)").matches;
+	if (!isStandalone) return;
+
 	const THRESHOLD = 80;
 	let startY = 0;
 	let pulling = false;
@@ -37,7 +40,7 @@ function minutesLeft(endsAt) {
 		if (!indicator) {
 			indicator = document.createElement("div");
 			indicator.style.cssText = "position:fixed;top:0;left:0;right:0;display:flex;justify-content:center;padding:12px;transform:translateY(-100%);transition:transform 0.2s;z-index:9999;pointer-events:none";
-			indicator.innerHTML = `<img src="images/icon_refresh.svg" alt="" style="opacity:0.6">`;
+			indicator.innerHTML = `<img src="images/icon_refresh.svg" alt="">`;
 			document.body.appendChild(indicator);
 		}
 		return indicator;
