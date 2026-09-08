@@ -449,7 +449,6 @@ header {
 .court-label {
 	font-weight: 700;
 	font-size: 0.8em;
-	letter-spacing: 0.1em;
 	text-transform: uppercase;
 	color: rgba(255, 255, 255, 0.8);
 	display: flex;
@@ -475,7 +474,6 @@ header {
 	color: #000;
 	font-size: 0.8em;
 	font-weight: 700;
-	letter-spacing: 0.04em;
 	text-transform: uppercase;
 	width: fit-content;
 	white-space: nowrap;
@@ -491,7 +489,6 @@ header {
 .card-status {
 	font-size: 1.8em;
 	font-weight: 700;
-	letter-spacing: -0.02em;
 	color: var(--white);
 	text-transform: uppercase;
 	line-height: 1;
@@ -522,10 +519,6 @@ header {
 	background: var(--pink);
 	width: 100%;
 	left: 0px;
-}
-
-.page-court.success .logo-pig {
-	opacity: 0;
 }
 
 .info-toggle {
@@ -580,7 +573,7 @@ header {
 .info-sub1 {
 	font-size: 1.2em;
 	font-weight: 700;
-	color: rgba(0, 0, 0, 0.69);
+	color: rgba(0, 0, 0, 0.7);
 }
 
 .info-sub2, .info-sub2 a {
