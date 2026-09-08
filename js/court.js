@@ -113,7 +113,7 @@ function renderLocationBlocked(court, message) {
 	const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
 	const isAndroid = /android/i.test(navigator.userAgent);
 	const locationHint = isIOS
-		? "Se negaste a localização, vai a Definições → Safari → Localização e permite o acesso."
+		? "Se negaste a localização, vai a Definições → Safari/Chrome → Localização e permite o acesso."
 		: isAndroid
 		? "Se negaste a localização, vai às Definições do browser → Permissões → Localização e permite o acesso."
 		: "";
