@@ -110,6 +110,14 @@ function renderPreview(court, active) {
 
 // RENDER A BLOCKING SCREEN WHEN LOCATION CAN'T BE VERIFIED
 function renderLocationBlocked(court, message) {
+	const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+	const isAndroid = /android/i.test(navigator.userAgent);
+	const locationHint = isIOS
+		? "Se negaste a localização, vai a Definições → Safari → Localização e permite o acesso."
+		: isAndroid
+		? "Se negaste a localização, vai às Definições do browser → Permissões → Localização e permite o acesso."
+		: "";
+
 	app.innerHTML = `
 		<p class="court-label">${court.name}</p>
 		<p class="card-status">Tás onde?</p>
@@ -117,6 +125,7 @@ function renderLocationBlocked(court, message) {
 		<button class="finish-btn" id="retry-btn"><img src="images/icon_fall.svg" class="link-icon" alt=""> Tentar outra vez</button>
 		<button class="finish-btn" id="hint-btn"><img src="images/icon_siren.svg" class="link-icon" alt=""> Não há QR Code na entrada</button>
 		<button class="submit" id="back-btn">Voltar</button>
+		${locationHint ? `<p class="card-sub margin-top-10" style="font-size: 0.75em">${locationHint}</p>` : ""}
 	`;
 	document.getElementById("retry-btn").addEventListener("click", () => verifyLocationAndProceed(court));
 	document.getElementById("back-btn").addEventListener("click", () => { location.href = "index.html"; });
