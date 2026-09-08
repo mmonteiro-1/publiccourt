@@ -261,7 +261,7 @@ async function finishGame(court, reservationId) {
 async function checkIn(court) {
 	const btn = document.getElementById("checkin-btn");
 	btn.disabled = true;
-	btn.textContent = "Checking in...";
+	btn.textContent = "A iniciar...";
 
 	const endsAt = new Date(Date.now() + selectedDuration * 60 * 1000).toISOString();
 
@@ -346,7 +346,7 @@ async function load() {
 		.from("courts").select("name, city, description, lat, lng").eq("id", courtId).single();
 
 	if (courtErr || !court) {
-		app.innerHTML = `<p class="message error">Court not found.</p>`;
+		app.innerHTML = `<p class="message error">Campo não encontrado.</p>`;
 		return;
 	}
 

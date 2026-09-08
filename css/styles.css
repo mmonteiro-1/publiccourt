@@ -15,6 +15,8 @@
 button, a {
 	font-size: 1em;
 	color: var(--black);
+	font-family: inherit;
+	font-weight: 600;
 }
 
 [hidden] { display: none !important; }
@@ -44,73 +46,25 @@ body {
 }
 
 
-.margin-0 { margin: 0px; }
-.margin-5 { margin: 5px; }
-.margin-10 { margin: 10px; }
-.margin-15 { margin: 15px; }
-.margin-20 { margin: 20px; }
-.margin-25 { margin: 25px; }
-.margin-30 { margin: 30px; }
-
-.margin-top-0 { margin-top: 0px; }
-.margin-top-5 { margin-top: 5px; }
 .margin-top-10 { margin-top: 10px; }
-.margin-top-15 { margin-top: 15px; }
-.margin-top-20 { margin-top: 20px; }
 .margin-top-25 { margin-top: 25px; }
-.margin-top-30 { margin-top: 30px; }
 
-.margin-bottom-0 { margin-bottom: 0px; }
-.margin-bottom-5 { margin-bottom: 5px; }
 .margin-bottom-10 { margin-bottom: 10px; }
-.margin-bottom-15 { margin-bottom: 15px; }
 .margin-bottom-20 { margin-bottom: 20px; }
-.margin-bottom-25 { margin-bottom: 25px; }
-.margin-bottom-30 { margin-bottom: 30px; }
 
-.padding-0 { padding: 0px; }
-.padding-5 { padding: 5px; }
 .padding-10 { padding: 10px; }
-.padding-15 { padding: 15px; }
-.padding-20 { padding: 20px; }
-.padding-25 { padding: 25px; }
-.padding-30 { padding: 30px; }
-
-.padding-top-0 { top: 0px; }
-.padding-top-5 { top: 5px; }
-.padding-top-10 { top: 10px; }
-.padding-top-15 { top: 15px; }
-.padding-top-20 { top: 20px; }
-.padding-top-25 { top: 25px; }
-.padding-top-30 { top: 30px; }
-
-.padding-bottom-0 { bottom: 0px; }
-.padding-bottom-5 { bottom: 5px; }
-.padding-bottom-10 { bottom: 10px; }
-.padding-bottom-15 { bottom: 15px; }
-.padding-bottom-20 { bottom: 20px; }
-.padding-bottom-25 { bottom: 25px; }
-.padding-bottom-30 { bottom: 30px; }
-
-.gap-0 { gap: 0px; }
-.gap-5 { gap: 5px; }
-.gap-10 { gap: 10px; }
-.gap-15 { gap: 15px; }
-.gap-20 { gap: 20px; }
-.gap-25 { gap: 25px; }
-.gap-30 { gap: 30px; }
 
 .logo {
 	display: flex;
 	align-items: center;
 	justify-content: center;
 	gap: 10px;
-	font-size: 32px;
+	font-size: 2em;
 }
 
 .logo-pig {
 	height: 45px;
-	width: 58px;
+	width: auto;
 	object-fit: cover;
 }
 
@@ -148,17 +102,6 @@ body {
 	background: var(--orange);
 }
 
-.page-court.success .card {
-	background: transparent;
-	border-radius: 0;
-	padding: 0;
-	box-shadow: none;
-}
-
-.page-court.success .card::after {
-	content: none;
-}
-
 .page-court .logo span {
 	color: var(--white);
 	-webkit-text-stroke: 4px var(--black);
@@ -174,9 +117,10 @@ body {
 
 .page-court.success .card {
 	background: transparent;
+	border-radius: 0;
 	border: none;
-	box-shadow: none;
 	padding: 0;
+	box-shadow: none;
 }
 
 .page-court.success .card::after {
@@ -222,8 +166,7 @@ body {
 .page-court .submit {
 	background: transparent;
 	border: 2px solid var(--black);
-/* 	color: var(--white);
- */}
+}
 
 .page-court .dur-btn {
 	border: 2px solid var(--black);
@@ -261,8 +204,7 @@ header {
 .toolbar {
 	display: flex;
 	align-items: center;
-/* 	justify-content: space-between;
- */	flex-wrap: nowrap;
+	flex-wrap: nowrap;
 	gap: 5px;
 	padding: 0 20px;
 	overflow-x: scroll;
@@ -289,6 +231,7 @@ header {
 	height: 0;
 	background: none;
 	border-top: 2px dashed var(--black);
+	margin: 20px 0;
 }
 
 .view-toggle-btn {
@@ -375,8 +318,8 @@ header {
 	flex: 1;
 	border: 2px solid var(--black);
 	overflow: hidden;
-	margin-bottom: 40px;
 	margin: 20px;
+	margin-bottom: 60px;
 }
 
 .maplibregl-marker svg path {
@@ -469,17 +412,9 @@ header {
 	background: var(--green);
 }
 
-/* .card.available::after {
-	border: 2px solid #1d2e3e;
-} */
-
 .card.inuse {
 	background: var(--orange);
 }
-
-/* .card.inuse::after {
-	border: 2px solid #501d00;
-} */
 
 .card-header {
 	display: flex;
@@ -497,7 +432,7 @@ header {
 .city,
 .court-label {
 	font-weight: 700;
-	font-size: 14px;
+	font-size: 0.8em;
 	letter-spacing: 0.1em;
 	text-transform: uppercase;
 	color: rgba(255, 255, 255, 0.8);
@@ -514,13 +449,6 @@ header {
 	flex-shrink: 0;
 }
 
-.badge-row {
-	display: flex;
-	flex-wrap: wrap;
-	gap: 10px;
-	margin-bottom: 20px;
-}
-
 .badge {
 	display: inline-flex;
 	align-items: center;
@@ -529,7 +457,7 @@ header {
 	border: 2px solid #000;
 	background: #fff;
 	color: #000;
-	font-size: 12px;
+	font-size: 0.8em;
 	font-weight: 700;
 	letter-spacing: 0.04em;
 	text-transform: uppercase;
@@ -544,13 +472,6 @@ header {
 	color: #000;
 }
 
-.dot {
-	width: 5px;
-	height: 5px;
-	border-radius: 50%;
-	background: currentColor;
-}
-
 .card-status {
 	font-size: 1.8em;
 	font-weight: 700;
@@ -562,7 +483,6 @@ header {
 }
 
 .card-sub {
-	font-size: 16px;
 	color: var(--muted);
 	font-weight: 400;
 }
@@ -636,69 +556,20 @@ header {
 }
 
 .info-heading {
-	font-size: 24px;
+	font-size: 1.5em;
 	font-weight: 700;
 	color: #000;
 }
 
 .info-sub1 {
-	font-size: 20px;
+	font-size: 1.2em;
 	font-weight: 700;
 	color: rgba(0, 0, 0, 0.69);
 }
 
 .info-sub2, .info-sub2 a {
-	font-size: 18px;
 	font-weight: 700;
 	color: rgba(0, 0, 0, 0.4);
-}
-
-.info-legal {
-	margin-top: 8px;
-	font-size: 12px;
-	font-weight: 700;
-	color: #000;
-}
-
-.info-legal a {
-	color: inherit;
-	text-decoration: underline;
-	text-transform: uppercase;
-}
-
-
-.divider {
-	height: 1.5px;
-	background: var(--border);
-	margin: 20px 0;
-}
-
-.field {
-	margin-bottom: 15px;
-}
-
-.field label {
-	display: block;
-	font-weight: 600;
-	letter-spacing: 0.07em;
-	text-transform: uppercase;
-	color: var(--muted);
-	margin-bottom: 10px;
-}
-
-.field input {
-	width: 100%;
-	padding: 10px 15px;
-	border: 1.5px solid var(--border);
-	border-radius: 10px;
-	font-family: inherit;
-	background: var(--bg);
-	outline: none;
-	transition: border-color 0.15s;
-}
-
-.field input:focus {
-	border-color: var(--accent);
 }
 
 .duration-grid {
@@ -709,9 +580,7 @@ header {
 
 .dur-btn {
 	padding: 10px 0;
-	border: 1.5px solid var(--border);
 	border-radius: 10px;
-	background: var(--bg);
 	font-family: inherit;
 	font-weight: 500;
 	transition: all 0.15s;
@@ -723,14 +592,9 @@ header {
 	padding: 15px;
 	border: none;
 	border-radius: 10px;
-	background: var(--accent);
-	font-family: inherit;
-	font-weight: 600;
-	transition: opacity 0.15s;
 }
 
 .submit:disabled {
-	opacity: 0.45;
 	pointer-events: none;
 }
 
@@ -740,20 +604,14 @@ header {
 	font-weight: 400;
 }
 
-.message.error {
-	color: var(--inuse);
-}
 
 .finish-btn {
 	width: 100%;
 	padding: 15px;
-	border: 1.5px solid var(--border);
 	border-radius: 10px;
 	background: transparent;
-	color: var(--muted);
 	font-family: inherit;
 	font-weight: 600;
-	transition: all 0.15s;
 	margin-top: 15px;
 }
 
