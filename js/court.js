@@ -69,13 +69,13 @@ function renderPreview(court, active) {
 
 	const bodyText = active
 		? "Parece que este campo está ocupado de momento. Caso não esteja, <b>se estiveres à beira do campo</b> podes terminar o jogo atual"
-		: "Para manter as coisas justas, não é possível iniciar um jogo sem que o jogador esteja à beira do campo.";
+		: "Para minimizar as batotas, não é possível iniciar um jogo sem que o jogador esteja à beira do campo.";
 
 	const actionLabel = active ? "Terminar jogo atual" : "Estou no campo";
 
 	const locationIcon = active
 		? `<img src="images/icon_death.svg" class="link-icon" alt="">`
-		: `<img src="images/icon_ball.svg" class="link-icon" alt="">`;
+		: `<img src="images/icon_flag.svg" class="link-icon" alt="">`;
 
 	app.innerHTML = `
 		<div class="card-header">
@@ -88,7 +88,7 @@ function renderPreview(court, active) {
 		<p class="margin-bottom-20 card-sub">${bodyText}</p>
 		<button class="finish-btn" id="here-btn">${locationIcon} ${actionLabel}</button>
 		<button class="submit" id="back-btn">Voltar</button>
-		<p class="card-sub margin-top-10" style="font-size:0.75em">Por favor permite que este navegador confirme a tua localização</p>
+		<p class="card-sub margin-top-10" style="font-size:0.75em">Por favor permite que este browser confirme a tua localização</p>
 	`;
 
 	const mapsUrl = court.lat && court.lng
