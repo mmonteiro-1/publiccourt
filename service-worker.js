@@ -1,10 +1,9 @@
-const CACHE = "campo-livre-v2";
+const CACHE = "campo-livre-v3";
 
 const SHELL = [
   "/",
-  "/index.html",
-  "/court.html",
-  "/info.html",
+  "/court",
+  "/info",
   "/manifest.json",
   "/css/styles.css",
   "/js/config.js",
@@ -27,6 +26,7 @@ const SHELL = [
   "/images/icon_mail.svg",
   "/images/icon_siren.svg",
   "/images/icon_refresh.svg",
+  "/images/icon_flag.svg",
   "/images/flag_aveiro.svg",
   "/images/flag_vagos.svg",
   "/images/flag_ilhavo.svg",
@@ -49,18 +49,16 @@ self.addEventListener("activate", e => {
 });
 
 self.addEventListener("fetch", e => {
-  // Let Supabase and external CDN calls go straight to the network
   if (!e.request.url.startsWith(self.location.origin)) return;
 
   e.respondWith(
-    caches.match(e.request).then(cached => {
-      const fresh = fetch(e.request).then(res => {
+    fetch(e.request)
+      .then(res => {
         if (res.ok) {
           caches.open(CACHE).then(c => c.put(e.request, res.clone()));
         }
         return res;
-      });
-      return cached || fresh;
-    })
+      })
+      .catch(() => caches.match(e.request))
   );
 });
