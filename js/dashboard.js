@@ -223,4 +223,7 @@ async function load() {
 }
 
 load();
-setInterval(load, 30000);
+
+db.channel("reservations-live")
+  .on("postgres_changes", { event: "*", schema: "public", table: "reservations" }, load)
+  .subscribe();
