@@ -1,4 +1,4 @@
-const CACHE = "campo-livre-v3";
+const CACHE = "campo-livre-v4";
 
 const SHELL = [
   "/",
