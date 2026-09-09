@@ -92,6 +92,21 @@ body {
 
 .page-dashboard .card {
 	box-shadow: 4px 4px 0 var(--black);
+	overflow: hidden;
+	padding-bottom: 20px;
+}
+.page-dashboard .card-status {
+	margin-bottom: 10px;
+}
+.page-dashboard .card-sub {
+	position: absolute;
+	background: var(--white);
+	color: var(--black);
+	width: 100%;
+	left: 0;
+	padding: 2px;
+	padding-left: 15px;
+	font-size: .7em;
 }
 
 .page-court:not(.success) {
@@ -405,7 +420,7 @@ header {
 
 
 .card {
-	padding: 20px;
+	padding: 15px;
 	text-decoration: none;
 	color: #fff;
 	width: 100%;
@@ -479,6 +494,13 @@ header {
 	white-space: nowrap;
 }
 
+.badge-icon {
+	height: 15px;
+	width: auto;
+	margin-right: 5px;
+	vertical-align: middle;
+}
+
 .badge.available,
 .badge.inuse,
 .badge.time {
@@ -492,7 +514,7 @@ header {
 	color: var(--white);
 	text-transform: uppercase;
 	line-height: 1;
-	margin-top: 5px;
+	margin: 5px 0;
 }
 
 .card-sub {

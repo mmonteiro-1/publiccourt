@@ -114,7 +114,7 @@ function renderCourtCard(court, res) {
 
 	if (res) {
 		const mins = minutesLeft(res.ends_at);
-		const timeLabel = mins > 0 ? `${mins}MIN REST` : "A ACABAR";
+		const timeLabel = mins > 0 ? `<img src="/images/icon_timer.svg" class="badge-icon">${mins}MIN` : "A ACABAR";
 		return `
       <a class="card inuse" href="court?court=${court.id}">
         <div class="card-header">
