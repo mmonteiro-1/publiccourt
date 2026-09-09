@@ -61,7 +61,7 @@ function renderPreview(court, active) {
 	const occupiedBadges = active
 		? `<div class="badge-group">
 			<span class="badge">OCUPADO</span>
-			<span class="badge">${minutesLeft(active.ends_at) > 0 ? `${minutesLeft(active.ends_at)}MIN REST` : "A TERMINAR"}</span>
+			<span class="badge">${minutesLeft(active.ends_at) > 0 ? `<img src="/images/icon_timer.svg" class="badge-icon">${minutesLeft(active.ends_at)}MIN` : "A TERMINAR"}</span>
 		</div>`
 		: statusBadge;
 
