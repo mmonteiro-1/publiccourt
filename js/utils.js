@@ -85,6 +85,7 @@ function cityHtml(city) {
 	const flag = key === "aveiro" ? `<img src="images/flag_aveiro.svg" class="city-flag" alt="">`
 		: key === "vagos" ? `<img src="images/flag_vagos.svg" class="city-flag" alt="">`
 		: key === "ílhavo" ? `<img src="images/flag_ilhavo.svg" class="city-flag" alt="">`
+		: key === "oliv bairro" ? `<img src="images/flag_ilhavo.svg" class="city-flag" alt="">`
 		: "";
 	return `<p class="city">${flag}${city || ""}</p>`;
 }

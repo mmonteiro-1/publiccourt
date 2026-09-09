@@ -155,7 +155,7 @@ function updateFilterTags(courts) {
 
 	filterTagsEl.innerHTML = cities.map(city => `
       <button class="filter-tag${activeCities.has(city) ? " active" : ""}" data-city="${city}">
-        ${city}
+        ${city.toLowerCase().startsWith("ol") && city.toLowerCase().includes("bairro") ? "Oliv. B." : city}
         <svg class="filter-tag-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round">
           <line x1="12" y1="4" x2="12" y2="20"></line>
           <line x1="4" y1="12" x2="20" y2="12"></line>
