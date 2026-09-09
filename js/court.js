@@ -295,8 +295,8 @@ async function checkIn(court) {
 		<div class="info-hero">
 			<img src="images/pig.svg" class="info-pig" alt="">
 		</div>
-		<p class="bom-jogo">BOM<br>JOGO</p>
-		<p class="info-sub1 margin-top-10">Obrigado por avisar os outros jogadores</p>
+		<p class="bom-jogo">BOM JOGO</p>
+		<p class="info-sub1 margin-top-10" style="font-size:2em">Obrigado por avisar os outros jogadores</p>
 	`;
 
 	const countdownEl = document.createElement("div");

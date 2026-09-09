@@ -567,6 +567,7 @@ header {
 	height: 30vh;
 	overflow: hidden;
 	pointer-events: none;
+	margin: 20px 0;
 }
 
 .info-pig {
