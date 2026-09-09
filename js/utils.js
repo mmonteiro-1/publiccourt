@@ -72,6 +72,13 @@ function minutesLeft(endsAt) {
 	}, { passive: true });
 })();
 
+// PERSISTENT DEVICE ID FOR TAILORING MESSAGES TO THE RESERVATION OWNER
+function getDeviceId() {
+	let id = localStorage.getItem("device_id");
+	if (!id) { id = crypto.randomUUID(); localStorage.setItem("device_id", id); }
+	return id;
+}
+
 // CITY LABEL WITH AN OPTIONAL FLAG ICON PREPENDED, SHARED BY EVERY PAGE
 function cityHtml(city) {
 	const key = city && city.toLowerCase();

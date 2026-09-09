@@ -109,7 +109,7 @@ function updateMarkerStatus() {
 }
 
 // RENDER A SINGLE COURT CARD, AVAILABLE OR IN USE
-function renderCourtCard(court, res) {
+function renderCourtCard(court, res, isOwner = false) {
 	const sub = court.description ? `<p class="card-sub">${court.description}</p>` : "";
 
 	if (res) {
@@ -125,7 +125,7 @@ function renderCourtCard(court, res) {
           </div>
         </div>
         <p class="card-status inuse">${court.name}</p>
-        ${sub}
+        ${isOwner ? `<p class="card-sub">Meu jogo</p>` : sub}
       </a>
     `;
 	}
@@ -183,10 +183,17 @@ function renderGrid() {
 		return cityDiff !== 0 ? cityDiff : (a.name || "").localeCompare(b.name || "");
 	});
 
+	const myRes = Object.values(latestActiveMap).find(r => r.device_id === getDeviceId());
+	const myCourtId = myRes?.court_id;
+
+	const finalSorted = myCourtId
+		? [sorted.find(c => c.id === myCourtId), ...sorted.filter(c => c.id !== myCourtId)].filter(Boolean)
+		: sorted;
+
 	const logoPig = document.querySelector(".logo-pig");
 
-	if (sorted.length) {
-		grid.innerHTML = sorted.map(court => renderCourtCard(court, latestActiveMap[court.id])).join("");
+	if (finalSorted.length) {
+		grid.innerHTML = finalSorted.map(court => renderCourtCard(court, latestActiveMap[court.id], court.id === myCourtId)).join("");
 		grid.classList.remove("grid--empty");
 		if (logoPig) logoPig.style.opacity = "";
 	} else {
@@ -194,6 +201,7 @@ function renderGrid() {
 		grid.classList.add("grid--empty");
 		if (logoPig) logoPig.style.opacity = "0";
 	}
+
 }
 
 // LOAD ALL COURTS AND THEIR ACTIVE RESERVATIONS

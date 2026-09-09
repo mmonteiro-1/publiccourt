@@ -67,8 +67,11 @@ function renderPreview(court, active) {
 
 	const descriptionLine = court.description ? `<p class="card-sub">${court.description}</p>` : "";
 
+	const isOwner = active && active.device_id === getDeviceId();
 	const bodyText = active
-		? "Parece que este campo está ocupado de momento. Caso não esteja, <b>se estiveres à beira do campo</b> podes terminar o jogo atual"
+		? isOwner
+			? "Caso saias mais cedo, podes avisar que o teu jogo terminou."
+			: "Parece que este campo está ocupado de momento. Caso esteja livre, <b>e se estiveres à beira do campo</b> podes terminar o jogo atual"
 		: "Para minimizar as batotas, não é possível iniciar um jogo sem que o jogador esteja à beira do campo.";
 
 	const actionLabel = active ? "Terminar jogo atual" : "Estou no campo";
@@ -88,7 +91,7 @@ function renderPreview(court, active) {
 		<p class="margin-bottom-20 card-sub">${bodyText}</p>
 		<button class="finish-btn" id="here-btn">${locationIcon} ${actionLabel}</button>
 		<button class="submit" id="back-btn">Voltar</button>
-		<p class="card-sub margin-top-10" style="font-size:0.75em">Por favor permite que este browser confirme a tua localização</p>
+		${!isOwner ? `<p class="card-sub margin-top-10" style="font-size:0.75em">Por favor permite que este browser confirme a tua localização</p>` : ""}
 	`;
 
 	const mapsUrl = court.lat && court.lng
@@ -105,7 +108,13 @@ function renderPreview(court, active) {
 	`;
 
 	document.getElementById("back-btn").addEventListener("click", () => { location.href = "index.html"; });
-	document.getElementById("here-btn").addEventListener("click", () => verifyLocationAndProceed(court));
+	document.getElementById("here-btn").addEventListener("click", () => {
+		if (active && isOwner) {
+			finishOwnGame(court, active.id);
+		} else {
+			verifyLocationAndProceed(court);
+		}
+	});
 }
 
 // RENDER A BLOCKING SCREEN WHEN LOCATION CAN'T BE VERIFIED
@@ -190,68 +199,9 @@ function renderAvailable(court) {
 	});
 }
 
-// RENDER IN-USE STATE WITH LIVE COUNTDOWN
-function renderInUse(court, reservation) {
-	document.body.classList.add("inuse");
-	const endsAt = new Date(reservation.ends_at).getTime();
-
-	function formatCountdown() {
-		const remaining = Math.max(0, endsAt - Date.now());
-		const totalSecs = Math.floor(remaining / 1000);
-		const h = Math.floor(totalSecs / 3600);
-		const m = Math.floor((totalSecs % 3600) / 60);
-		const s = totalSecs % 60;
-		return h > 0
-			? `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`
-			: `${m}:${String(s).padStart(2, "0")}`;
-	}
-
-	app.innerHTML = `
-    <div class="card-header">
-      <p class="court-label">${court.name}</p>
-      <span class="badge inuse">Ocupado</span>
-    </div>
-    <p class="card-status inuse" id="countdown">${formatCountdown()}</p>
-    <p class="card-sub">Os jogadores pararam mais cedo para ir aos copos. Podes terminar o jogo atual e começar um novo.</p>
-    <button class="finish-btn margin-top-25" id="finish-btn"><img src="images/icon_death.svg" class="link-icon" alt=""> Terminar jogo atual</button>
-  `;
-
-	const backIcon = `<img src="images/icon_back.svg" class="link-icon" alt="">`;
-
-	document.getElementById("court-footer").innerHTML = `
-		<a class="info-link" id="back-link" href="#">
-			${backIcon}
-			Voltar
-		</a>
-	`;
-
-	document.getElementById("back-link").addEventListener("click", e => {
-		e.preventDefault();
-		location.href = "index.html";
-	});
-
-	const timer = setInterval(() => {
-		const el = document.getElementById("countdown");
-		if (!el) { clearInterval(timer); return; }
-		el.textContent = formatCountdown();
-		if (Date.now() >= endsAt) clearInterval(timer);
-	}, 1000);
-
-	document.getElementById("finish-btn").addEventListener("click", () => {
-		clearInterval(timer);
-		finishGame(court, reservation.id);
-	});
-}
-
-// RE-FETCH THE RESERVATION STATUS AND RE-RENDER, WITHOUT REPEATING THE LOCATION CHECK
-async function refreshStatus(court) {
-	const active = await fetchActiveReservation();
-	active ? renderInUse(court, active) : renderAvailable(court);
-}
-
-// END THE CURRENT RESERVATION EARLY
-async function finishGame(court, reservationId) {
-	const btn = document.getElementById("finish-btn");
+// END A RESERVATION AND SHOW THE THANK-YOU SCREEN (OWNER FINISHING THEIR OWN GAME)
+async function finishOwnGame(court, reservationId) {
+	const btn = document.getElementById("here-btn");
 	btn.disabled = true;
 
 	const { error } = await db.from("reservations")
@@ -263,7 +213,43 @@ async function finishGame(court, reservationId) {
 		return;
 	}
 
-	refreshStatus(court);
+	document.body.classList.remove("inuse");
+	document.body.classList.add("success");
+	app.classList.remove("available", "inuse");
+	document.getElementById("court-footer").innerHTML = "";
+
+	app.innerHTML = `
+		<div class="info-hero">
+			<img src="images/pig.svg" class="info-pig" alt="">
+		</div>
+		<p class="bom-jogo">OBRIGADO</p>
+		<p class="info-sub1 margin-top-10" style="font-size:1.5em">Por avisar que o campo ficou livre</p>
+	`;
+
+	const countdownEl = document.createElement("div");
+	countdownEl.className = "bom-jogo-countdown";
+	let secs = 6;
+	countdownEl.textContent = secs;
+	document.body.appendChild(countdownEl);
+
+	const ticker = setInterval(() => {
+		secs--;
+		countdownEl.textContent = secs;
+	}, 1000);
+
+	setTimeout(() => {
+		clearInterval(ticker);
+		location.reload();
+	}, 7000);
+}
+
+// END SOMEONE ELSE'S RESERVATION (CALLED AFTER LOCATION IS VERIFIED)
+async function finishGame(reservationId) {
+	const { error } = await db.from("reservations")
+		.update({ manual_finished_at: new Date().toISOString() })
+		.eq("id", reservationId);
+
+	if (error) alert("Algo correu mal. Tenta outra vez.");
 }
 
 // SUBMIT CHECK-IN TO SUPABASE
@@ -277,6 +263,7 @@ async function checkIn(court) {
 	const { error } = await db.from("reservations").insert({
 		court_id: courtId,
 		ends_at: endsAt,
+		device_id: getDeviceId(),
 	});
 
 	if (error) {
@@ -296,7 +283,7 @@ async function checkIn(court) {
 			<img src="images/pig.svg" class="info-pig" alt="">
 		</div>
 		<p class="bom-jogo">BOM JOGO</p>
-		<p class="info-sub1 margin-top-10" style="font-size:2em">Obrigado por avisar os outros jogadores</p>
+		<p class="info-sub1 margin-top-10" style="font-size:1.5em">Obrigado por avisar os outros jogadores</p>
 	`;
 
 	const countdownEl = document.createElement("div");
@@ -341,7 +328,9 @@ async function verifyLocationAndProceed(court) {
 		return;
 	}
 
-	refreshStatus(court);
+	const active = await fetchActiveReservation();
+	if (active) await finishGame(active.id);
+	renderAvailable(court);
 }
 
 // LOAD COURT STATUS AND SHOW THE PREVIEW SCREEN
