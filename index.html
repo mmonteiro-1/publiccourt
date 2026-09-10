@@ -24,16 +24,19 @@
 		</div>
 	</header>
 
-	<div class="toolbar">
-		<div class="view-toggle" id="viewToggle">
-			<button class="view-toggle-btn active" data-view="list" aria-label="Show list view" aria-pressed="true">
-				<img src="images/icon_list.svg" alt="">
-			</button>
-			<button class="view-toggle-btn" data-view="map" aria-label="Show map view" aria-pressed="false">
-				<img src="images/icon_map.svg" alt="">
-			</button>
+	<div class="toolbar-wrap">
+		<div class="toolbar">
+			<div class="view-toggle" id="viewToggle">
+				<button class="view-toggle-btn active" data-view="list" aria-label="Show list view" aria-pressed="true">
+					<img src="images/icon_list.svg" alt="">
+				</button>
+				<button class="view-toggle-btn" data-view="map" aria-label="Show map view" aria-pressed="false">
+					<img src="images/icon_map.svg" alt="">
+				</button>
+			</div>
+			<div class="filter-tags" id="filterTags"></div>
 		</div>
-		<div class="filter-tags" id="filterTags"></div>
+		<div class="filter-hint" aria-hidden="true">Pressiona e segura para isolar a cidade</div>
 	</div>
 
 	<div class="grid" id="grid" aria-live="polite">
