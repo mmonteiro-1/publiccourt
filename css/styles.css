@@ -310,6 +310,10 @@ header {
 	filter: invert(1);
 }
 
+.filter-tag:focus {
+	outline: none;
+}
+
 .filter-tag {
 	display: inline-flex;
 	align-items: center;
@@ -325,6 +329,7 @@ header {
 	text-transform: uppercase;
 	transition: all 0.15s;
 	white-space: nowrap;
+	-webkit-tap-highlight-color: transparent;
 }
 
 .filter-tag-icon {
