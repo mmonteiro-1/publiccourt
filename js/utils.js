@@ -41,6 +41,7 @@ function cityHtml(city) {
 		: key === "ílhavo" ? `<img src="images/flag_ilhavo.svg" class="city-flag" alt="">`
 		: key === "oliv bairro" ? `<img src="images/flag_ilhavo.svg" class="city-flag" alt="">`
 		: key === "anadia" ? `<img src="images/flag_ilhavo.svg" class="city-flag" alt="">`
+		: key === "albergaria" ? `<img src="images/flag_albergaria.svg" class="city-flag" alt="">`
 		: "";
 	return `<p class="city">${flag}${city || ""}</p>`;
 }
