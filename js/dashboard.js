@@ -164,7 +164,29 @@ function updateFilterTags(courts) {
     `).join("");
 
 	filterTagsEl.querySelectorAll(".filter-tag").forEach(btn => {
+		let longPressTimer = null;
+		let didLongPress = false;
+
+		btn.addEventListener("pointerdown", (e) => {
+			e.preventDefault();
+			didLongPress = false;
+			longPressTimer = setTimeout(() => {
+				didLongPress = true;
+				const city = btn.dataset.city;
+				activeCities.forEach(c => { if (c !== city) activeCities.delete(c); });
+				if (!activeCities.has(city)) activeCities.add(city);
+				updateFilterTags(latestCourts);
+				renderGrid();
+				updateMapVisibility();
+			}, 500);
+		});
+
+		btn.addEventListener("pointerup", () => clearTimeout(longPressTimer));
+		btn.addEventListener("pointercancel", () => clearTimeout(longPressTimer));
+		btn.addEventListener("pointermove", () => clearTimeout(longPressTimer));
+
 		btn.addEventListener("click", () => {
+			if (didLongPress) return;
 			const city = btn.dataset.city;
 			activeCities.has(city) ? activeCities.delete(city) : activeCities.add(city);
 			btn.classList.toggle("active");

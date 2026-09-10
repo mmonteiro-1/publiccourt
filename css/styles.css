@@ -41,6 +41,9 @@ body {
 	padding: 20px;
 	box-sizing: border-box;
 	display: flex;
+	-webkit-user-select: none;
+	-webkit-touch-callout: none;
+	user-select: none;
 	flex-direction: column;
 	overflow-x: hidden;
 }
@@ -290,6 +293,7 @@ header {
 	border: 2px solid #000;
 	background: none;
 	font-family: inherit;
+	user-select: none;
 	font-weight: 600;
 	text-transform: uppercase;
 	transition: all 0.15s;
