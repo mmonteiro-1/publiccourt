@@ -28,6 +28,7 @@ button, a {
 	--orange: #e55604;
 	--white: #fff;
 	--black: #000;
+	--muted-black: #0000004f;
 	--muted: #ffffff8f;
 }
 
@@ -102,8 +103,8 @@ body {
 }
 .page-dashboard .card-sub {
 	position: absolute;
-	background: var(--white);
-	color: var(--black);
+	background: var(--muted-black);
+	color: var(--muted);
 	width: 100%;
 	left: 0;
 	bottom: 0;
