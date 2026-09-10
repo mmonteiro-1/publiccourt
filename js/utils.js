@@ -53,8 +53,8 @@ function minutesLeft(endsAt) {
 	document.addEventListener("touchstart", e => {
 		startY = e.touches[0].clientY;
 		const mapEl = document.getElementById("map");
-		// Only pull when already at the top and not touching the map (which has its own pan gesture).
-		pulling = window.scrollY === 0 && !(mapEl && mapEl.contains(e.target));
+		// Only pull when already at the top, not on the map, and not on a success screen.
+		pulling = window.scrollY === 0 && !(mapEl && mapEl.contains(e.target)) && !document.body.classList.contains("success");
 	}, { passive: true });
 
 	document.addEventListener("touchmove", e => {
