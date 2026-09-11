@@ -72,7 +72,7 @@ function renderPreview(court, active) {
 		? isOwner
 			? "Caso saias mais cedo, podes avisar que o teu jogo terminou."
 			: "Parece que este campo está ocupado de momento. Caso esteja livre, <b>e se estiveres à beira do campo</b> podes terminar o jogo atual"
-		: "Para minimizar as batotas, não é possível iniciar um jogo sem que o jogador esteja à beira do campo.";
+		: "Para minimizar os batotas, não é possível iniciar um jogo sem que o jogador esteja à beira do campo.";
 
 	const actionLabel = active ? "Terminar jogo atual" : "Estou no campo";
 
