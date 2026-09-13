@@ -22,16 +22,8 @@ button, a {
 [hidden] { display: none !important; }
 
 /* SHARED THEME, USED BY BOTH PAGES */
-html {
+html:has(.page-dashboard) {
 	background: var(--pink);
-}
-
-html:has(.page-court:not(.success)) {
-	background: var(--green);
-}
-
-html:has(.page-court.inuse) {
-	background: var(--orange);
 }
 
 :root {
@@ -101,12 +93,8 @@ body {
 	padding: 0;
 	padding-top: 20px;
 }
-.page-dashboard .card::after {
-	content: none;
-}
-
 .page-dashboard .card {
-	box-shadow: 4px 4px 0 var(--black);
+	box-shadow: 5px 5px 0 var(--black);
 	overflow: hidden;
 	padding-bottom: 20px;
 }
