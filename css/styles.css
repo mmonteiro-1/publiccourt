@@ -94,8 +94,6 @@ body {
 	padding-top: 20px;
 }
 .page-dashboard .card {
-	box-shadow: 5px 5px 0 var(--black);
-	overflow: hidden;
 	padding-bottom: 20px;
 }
 .page-dashboard .card-status {
@@ -111,6 +109,7 @@ body {
 	padding: 2px;
 	padding-left: 15px;
 	font-size: .7em;
+	border-radius: 0 0 18px 0;
 }
 
 .page-court:not(.success) {
@@ -473,8 +472,15 @@ header {
 	inset: 0;
 	border-radius: inherit;
 	transform: translate(6px, 6px);
-	z-index: -1;
 	border: 2px solid var(--black);
+	clip-path: polygon(
+		calc(100% - 6px) 0%,
+		100% 0%,
+		100% 100%,
+		0% 100%,
+		0% calc(100% - 6px),
+		calc(100% - 6px) calc(100% - 6px)
+	);
 }
 
 .card.available {
