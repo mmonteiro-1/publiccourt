@@ -22,6 +22,18 @@ button, a {
 [hidden] { display: none !important; }
 
 /* SHARED THEME, USED BY BOTH PAGES */
+html {
+	background: var(--pink);
+}
+
+html:has(.page-court:not(.success)) {
+	background: var(--green);
+}
+
+html:has(.page-court.inuse) {
+	background: var(--orange);
+}
+
 :root {
 	--pink: #e6b5b2;
 	--green: #2c5745;
@@ -689,4 +701,11 @@ header {
 
 .finish-btn:disabled {
 	pointer-events: none;
+}
+
+@media (min-width: 768px) {
+	body {
+		max-width: 430px;
+		margin: 0 auto;
+	}
 }
