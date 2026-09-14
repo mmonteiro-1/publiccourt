@@ -93,7 +93,13 @@ body {
 	padding: 0;
 	padding-top: 20px;
 }
+.page-dashboard .card::after {
+	content: none;
+}
+
 .page-dashboard .card {
+	box-shadow: 4px 4px 0 var(--black);
+	overflow: hidden;
 	padding-bottom: 20px;
 }
 .page-dashboard .card-status {
@@ -472,15 +478,8 @@ header {
 	inset: 0;
 	border-radius: inherit;
 	transform: translate(6px, 6px);
+	z-index: -1;
 	border: 2px solid var(--black);
-	clip-path: polygon(
-		calc(100% - 6px) 0%,
-		100% 0%,
-		100% 100%,
-		0% 100%,
-		0% calc(100% - 6px),
-		calc(100% - 6px) calc(100% - 6px)
-	);
 }
 
 .card.available {
