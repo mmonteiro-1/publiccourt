@@ -70,7 +70,7 @@ function renderPreview(court, active) {
 	const isOwner = active && active.device_id === getDeviceId();
 	const bodyText = active
 		? isOwner
-			? "Caso saias mais cedo, podes avisar que o teu jogo terminou."
+			? "Podes sempre avisar que o teu jogo vai demorar mais um bocadinho. E caso pares mais cedo, podes avisar que o teu jogo terminou."
 			: "Parece que este campo está ocupado de momento. Caso esteja livre, <b>e se estiveres à beira do campo</b> podes terminar o jogo atual"
 		: "Para minimizar os batotas, não é possível iniciar um jogo sem que o jogador esteja à beira do campo.";
 
@@ -89,6 +89,12 @@ function renderPreview(court, active) {
 		${descriptionLine}
 		<div class="divider"></div>
 		<p class="margin-bottom-20 card-sub">${bodyText}</p>
+		${isOwner ? `
+		<div class="extend-row">
+			<button class="finish-btn extend-btn" data-mins="15" ${localStorage.getItem("extended_" + active.id) ? "disabled" : ""}>+ 15MIN</button>
+			<button class="finish-btn extend-btn" data-mins="30" ${localStorage.getItem("extended_" + active.id) ? "disabled" : ""}>+ 30MIN</button>
+			<button class="finish-btn extend-btn" data-mins="60" ${localStorage.getItem("extended_" + active.id) ? "disabled" : ""}>+ 60MIN</button>
+		</div>` : ""}
 		<button class="finish-btn" id="here-btn">${locationIcon} ${actionLabel}</button>
 		<button class="submit" id="back-btn">Voltar</button>
 		${!isOwner ? `<p class="card-sub margin-top-10" style="font-size:0.75em">Por favor permite que este browser confirme a tua localização</p>` : ""}
@@ -115,6 +121,12 @@ function renderPreview(court, active) {
 			verifyLocationAndProceed(court);
 		}
 	});
+
+	if (isOwner) {
+		document.querySelectorAll(".extend-btn").forEach(btn => {
+			btn.addEventListener("click", () => extendGame(court, active, parseInt(btn.dataset.mins)));
+		});
+	}
 }
 
 // RENDER A BLOCKING SCREEN WHEN LOCATION CAN'T BE VERIFIED
@@ -197,6 +209,42 @@ function renderAvailable(court) {
 		e.preventDefault();
 		location.href = "index.html";
 	});
+}
+
+// EXTEND THE ACTIVE RESERVATION BY N MINUTES (OWNER ONLY, NO LOCATION CHECK)
+async function extendGame(court, active, minutes) {
+	const btns = document.querySelectorAll(".extend-btn");
+	const clicked = [...btns].find(b => parseInt(b.dataset.mins) === minutes);
+	const originalLabel = clicked.innerHTML;
+
+	clicked.innerHTML = `<img src="images/icon_like.svg" class="link-icon" alt="">`;
+
+	const newEndsAt = new Date(new Date(active.ends_at).getTime() + minutes * 60 * 1000).toISOString();
+
+	const { error } = await db.from("reservations")
+		.update({ ends_at: newEndsAt })
+		.eq("id", active.id);
+
+	if (error) {
+		btns.forEach(b => b.disabled = false);
+		clicked.innerHTML = originalLabel;
+		return;
+	}
+
+	localStorage.setItem("extended_" + active.id, "1");
+
+	const timeBadge = app.querySelector(".badge-group .badge:last-child");
+	if (timeBadge) {
+		const mins = minutesLeft(newEndsAt);
+		timeBadge.innerHTML = mins > 0
+			? `<img src="/images/icon_timer.svg" class="badge-icon">${mins}MIN`
+			: "A TERMINAR";
+	}
+
+	setTimeout(() => {
+		clicked.innerHTML = originalLabel;
+		btns.forEach(b => b.disabled = true);
+	}, 1500);
 }
 
 // END A RESERVATION AND SHOW THE THANK-YOU SCREEN (OWNER FINISHING THEIR OWN GAME)
@@ -283,12 +331,13 @@ async function checkIn(court) {
 			<img src="images/pig.svg" class="info-pig" alt="">
 		</div>
 		<p class="bom-jogo">BOM JOGO</p>
-		<p class="info-sub1 margin-top-10" style="font-size:1.5em">Obrigado por avisar os outros jogadores</p>
+		<p class="info-sub1 margin-top-10" style="font-size:1.5em">Obrigado por avisar os outros jogadores.</p>
+		<p class="info-sub1 margin-top-10">Se quiseres ser porreiríssimo, coloca também um timer de ${selectedDuration}min a contar.</p>
 	`;
 
 	const countdownEl = document.createElement("div");
 	countdownEl.className = "bom-jogo-countdown";
-	let secs = 6;
+	let secs = 10;
 	countdownEl.textContent = secs;
 	document.body.appendChild(countdownEl);
 
@@ -300,7 +349,7 @@ async function checkIn(court) {
 	setTimeout(() => {
 		clearInterval(ticker);
 		location.reload();
-	}, 7000);
+	}, 11000);
 }
 
 // VERIFY THE DEVICE IS ON-PREMISES, THEN SHOW THE CHECK-IN / FINISH FLOW

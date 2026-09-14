@@ -161,7 +161,7 @@ body {
 }
 
 .bom-jogo {
-	font-size: 4em;
+	font-size: 3em;
 	font-weight: 700;
 	color: var(--black);
 	line-height: 1;
@@ -694,6 +694,21 @@ header {
 
 .finish-btn:disabled {
 	pointer-events: none;
+	opacity: 0.4;
+}
+
+.finish-btn.extend-confirming:disabled {
+	opacity: 1;
+}
+
+.extend-row {
+	display: grid;
+	grid-template-columns: 1fr 1fr 1fr;
+	gap: 10px;
+}
+
+.extend-row .finish-btn {
+	margin-top: 0;
 }
 
 @media (min-width: 768px) {

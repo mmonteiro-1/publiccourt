@@ -29,7 +29,12 @@ function minutesLeft(endsAt) {
 // PERSISTENT DEVICE ID FOR TAILORING MESSAGES TO THE RESERVATION OWNER
 function getDeviceId() {
 	let id = localStorage.getItem("device_id");
-	if (!id) { id = crypto.randomUUID(); localStorage.setItem("device_id", id); }
+	if (!id) {
+		id = crypto.randomUUID?.() ?? ([1e7]+-1e3+-4e3+-8e3+-1e11).replace(/[018]/g, c =>
+			(c ^ (Math.random() * 16 >> c / 4)).toString(16)
+		);
+		localStorage.setItem("device_id", id);
+	}
 	return id;
 }
 
