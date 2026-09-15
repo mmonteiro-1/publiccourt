@@ -4,6 +4,10 @@ const params = new URLSearchParams(location.search);
 const courtId = params.get("court");
 let selectedDuration = 45;
 
+// MARK BROWSER-ONLY VISITORS SO CSS CAN SHOW AN INSTALL NUDGE ANIMATION
+const isPWA = window.matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
+if (!isPWA) document.body.classList.add("non-pwa");
+
 // HOW CLOSE (METERS) A DEVICE MUST BE TO THE COURT TO CHECK IN OR FINISH A GAME
 const MAX_DISTANCE_METERS = 500;
 // EXTRA SLACK ADDED FOR LOW-CONFIDENCE GPS READINGS, CAPPED SO THE CHECK STAYS MEANINGFUL
@@ -45,6 +49,7 @@ async function fetchActiveReservation() {
 		.eq("court_id", courtId)
 		.is("manual_finished_at", null)
 		.gt("ends_at", now)
+		// Descending + limit 1: if two overlapping reservations somehow exist, pick the one ending latest.
 		.order("ends_at", { ascending: false })
 		.limit(1);
 
@@ -56,6 +61,11 @@ function renderPreview(court, active) {
 	document.body.classList.toggle("inuse", !!active);
 	app.classList.toggle("available", !active);
 	app.classList.toggle("inuse", !!active);
+	const nudge = document.getElementById("install-nudge");
+	if (nudge) {
+		nudge.classList.toggle("available", !active);
+		nudge.classList.toggle("inuse", !!active);
+	}
 
 	const statusBadge = `<span class="badge">LIVRE</span>`;
 	const occupiedBadges = active
@@ -292,6 +302,8 @@ async function finishOwnGame(court, reservationId) {
 		countdownEl.textContent = secs;
 	}, 1000);
 
+	// Reload instead of redirect so the page re-fetches live status after the finish.
+	// clearInterval first to avoid a tick firing after the page unloads.
 	setTimeout(() => {
 		clearInterval(ticker);
 		location.reload();
@@ -375,7 +387,9 @@ async function verifyLocationAndProceed(court) {
 		position.coords.latitude, position.coords.longitude,
 		court.lat, court.lng
 	);
-	// GIVE SLACK FOR LOW-CONFIDENCE READINGS (E.G. DESKTOP WIFI-BASED LOCATION), CAPPED SO THE CHECK STAYS MEANINGFUL
+	// accuracy is the GPS error radius in meters. We widen the allowed distance by that amount
+	// so a device with a coarse fix (e.g. Wi-Fi triangulation) isn't unfairly rejected,
+	// but cap it so someone far away can't spoof their way in with a deliberately bad signal.
 	const allowance = Math.min(position.coords.accuracy || 0, MAX_ACCURACY_ALLOWANCE);
 	const threshold = MAX_DISTANCE_METERS + allowance;
 
@@ -409,3 +423,7 @@ async function load() {
 }
 
 load();
+
+document.getElementById("install-nudge-close")?.addEventListener("click", () => {
+	document.getElementById("install-nudge").hidden = true;
+});

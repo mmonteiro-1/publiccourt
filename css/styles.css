@@ -53,7 +53,7 @@ body {
 	overflow-x: hidden;
 }
 
-
+.margin-top-5 { margin-top: 5px; }
 .margin-top-10 { margin-top: 10px; }
 
 .margin-bottom-10 { margin-bottom: 10px; }
@@ -134,6 +134,7 @@ body {
 .page-court .card {
 	border: 2px solid var(--black);
 }
+
 
 .page-court.success {
 	background: var(--pink);
@@ -711,6 +712,33 @@ header {
 
 .extend-row .finish-btn {
 	margin-top: 0;
+}
+
+.install-nudge {
+	display: none;
+	position: relative;
+	margin-top: 20px;
+	padding: 15px;
+	border: 2px solid var(--black);
+	border-radius: 20px 20px 20px 0;
+}
+
+.non-pwa .install-nudge {
+	display: block;
+}
+
+.install-nudge-close {
+	position: absolute;
+	top: 15px;
+	right: 15px;
+	background: none;
+	border: none;
+	line-height: 0;
+	-webkit-tap-highlight-color: transparent;
+}
+
+.uppercase {
+	text-transform: uppercase;
 }
 
 @media (min-width: 768px) {

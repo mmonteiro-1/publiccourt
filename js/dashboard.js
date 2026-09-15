@@ -35,6 +35,7 @@ function initMap(courts) {
 		const descHtml = court.description ? `<div class="popup-desc">${court.description}</div>` : "";
 		const popup = new maplibregl.Popup({ offset: 40 })
 			.setHTML(`<a class="popup-link" href="court?court=${court.id}"><div class="popup-body"><div><div class="popup-name">${court.name}</div>${descHtml}</div>${extIcon}</div></a>`);
+		// Read status at open-time rather than at creation so the popup reflects the latest poll.
 		popup.on("open", () => {
 			const occupied = Boolean(latestActiveMap[court.id]);
 			popup.getElement()?.classList.toggle("popup-occupied", occupied);
@@ -145,7 +146,8 @@ function renderCourtCard(court, res, isOwner = false) {
 function updateFilterTags(courts) {
 	const cities = Array.from(new Set(courts.map(c => c.city || "Other"))).sort((a, b) => a.localeCompare(b));
 
-	// A CITY NOT SEEN BEFORE STARTS OUT VISIBLE; AN ALREADY-KNOWN CITY KEEPS ITS CURRENT ON/OFF STATE
+	// A city seen for the first time defaults to visible; one already known keeps its toggle state.
+	// This lets a live-update add a new city without wiping the user's current filter selection.
 	cities.forEach(city => {
 		if (!knownCities.has(city)) {
 			knownCities.add(city);
@@ -170,6 +172,8 @@ function updateFilterTags(courts) {
 		btn.addEventListener("pointerdown", (e) => {
 			e.preventDefault();
 			didLongPress = false;
+			// Long-press (500 ms) isolates the tapped city, hiding all others.
+			// didLongPress guards the subsequent click handler from also toggling the tag.
 			longPressTimer = setTimeout(() => {
 				didLongPress = true;
 				const city = btn.dataset.city;
@@ -208,6 +212,7 @@ function renderGrid() {
 	const myRes = Object.values(latestActiveMap).find(r => r.device_id === getDeviceId());
 	const myCourtId = myRes?.court_id;
 
+	// Float the user's own active court to the top of the list regardless of city/alpha order.
 	const finalSorted = myCourtId
 		? [sorted.find(c => c.id === myCourtId), ...sorted.filter(c => c.id !== myCourtId)].filter(Boolean)
 		: sorted;
@@ -254,6 +259,7 @@ async function load() {
 
 load();
 
+// Re-run the full load on any reservation change so card statuses stay live without polling.
 db.channel("reservations-live")
   .on("postgres_changes", { event: "*", schema: "public", table: "reservations" }, load)
   .subscribe();
