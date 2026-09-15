@@ -723,6 +723,10 @@ header {
 	border-radius: 20px 20px 20px 0;
 }
 
+.install-nudge a {
+	color: var(--white);
+}
+
 .non-pwa .install-nudge {
 	display: block;
 }
