@@ -161,6 +161,10 @@ body {
 	-webkit-text-stroke: 2px var(--black);
 }
 
+.page-court.success .install-nudge {
+	display: none;
+}
+
 .bom-jogo {
 	font-size: 3em;
 	font-weight: 700;
@@ -610,22 +614,14 @@ header {
 }
 
 .info-hero {
-	position: relative;
-	right: -20px;
-	height: 30vh;
-	overflow: hidden;
-	pointer-events: none;
-	margin: 20px 0;
+	height: 200px;
+	margin: 40px 0;
 }
 
 .info-pig {
-	position: absolute;
-	right: -40%;
-	top: 0;
 	width: 100%;
 	height: 100%;
 	object-fit: contain;
-	overflow: visible;
 }
 
 .info-content {
