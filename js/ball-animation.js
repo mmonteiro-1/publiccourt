@@ -1,4 +1,4 @@
-function playBallAnimation() {
+function playBallAnimation(targetEl) {
 	let canvas = document.getElementById('ballCanvas');
 	if (!canvas) {
 		canvas = document.createElement('canvas');
@@ -21,10 +21,22 @@ function playBallAnimation() {
 	hitmark.src = 'images/hitmark.svg';
 
 	const R = 15;
-	const FLOOR = () => window.innerHeight - 320;
-	const HIT_Y = () => FLOOR() - 150;
-	const START_Y = () => HIT_Y() + 150; // ball enters lower, rises diagonally to HIT_Y
-	const BARRIER_X = () => window.innerWidth / 2;
+
+	// Derive hit coords from the pig element's layout; fall back to screen-based defaults
+	let hitX, hitY;
+	if (targetEl) {
+		const rect = targetEl.getBoundingClientRect();
+		hitX = rect.left + rect.width * 0.5;
+		hitY = rect.top + rect.height * 0.45;
+	} else {
+		hitX = window.innerWidth / 2;
+		hitY = window.innerHeight - 470;
+	}
+
+	const BARRIER_X = () => hitX;
+	const HIT_Y = () => hitY;
+	const FLOOR = () => HIT_Y() + 150;
+	const START_Y = () => HIT_Y() + 80; // ball enters lower, rises diagonally to HIT_Y
 
 	const T_FLY = 200;
 	const T_DROP = 350;
@@ -105,5 +117,19 @@ function playBallAnimation() {
 		if (!done) requestAnimationFrame(draw);
 	}
 
-	img.onload = () => requestAnimationFrame(draw);
+	function startWhenReady() {
+		setTimeout(() => requestAnimationFrame(draw), 2000);
+	}
+
+	let ballReady = img.complete;
+	let pigReady = !targetEl || targetEl.complete;
+
+	function checkReady() {
+		if (ballReady && pigReady) startWhenReady();
+	}
+
+	if (!ballReady) img.onload = () => { ballReady = true; checkReady(); };
+	if (targetEl && !pigReady) targetEl.addEventListener('load', () => { pigReady = true; checkReady(); });
+
+	checkReady();
 }

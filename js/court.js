@@ -353,7 +353,7 @@ async function checkIn(court) {
 		<p class="info-sub1 margin-top-10" style="font-size:1.5em">Obrigado por avisar os outros jogadores.</p>
 		<p class="info-sub1 margin-top-10">Se quiseres ser porreiríssimo, coloca também um timer de ${selectedDuration}min a contar.</p>
 	`;
-	playBallAnimation();
+	playBallAnimation(app.querySelector('.info-pig'));
 
 	const countdownEl = document.createElement("div");
 	countdownEl.className = "bom-jogo-countdown";
