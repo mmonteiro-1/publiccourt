@@ -185,6 +185,8 @@ body {
 	background: var(--white);
 	color: var(--black);
 	box-shadow: 4px 4px 0 var(--black);
+	white-space: nowrap;
+	padding: 15px 10px;
 }
 
 .page-court .submit {

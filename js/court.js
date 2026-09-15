@@ -235,16 +235,23 @@ async function extendGame(court, active, minutes) {
 
 	const timeBadge = app.querySelector(".badge-group .badge:last-child");
 	if (timeBadge) {
-		const mins = minutesLeft(newEndsAt);
-		timeBadge.innerHTML = mins > 0
-			? `<img src="/images/icon_timer.svg" class="badge-icon">${mins}MIN`
-			: "A TERMINAR";
+		const currentMins = minutesLeft(active.ends_at);
+		const finalMins = minutesLeft(newEndsAt);
+		const timerIcon = `<img src="/images/icon_timer.svg" class="badge-icon">`;
+		timeBadge.innerHTML = currentMins > 0
+			? `${timerIcon}${currentMins} + ${minutes}MIN`
+			: `${timerIcon}${minutes}MIN`;
+		setTimeout(() => {
+			timeBadge.innerHTML = finalMins > 0
+				? `${timerIcon}${finalMins}MIN`
+				: "A TERMINAR";
+		}, 3000);
 	}
 
 	setTimeout(() => {
 		clicked.innerHTML = originalLabel;
 		btns.forEach(b => b.disabled = true);
-	}, 1500);
+	}, 3000);
 }
 
 // END A RESERVATION AND SHOW THE THANK-YOU SCREEN (OWNER FINISHING THEIR OWN GAME)
