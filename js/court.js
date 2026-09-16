@@ -153,7 +153,7 @@ function renderLocationBlocked(court, message) {
 		<p class="court-label">${court.name}</p>
 		<p class="card-status">Tás onde?</p>
 		<p class="card-sub margin-top-10 margin-bottom-20">${message}</p>
-		<button class="finish-btn" id="retry-btn"><img src="images/icon_bell.svg" class="link-icon" alt=""> Tentar outra vez</button>
+		<button class="finish-btn" id="retry-btn"><img src="images/icon_location_exclamation.svg" class="link-icon" alt=""> Tentar outra vez</button>
 		<button class="finish-btn" id="hint-btn"><img src="images/icon_siren.svg" class="link-icon" alt=""> Não há QR Code na entrada</button>
 		<button class="submit" id="back-btn">Voltar</button>
 		${locationHint ? `<p class="card-sub margin-top-10" style="font-size: 0.75em">${locationHint}</p>` : ""}

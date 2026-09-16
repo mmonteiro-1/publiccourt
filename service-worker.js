@@ -1,4 +1,4 @@
-const CACHE = "campo-livre-v7";
+const CACHE = "campo-livre-v8";
 
 const SHELL = [
   "/",
@@ -17,6 +17,7 @@ const SHELL = [
   "/images/icon_car.svg",
   "/images/icon_ball.svg",
   "/images/icon_bell.svg",
+  "/images/icon_location_exclamation.svg",
   "/images/icon_fall.svg",
   "/images/icon_death.svg",
   "/images/icon_run.svg",
