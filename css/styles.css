@@ -274,7 +274,7 @@ header {
 	text-align: center;
 	transform: translateY(-100%);
 	opacity: 0;
-	animation: filter-hint-slide 5s ease-in-out 2s forwards;
+	animation: filter-hint-slide 10s ease-in-out 2s forwards;
 }
 
 @keyframes filter-hint-slide {
