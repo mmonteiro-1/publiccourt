@@ -138,6 +138,7 @@ body {
 
 .page-court.success {
 	background: var(--pink);
+	padding: 20px 40px;
 }
 
 .page-court.success .card {
@@ -165,8 +166,23 @@ body {
 	display: none;
 }
 
+.success-bg {
+	position: fixed;
+	background: var(--green);
+	width: 100%;
+	height: 60%;
+	left: 0;
+	top: 40%;
+	z-index: -1;
+}
+
+.page-court.success .bom-jogo,
+.page-court.success .info-sub1 {
+	color: var(--white);
+}
+
 .bom-jogo {
-	font-size: 3em;
+	font-size: 2.5em;
 	font-weight: 700;
 	color: var(--black);
 	line-height: 1;
@@ -615,7 +631,7 @@ header {
 
 .info-hero {
 	height: 200px;
-	margin: 40px 0;
+	margin: 20px 0 40px 0;
 }
 
 .info-pig {

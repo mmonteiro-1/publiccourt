@@ -288,8 +288,11 @@ async function finishOwnGame(court, reservationId) {
 			<img src="images/pig_sitting.svg" class="info-pig" alt="">
 		</div>
 		<p class="bom-jogo">OBRIGADO</p>
-		<p class="info-sub1 margin-top-10" style="font-size:1.5em">Por avisar que o campo ficou livre</p>
+		<p class="info-sub1 margin-top-10" style="font-size:1.5em">Por avisar que o campo ficou livre.</p>
 	`;
+	const bg1 = document.createElement('div');
+	bg1.className = 'success-bg';
+	document.body.appendChild(bg1);
 
 	const countdownEl = document.createElement("div");
 	countdownEl.className = "bom-jogo-countdown";
@@ -351,8 +354,11 @@ async function checkIn(court) {
 		</div>
 		<p class="bom-jogo">BOM JOGO</p>
 		<p class="info-sub1 margin-top-10" style="font-size:1.5em">Obrigado por avisar os outros jogadores.</p>
-		<p class="info-sub1 margin-top-10">Se quiseres ser porreiríssimo, coloca também um timer de ${selectedDuration}min a contar.</p>
+		<p class="info-sub1 margin-top-10" style="color: #ffffff8f; font-weight: 400">Se quiseres ser porreiríssimo, coloca também um timer de ${selectedDuration}min a contar.</p>
 	`;
+	const bg2 = document.createElement('div');
+	bg2.className = 'success-bg';
+	document.body.appendChild(bg2);
 	playBallAnimation(app.querySelector('.info-pig'));
 
 	const countdownEl = document.createElement("div");
