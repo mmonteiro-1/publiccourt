@@ -35,7 +35,7 @@ function playBallAnimation(targetEl) {
 
 	const BARRIER_X = () => hitX;
 	const HIT_Y = () => hitY;
-	const FLOOR = () => HIT_Y() + 150;
+	const FLOOR = () => HIT_Y() + 130;
 	const START_Y = () => HIT_Y() + 80; // ball enters lower, rises diagonally to HIT_Y
 
 	const T_FLY = 200;
@@ -67,7 +67,7 @@ function playBallAnimation(targetEl) {
 
 		} else if (elapsed < T_FLY + T_DROP + T_BOUNCE) {
 			const t = (elapsed - T_FLY - T_DROP) / T_BOUNCE;
-			x = BARRIER_X() + t * 100;
+			x = BARRIER_X() - t * 100;
 			const bounceHeights = [75, 38, 16];
 			const splits = [0, 0.42, 0.68, 0.88, 1];
 			let seg = 0;
@@ -83,10 +83,10 @@ function playBallAnimation(targetEl) {
 			// Roll-out: decelerates to a stop over 1s
 			const t = (elapsed - T_FLY - T_DROP - T_BOUNCE) / T_ROLL;
 			const ease = 1 - (1 - t) * (1 - t);
-			x = BARRIER_X() + 100 + ease * 50;
+			x = BARRIER_X() - 100 - ease * 50;
 			y = FLOOR();
 		} else {
-			x = BARRIER_X() + 150;
+			x = BARRIER_X() - 150;
 			y = FLOOR();
 			done = true;
 		}
@@ -103,10 +103,10 @@ function playBallAnimation(targetEl) {
 		const bounceElapsed = elapsed - T_FLY - T_DROP;
 		let angle = 0;
 		if (bounceElapsed > 0 && bounceElapsed <= T_BOUNCE) {
-			angle = (bounceElapsed / 1000) * Math.PI * 1.5;
+			angle = -(bounceElapsed / 1000) * Math.PI * 1.5;
 		} else if (bounceElapsed > T_BOUNCE) {
 			const rollT = Math.min((bounceElapsed - T_BOUNCE) / T_ROLL, 1);
-			angle = (T_BOUNCE / 1000) * Math.PI * 1.5 + (1 - (1 - rollT) * (1 - rollT)) * Math.PI;
+			angle = -((T_BOUNCE / 1000) * Math.PI * 1.5 + (1 - (1 - rollT) * (1 - rollT)) * Math.PI);
 		}
 		ctx.save();
 		ctx.translate(x, y);
