@@ -407,7 +407,6 @@ header {
 .empty-pig {
 	height: 80px;
 	width: auto;
-	transform: rotate(180deg);
 }
 
 

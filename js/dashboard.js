@@ -224,7 +224,7 @@ function renderGrid() {
 		grid.classList.remove("grid--empty");
 		if (logoPig) logoPig.style.opacity = "";
 	} else {
-		grid.innerHTML = `<div class="empty"><img src="images/pig.svg" class="empty-pig" alt=""> <p>Removeste todos<br> os filtros, Zé.</p></div>`;
+		grid.innerHTML = `<div class="empty"><img src="images/pig_sitting.svg" class="empty-pig" alt=""> <p>Removeste todos<br> os filtros, Zé.</p></div>`;
 		grid.classList.add("grid--empty");
 		if (logoPig) logoPig.style.opacity = "0";
 	}
