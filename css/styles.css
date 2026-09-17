@@ -512,6 +512,98 @@ header {
 	background: var(--orange);
 }
 
+/* === DECK (page-court only) === */
+.page-court .deck {
+	display: grid;
+}
+
+.page-court .deck .card {
+	grid-area: 1 / 1;
+}
+
+.page-court .deck .card::after {
+	display: none;
+}
+
+/* Default positions: #app on top, secondary behind */
+.page-court .deck #app {
+	z-index: 1;
+}
+
+.page-court .deck .secondary-card {
+	transform: translate(6px, 6px);
+	z-index: 0;
+}
+
+/* Secondary card color tracks #app */
+.page-court .deck:has(#app.available) .secondary-card { background: var(--green); }
+.page-court .deck:has(#app.inuse) .secondary-card { background: var(--orange); }
+
+/* Flipped state: secondary on top, #app behind */
+.page-court .deck.flipped #app {
+	transform: translate(6px, 6px);
+	z-index: 0;
+}
+
+.page-court .deck.flipped .secondary-card {
+	transform: translate(0, 0);
+	z-index: 1;
+}
+
+/* Secondary card close button */
+.secondary-close {
+	position: absolute;
+	top: 15px;
+	right: 15px;
+	background: none;
+	border: none;
+	line-height: 0;
+	padding: 0;
+	-webkit-tap-highlight-color: transparent;
+}
+
+.secondary-close img {
+	width: 20px;
+	height: 20px;
+}
+
+/* Flip trigger link inside main card */
+.deck-flip-link {
+	display: block;
+	font-size: 0.8em;
+	text-decoration: underline;
+	text-underline-offset: 3px;
+}
+
+.deck-flip-link img {
+	height: 13px;
+	margin-left: 5px;
+	filter: invert(1);
+	opacity: .6;
+	vertical-align: middle;
+}
+
+/* Animation keyframes */
+@keyframes deck-to-back {
+	0%   { transform: translate(0, 0) rotate(0deg); animation-timing-function: ease-in; }
+	50%  { transform: translate(110vw, 10px) rotate(45deg); animation-timing-function: ease-out; }
+	100% { transform: translate(6px, 6px) rotate(0deg); }
+}
+
+@keyframes deck-to-front {
+	0%   { transform: translate(6px, 6px); }
+	70%  { transform: translate(-1px, -1px); }
+	100% { transform: translate(0, 0); }
+}
+
+.page-court .deck .card.to-back {
+	animation: deck-to-back 600ms forwards;
+}
+
+.page-court .deck .card.to-front {
+	animation: deck-to-front 600ms ease-out forwards;
+}
+
 .card-header {
 	display: flex;
 	align-items: flex-start;

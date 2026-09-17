@@ -75,7 +75,7 @@ function renderPreview(court, active) {
 		</div>`
 		: statusBadge;
 
-	const descriptionLine = court.description ? `<p class="card-sub">${court.description}</p>` : "";
+	const descriptionLine = `<a class="card-sub deck-flip-link" data-action="flip-deck" href="#">${court.description || "Mais sobre este campo"}<img src="images/icon_info.svg" class="link-icon" alt=""></a>`;
 
 	const isOwner = active && active.device_id === getDeviceId();
 	const bodyText = active
@@ -176,7 +176,7 @@ function renderAvailable(court) {
 	app.classList.add("available");
 	app.classList.remove("inuse");
 
-	const descriptionLine = court.description ? `<p class="card-sub">${court.description}</p>` : "";
+	const descriptionLine = `<a class="card-sub deck-flip-link" data-action="flip-deck" href="#">${court.description || "Mais sobre este campo"}<img src="images/icon_info.svg" class="link-icon" alt=""></a>`;
 
 	const runnerIcon = `<img src="images/icon_run.svg" class="link-icon" alt="">`;
 
@@ -410,6 +410,53 @@ async function verifyLocationAndProceed(court) {
 	renderAvailable(court);
 }
 
+// CARD DECK FLIP MECHANIC
+function initDeck() {
+	const deck = document.querySelector(".deck");
+	const mainCard = document.getElementById("app");
+	const secondaryCard = document.getElementById("secondary-card");
+	const closeBtn = document.getElementById("secondary-close");
+	if (!deck || !mainCard || !secondaryCard) return;
+
+	const ANIM_MS = 600;
+	let animating = false;
+
+	function flipDeck() {
+		if (animating) return;
+		animating = true;
+
+		const isFlipped = deck.classList.contains("flipped");
+		const topCard = isFlipped ? secondaryCard : mainCard;
+		const bottomCard = isFlipped ? mainCard : secondaryCard;
+
+		topCard.classList.add("to-back");
+		bottomCard.classList.add("to-front");
+
+		// Swap z-index at midpoint when top card is off-screen
+		const mid = setTimeout(() => {
+			topCard.style.zIndex = "0";
+			bottomCard.style.zIndex = "2";
+		}, ANIM_MS / 2);
+
+		topCard.addEventListener("animationend", () => {
+			clearTimeout(mid);
+			topCard.classList.remove("to-back");
+			bottomCard.classList.remove("to-front");
+			topCard.style.zIndex = "";
+			bottomCard.style.zIndex = "";
+			deck.classList.toggle("flipped");
+			animating = false;
+		}, { once: true });
+	}
+
+	closeBtn?.addEventListener("click", flipDeck);
+
+	// Event delegation for flip links injected by render functions
+	deck.addEventListener("click", e => {
+		if (e.target.closest("[data-action='flip-deck']")) flipDeck();
+	});
+}
+
 // LOAD COURT STATUS AND SHOW THE PREVIEW SCREEN
 async function load() {
 	if (!courtId) {
@@ -430,6 +477,7 @@ async function load() {
 }
 
 load();
+initDeck();
 
 document.getElementById("install-nudge-close")?.addEventListener("click", () => {
 	document.getElementById("install-nudge").hidden = true;
