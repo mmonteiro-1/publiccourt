@@ -465,33 +465,108 @@ function renderSecondaryCard(court) {
 	const content = document.createElement("div");
 	content.className = "secondary-content";
 	content.innerHTML = `
-		<p class="card-status">${court.name}</p>
-		${court.description ? `<p class="card-sub">${court.description}</p>` : ""}
-		<div class="divider"></div>
+		
 		<div id="court-stats"></div>
 	`;
 	secondary.querySelector(".secondary-close").insertAdjacentElement("afterend", content);
 }
 
-// FETCH GROUP ANALYTICS VIA RPC AND FILL IN THE STATS SECTION
-async function loadGroupAnalytics(groupId) {
+// FETCH ALL RESERVATIONS FOR THIS COURT AND RENDER AN HOURLY OCCUPANCY CHART
+async function loadHourlyChart() {
 	const statsEl = document.getElementById("court-stats");
 	if (!statsEl) return;
-	const { data, error } = await db.rpc("group_analytics", { p_group_id: groupId });
-	if (error || !data || !data[0]) { statsEl.innerHTML = ""; return; }
-	const { avg_duration_min, peak_hour_weekday, peak_hour_weekend } = data[0];
-	if (avg_duration_min === null && peak_hour_weekday === null && peak_hour_weekend === null) {
-		statsEl.innerHTML = `<p class="card-sub" style="opacity:0.5">Ainda sem dados suficientes</p>`;
-		return;
+
+	const DAYS = 7; // TODO: increase to 30–90 once more courts are active — larger sample gives more stable occupancy rates
+	const since = new Date(Date.now() - DAYS * 24 * 60 * 60 * 1000);
+	const { data } = await db
+		.from("reservations")
+		.select("started_at, ends_at, manual_finished_at")
+		.eq("court_id", courtId)
+		.gte("started_at", since.toISOString());
+
+	const HOURS = Array.from({ length: 10 }, (_, i) => i + 10); // 10h–19h
+
+	// Count weekday and weekend days in the window for each hour's denominator
+	let weekdayDays = 0, weekendDays = 0;
+	for (let i = 0; i < DAYS; i++) {
+		const dow = new Date(since.getTime() + i * 24 * 60 * 60 * 1000).getDay();
+		if (dow === 0 || dow === 6) weekendDays++; else weekdayDays++;
 	}
-	const items = [
-		avg_duration_min != null ? { value: `${avg_duration_min}min`, label: "duração média" } : null,
-		peak_hour_weekday != null ? { value: `${peak_hour_weekday}h`, label: "pico semana" } : null,
-		peak_hour_weekend != null ? { value: `${peak_hour_weekend}h`, label: "pico fim de semana" } : null,
-	].filter(Boolean);
-	statsEl.innerHTML = `<div class="court-stats-row">${items.map(s =>
-		`<div class="court-stat"><span class="court-stat-value">${s.value}</span><span class="court-stat-label">${s.label}</span></div>`
-	).join("")}</div>`;
+
+	const weekday = {}, weekend = {};
+	HOURS.forEach(h => { weekday[h] = 0; weekend[h] = 0; });
+
+	(data || []).forEach(r => {
+		const start = new Date(r.started_at);
+		const end = new Date(r.manual_finished_at ?? r.ends_at);
+		const dow = start.getDay();
+		const startH = start.getHours() + start.getMinutes() / 60;
+		const endH = end.getHours() + end.getMinutes() / 60;
+		const target = (dow === 0 || dow === 6) ? weekend : weekday;
+		HOURS.forEach(h => {
+			const overlap = Math.max(0, Math.min(endH, h + 1) - Math.max(startH, h));
+			target[h] += overlap;
+		});
+	});
+
+	// Convert occupied hours → occupancy rate (0–1) relative to total available hours per slot
+	const toRate = (occupiedHours, days) => Math.min(1, occupiedHours / days);
+	const hasData = (data || []).length > 0;
+
+	// DEBUG — remove before shipping
+	console.group("loadHourlyChart");
+	console.log("courtId:", courtId, "| rows fetched:", (data || []).length, "| since:", since.toISOString());
+	console.log("window days — weekday:", weekdayDays, "weekend:", weekendDays);
+	console.table(HOURS.map(h => ({
+		hour: h,
+		weekday_occupied_h: +weekday[h].toFixed(3),
+		weekend_occupied_h: +weekend[h].toFixed(3),
+		weekday_rate: hasData ? +(weekday[h] / weekdayDays).toFixed(3) : "placeholder",
+		weekend_rate: hasData ? +(weekend[h] / weekendDays).toFixed(3) : "placeholder",
+	})));
+	console.groupEnd();
+
+	if (!hasData) {
+		// TODO: remove placeholders once app has sufficient data
+		const rand = (min, max) => Math.random() * (max - min) + min;
+		HOURS.forEach(h => {
+			weekday[h] = (h >= 16 && h <= 18) ? rand(0.5, 0.75) : rand(0.1, 0.3);
+			weekend[h] = (h >= 10 && h <= 12) ? rand(0.4, 0.75) : (h >= 15 && h <= 18 ? rand(0.35, 0.65) : rand(0.05, 0.2));
+		});
+	}
+
+	const rate = h => ({
+		wd: hasData ? toRate(weekday[h], weekdayDays) : weekday[h],
+		we: hasData ? toRate(weekend[h], weekendDays) : weekend[h],
+	});
+
+	statsEl.innerHTML = `
+		<div class="court-stats-label">Taxa de ocupação por hora</div>
+		<div class="chart-legend">(% de vezes em que o campo esteve ocupado)</div>
+		<div class="court-chart">
+			<div class="chart-area">
+				<div class="chart-y-axis">
+					<span class="chart-y-label">100%</span>
+					<span class="chart-y-label">50%</span>
+					<span class="chart-y-label">0%</span>
+				</div>
+				<div class="chart-bars">
+					${HOURS.map(h => { const r = rate(h); return `
+					<div class="chart-col">
+						<div class="chart-col-bars">
+							<div class="chart-bar chart-bar-weekday" style="height:${Math.round(r.wd * 100)}px"></div>
+							<div class="chart-bar chart-bar-weekend" style="height:${Math.round(r.we * 100)}px"></div>
+						</div>
+						<span class="chart-label">${h}h</span>
+					</div>`; }).join("")}
+				</div>
+			</div>
+			<div class="chart-legend">
+				<span class="legend-item"><span class="legend-dot legend-weekday"></span>Seg–Sex</span>
+				<span class="legend-item"><span class="legend-dot legend-weekend"></span>Sab–Dom</span>
+			</div>
+		</div>
+	`;
 }
 
 // BUILD THE ISO COURT GROUP DIAGRAM INSIDE THE SECONDARY CARD
@@ -505,11 +580,11 @@ function renderCourtGroupDiagram(groupCourts) {
 	//   left=(0.5,57.1)  bottom=(54.9,88.5)  right=(152.7,32.1)  top=(98,0.5)
 	// Courts are arranged TL→BR: each successive court steps right (+X) and down (+Y).
 	// Step derived from the sideline vector (left→top vertex), scaled to display size.
-	const IMG_H = 90;
-	const IMG_W = Math.round(154 / 90 * IMG_H);                     // = 154
+	const IMG_H = 80;
+	const IMG_W = Math.round(154 / 90 * IMG_H);                     // = 137
 	// Full sideline step (courts touching) scaled by spacing factor.
-	const STEP_X = Math.round((98 - 0.5) / 154 * IMG_W * 0.65);    // ≈ 63
-	const STEP_Y = Math.round((57.1 - 0.5) / 90 * IMG_H * 0.65);   // ≈ 37
+	const STEP_X = Math.round((98 - 0.5) / 154 * IMG_W * 0.65);    // ≈ 56
+	const STEP_Y = Math.round((57.1 - 0.5) / 90 * IMG_H * 0.65);   // ≈ 33
 
 	const sorted = [...groupCourts].sort((a, b) => a.group_position - b.group_position);
 	const currentIndex = sorted.findIndex(c => String(c.id) === String(courtId));
@@ -540,8 +615,13 @@ function renderCourtGroupDiagram(groupCourts) {
 		diagram.appendChild(img);
 	});
 
+	const label = document.createElement("div");
+	label.className = "court-diagram-label";
+	label.textContent = "Posição do campo";
+	wrapper.appendChild(label);
 	wrapper.appendChild(diagram);
-	secondary.appendChild(wrapper);
+	const statsEl = secondary.querySelector("#court-stats");
+	statsEl ? statsEl.parentElement.insertBefore(wrapper, statsEl) : secondary.appendChild(wrapper);
 }
 
 // LOAD COURT STATUS AND SHOW THE PREVIEW SCREEN
@@ -572,7 +652,7 @@ async function load() {
 			.then(({ data }) => {
 				if (data && data.length > 1) renderCourtGroupDiagram(data);
 			});
-		loadGroupAnalytics(court.group_id);
+		loadHourlyChart();
 	}
 }
 
