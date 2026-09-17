@@ -457,6 +457,56 @@ function initDeck() {
 	});
 }
 
+// BUILD THE ISO COURT GROUP DIAGRAM INSIDE THE SECONDARY CARD
+function renderCourtGroupDiagram(groupCourts) {
+	const secondary = document.getElementById("secondary-card");
+	if (!secondary) return;
+
+	secondary.querySelector(".court-diagram-wrapper")?.remove();
+
+	// SVG viewBox is 154×90. Court outline vertices (after group translate -500.5,-93.5):
+	//   left=(0.5,57.1)  bottom=(54.9,88.5)  right=(152.7,32.1)  top=(98,0.5)
+	// Courts are arranged TL→BR: each successive court steps right (+X) and down (+Y).
+	// Step derived from the sideline vector (left→top vertex), scaled to display size.
+	const IMG_H = 90;
+	const IMG_W = Math.round(154 / 90 * IMG_H);                     // = 154
+	// Full sideline step (courts touching) scaled by spacing factor.
+	const STEP_X = Math.round((98 - 0.5) / 154 * IMG_W * 0.65);    // ≈ 63
+	const STEP_Y = Math.round((57.1 - 0.5) / 90 * IMG_H * 0.65);   // ≈ 37
+
+	const sorted = [...groupCourts].sort((a, b) => a.group_position - b.group_position);
+	const currentIndex = sorted.findIndex(c => String(c.id) === String(courtId));
+	if (currentIndex === -1) return;
+
+	const n = sorted.length;
+	const containerW = (n - 1) * STEP_X + IMG_W;
+	const containerH = (n - 1) * STEP_Y + IMG_H;
+
+	const wrapper = document.createElement("div");
+	wrapper.className = "court-diagram-wrapper";
+
+	const diagram = document.createElement("div");
+	diagram.className = "court-group-diagram";
+	diagram.style.width = containerW + "px";
+	diagram.style.height = containerH + "px";
+
+	sorted.forEach((court, i) => {
+		const img = document.createElement("img");
+		img.src = "/images/court_iso.svg";
+		img.alt = court.name || "";
+		img.className = "court-diagram-img";
+		img.style.left = (i * STEP_X) + "px";
+		img.style.top = (i * STEP_Y) + "px";
+		img.style.width = IMG_W + "px";
+		img.style.height = IMG_H + "px";
+		img.style.opacity = i === currentIndex ? "1" : "0.3";
+		diagram.appendChild(img);
+	});
+
+	wrapper.appendChild(diagram);
+	secondary.appendChild(wrapper);
+}
+
 // LOAD COURT STATUS AND SHOW THE PREVIEW SCREEN
 async function load() {
 	if (!courtId) {
@@ -465,7 +515,7 @@ async function load() {
 	}
 
 	const { data: court, error: courtErr } = await db
-		.from("courts").select("name, city, description, lat, lng").eq("id", courtId).single();
+		.from("courts").select("name, city, description, lat, lng, group_id").eq("id", courtId).single();
 
 	if (courtErr || !court) {
 		app.innerHTML = `<p class="message error">Campo não encontrado.</p>`;
@@ -474,6 +524,17 @@ async function load() {
 
 	const active = await fetchActiveReservation();
 	renderPreview(court, active);
+
+	// Populate the secondary card diagram lazily — it won't be visible until the user flips.
+	if (court.group_id) {
+		db.from("courts")
+			.select("id, name, group_position")
+			.eq("group_id", court.group_id)
+			.order("group_position")
+			.then(({ data }) => {
+				if (data && data.length > 1) renderCourtGroupDiagram(data);
+			});
+	}
 }
 
 load();
