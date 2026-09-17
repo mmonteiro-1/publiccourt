@@ -513,19 +513,6 @@ async function loadHourlyChart() {
 	const toRate = (occupiedHours, days) => Math.min(1, occupiedHours / days);
 	const hasData = (data || []).length > 0;
 
-	// DEBUG — remove before shipping
-	console.group("loadHourlyChart");
-	console.log("courtId:", courtId, "| rows fetched:", (data || []).length, "| since:", since.toISOString());
-	console.log("window days — weekday:", weekdayDays, "weekend:", weekendDays);
-	console.table(HOURS.map(h => ({
-		hour: h,
-		weekday_occupied_h: +weekday[h].toFixed(3),
-		weekend_occupied_h: +weekend[h].toFixed(3),
-		weekday_rate: hasData ? +(weekday[h] / weekdayDays).toFixed(3) : "placeholder",
-		weekend_rate: hasData ? +(weekend[h] / weekendDays).toFixed(3) : "placeholder",
-	})));
-	console.groupEnd();
-
 	if (!hasData) {
 		// TODO: remove placeholders once app has sufficient data
 		const rand = (min, max) => Math.random() * (max - min) + min;
