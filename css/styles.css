@@ -6,6 +6,7 @@
 	margin: 0;
 	padding: 0;
 	scrollbar-width: none;
+	-webkit-tap-highlight-color: transparent;
 }
 
 *::-webkit-scrollbar {
@@ -358,7 +359,6 @@ header {
 	text-transform: uppercase;
 	transition: all 0.15s;
 	white-space: nowrap;
-	-webkit-tap-highlight-color: transparent;
 }
 
 .filter-tag-icon {
@@ -459,7 +459,6 @@ header {
 	display: block;
 	-webkit-user-select: none;
 	user-select: none;
-	-webkit-tap-highlight-color: transparent;
 	outline: none;
 }
 
@@ -559,7 +558,6 @@ header {
 	border: none;
 	line-height: 0;
 	padding: 0;
-	-webkit-tap-highlight-color: transparent;
 }
 
 .secondary-close img {
@@ -699,7 +697,6 @@ header {
 	width: 100%;
 	left: 0px;
 	outline: none;
-	-webkit-tap-highlight-color: transparent;
 }
 
 .info-toggle {
@@ -841,7 +838,6 @@ header {
 	background: none;
 	border: none;
 	line-height: 0;
-	-webkit-tap-highlight-color: transparent;
 }
 
 .uppercase {
