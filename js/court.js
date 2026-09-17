@@ -457,6 +457,43 @@ function initDeck() {
 	});
 }
 
+// POPULATE THE SECONDARY CARD WITH COURT INFO AND A STATS PLACEHOLDER
+function renderSecondaryCard(court) {
+	const secondary = document.getElementById("secondary-card");
+	if (!secondary) return;
+	secondary.querySelector(".secondary-content")?.remove();
+	const content = document.createElement("div");
+	content.className = "secondary-content";
+	content.innerHTML = `
+		<p class="card-status">${court.name}</p>
+		${court.description ? `<p class="card-sub">${court.description}</p>` : ""}
+		<div class="divider"></div>
+		<div id="court-stats"></div>
+	`;
+	secondary.querySelector(".secondary-close").insertAdjacentElement("afterend", content);
+}
+
+// FETCH GROUP ANALYTICS VIA RPC AND FILL IN THE STATS SECTION
+async function loadGroupAnalytics(groupId) {
+	const statsEl = document.getElementById("court-stats");
+	if (!statsEl) return;
+	const { data, error } = await db.rpc("group_analytics", { p_group_id: groupId });
+	if (error || !data || !data[0]) { statsEl.innerHTML = ""; return; }
+	const { avg_duration_min, peak_hour_weekday, peak_hour_weekend } = data[0];
+	if (avg_duration_min === null && peak_hour_weekday === null && peak_hour_weekend === null) {
+		statsEl.innerHTML = `<p class="card-sub" style="opacity:0.5">Ainda sem dados suficientes</p>`;
+		return;
+	}
+	const items = [
+		avg_duration_min != null ? { value: `${avg_duration_min}min`, label: "duração média" } : null,
+		peak_hour_weekday != null ? { value: `${peak_hour_weekday}h`, label: "pico semana" } : null,
+		peak_hour_weekend != null ? { value: `${peak_hour_weekend}h`, label: "pico fim de semana" } : null,
+	].filter(Boolean);
+	statsEl.innerHTML = `<div class="court-stats-row">${items.map(s =>
+		`<div class="court-stat"><span class="court-stat-value">${s.value}</span><span class="court-stat-label">${s.label}</span></div>`
+	).join("")}</div>`;
+}
+
 // BUILD THE ISO COURT GROUP DIAGRAM INSIDE THE SECONDARY CARD
 function renderCourtGroupDiagram(groupCourts) {
 	const secondary = document.getElementById("secondary-card");
@@ -524,8 +561,9 @@ async function load() {
 
 	const active = await fetchActiveReservation();
 	renderPreview(court, active);
+	renderSecondaryCard(court);
 
-	// Populate the secondary card diagram lazily — it won't be visible until the user flips.
+	// Populate the secondary card lazily — it won't be visible until the user flips.
 	if (court.group_id) {
 		db.from("courts")
 			.select("id, name, group_position")
@@ -534,6 +572,7 @@ async function load() {
 			.then(({ data }) => {
 				if (data && data.length > 1) renderCourtGroupDiagram(data);
 			});
+		loadGroupAnalytics(court.group_id);
 	}
 }
 
