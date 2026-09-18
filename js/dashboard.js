@@ -12,13 +12,16 @@ const activeCities = new Set();
 let latestCourts = [];
 let latestActiveMap = {};
 
+// COURT IDS HIDDEN FROM THE DASHBOARD (still accessible by direct URL for debugging)
+const HIDDEN_COURT_IDS = new Set([2, 8]);
+
 // CREATE THE MAP AND ONE MARKER PER COURT (RUNS ONCE); VISIBILITY IS SYNCED SEPARATELY
 let map = null;
 const markersByCourtId = {};
 function initMap(courts) {
 	if (map) return;
 
-	const points = courts.filter(c => c.lat != null && c.lng != null);
+	const points = courts.filter(c => c.lat != null && c.lng != null && !HIDDEN_COURT_IDS.has(c.id));
 	if (points.length === 0) return;
 
 	map = new maplibregl.Map({
@@ -33,12 +36,15 @@ function initMap(courts) {
 	points.forEach(court => {
 		const extIcon = `<svg viewBox="0 0 20 20" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="7 4 13 10 7 16"/></svg>`;
 		const descHtml = court.description ? `<div class="popup-desc">${court.description}</div>` : "";
-		const popup = new maplibregl.Popup({ offset: 40 })
-			.setHTML(`<a class="popup-link" href="court?court=${court.id}"><div class="popup-body"><div><div class="popup-name">${court.name}</div>${descHtml}</div>${extIcon}</div></a>`);
+		const popupBody = court.unavailable
+			? `<div class="popup-body"><div><div class="popup-name">${court.name}</div><div class="popup-desc">Indisponível</div></div></div>`
+			: `<a class="popup-link" href="court?court=${court.id}"><div class="popup-body"><div><div class="popup-name">${court.name}</div>${descHtml}</div>${extIcon}</div></a>`;
+		const popup = new maplibregl.Popup({ offset: 40 }).setHTML(popupBody);
 		// Read status at open-time rather than at creation so the popup reflects the latest poll.
 		popup.on("open", () => {
 			const occupied = Boolean(latestActiveMap[court.id]);
-			popup.getElement()?.classList.toggle("popup-occupied", occupied);
+			popup.getElement()?.classList.toggle("popup-occupied", occupied && !court.unavailable);
+			popup.getElement()?.classList.toggle("popup-unavailable", Boolean(court.unavailable));
 		});
 		const marker = new maplibregl.Marker()
 			.setLngLat([court.lng, court.lat])
@@ -101,17 +107,31 @@ viewToggleEl.querySelectorAll(".view-toggle-btn").forEach(btn => {
 	btn.addEventListener("click", () => setView(btn.dataset.view));
 });
 
-// GRAY OUT MAP PINS FOR COURTS THAT ARE CURRENTLY OCCUPIED
+// GRAY OUT MAP PINS FOR COURTS THAT ARE CURRENTLY OCCUPIED OR UNAVAILABLE
 function updateMarkerStatus() {
 	Object.values(markersByCourtId).forEach(({ marker, court }) => {
 		const occupied = Boolean(latestActiveMap[court.id]);
-		marker.getElement().classList.toggle("marker-occupied", occupied);
+		marker.getElement().classList.toggle("marker-occupied", occupied && !court.unavailable);
+		marker.getElement().classList.toggle("marker-unavailable", Boolean(court.unavailable));
 	});
 }
 
 // RENDER A SINGLE COURT CARD, AVAILABLE OR IN USE
 function renderCourtCard(court, res, isOwner = false) {
 	const sub = court.description ? `<p class="card-sub">${court.description}</p>` : "";
+
+	if (court.unavailable) {
+		return `
+      <div class="card unavailable">
+        <div class="card-header">
+          ${cityHtml(court.city)}
+          <span class="badge unavailable">Indisponível</span>
+        </div>
+        <p class="card-status">${court.name}</p>
+        ${sub}
+      </div>
+    `;
+	}
 
 	if (res) {
 		const mins = minutesLeft(res.ends_at);
@@ -202,7 +222,7 @@ function updateFilterTags(courts) {
 
 // RENDER THE COURT GRID FROM CACHED DATA, FILTERED BY THE ACTIVE CITY TAGS
 function renderGrid() {
-	const visible = latestCourts.filter(court => activeCities.has(court.city || "Other"));
+	const visible = latestCourts.filter(court => activeCities.has(court.city || "Other") && !HIDDEN_COURT_IDS.has(court.id));
 
 	const sorted = [...visible].sort((a, b) => {
 		const cityDiff = (a.city || "").localeCompare(b.city || "");

@@ -33,6 +33,7 @@ html:has(.page-dashboard) {
 	--orange: #e55604;
 	--white: #fff;
 	--black: #000;
+	--gray: #808080;
 	--muted-black: #0000004f;
 	--muted: #ffffff8f;
 }
@@ -434,6 +435,10 @@ header {
 	fill: var(--orange);
 }
 
+.marker-unavailable svg path {
+	fill: var(--gray);
+}
+
 .maplibregl-popup-content {
 	background: var(--green);
 	color: var(--white);
@@ -447,6 +452,10 @@ header {
 
 .popup-occupied .maplibregl-popup-content {
 	background: var(--orange);
+}
+
+.popup-unavailable .maplibregl-popup-content {
+	background: var(--gray);
 }
 
 .maplibregl-popup-tip {
@@ -513,6 +522,10 @@ header {
 
 .card.inuse {
 	background: var(--orange);
+}
+
+.card.unavailable {
+	background: var(--gray);
 }
 
 /* === DECK (page-court only) === */

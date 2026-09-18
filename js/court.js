@@ -644,10 +644,15 @@ async function load() {
 	}
 
 	const { data: court, error: courtErr } = await db
-		.from("courts").select("name, city, description, lat, lng, group_id").eq("id", courtId).eq("active", true).single();
+		.from("courts").select("name, city, description, lat, lng, group_id, unavailable").eq("id", courtId).eq("active", true).single();
 
 	if (courtErr || !court) {
 		app.innerHTML = `<p class="message error">Campo não encontrado.</p>`;
+		return;
+	}
+
+	if (court.unavailable) {
+		app.innerHTML = `<p class="message error">Este campo está temporariamente encerrado.</p>`;
 		return;
 	}
 
