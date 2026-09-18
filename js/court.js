@@ -280,6 +280,7 @@ async function finishOwnGame(court, reservationId) {
 
 	document.body.classList.remove("inuse");
 	document.body.classList.add("success");
+	document.querySelector(".deck")?.classList.remove("flipped");
 	app.classList.remove("available", "inuse");
 	document.getElementById("court-footer").innerHTML = "";
 
@@ -345,6 +346,7 @@ async function checkIn(court) {
 
 	document.body.classList.remove("inuse");
 	document.body.classList.add("success");
+	document.querySelector(".deck")?.classList.remove("flipped");
 	app.classList.remove("available", "inuse");
 	document.getElementById("court-footer").innerHTML = "";
 
