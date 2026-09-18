@@ -4,6 +4,13 @@ const params = new URLSearchParams(location.search);
 const courtId = params.get("court");
 let selectedDuration = 45;
 
+// CUSTOM ISO DIAGRAM IMAGES FOR SPECIFIC COURTS (keyed by court id as string)
+// Each entry: { src, height? } — height overrides the default IMG_H (80px)
+const COURT_CUSTOM_IMAGES = {
+	"5": { src: "/images/court_iso_costa1.svg", height: 120 },
+	"6": { src: "/images/court_iso_costa2.svg", height: 120 },
+};
+
 // MARK BROWSER-ONLY VISITORS SO CSS CAN SHOW AN INSTALL NUDGE ANIMATION
 const isPWA = window.matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
 if (!isPWA) document.body.classList.add("non-pwa");
@@ -580,34 +587,49 @@ function renderCourtGroupDiagram(groupCourts) {
 	const currentIndex = sorted.findIndex(c => String(c.id) === String(courtId));
 	if (currentIndex === -1) return;
 
-	const n = sorted.length;
-	const containerW = (n - 1) * STEP_X + IMG_W;
-	const containerH = (n - 1) * STEP_Y + IMG_H;
-
 	const wrapper = document.createElement("div");
 	wrapper.className = "court-diagram-wrapper";
 
 	const diagram = document.createElement("div");
 	diagram.className = "court-group-diagram";
-	diagram.style.width = containerW + "px";
-	diagram.style.height = containerH + "px";
 
-	sorted.forEach((court, i) => {
+	const currentCustomImage = COURT_CUSTOM_IMAGES[String(courtId)];
+	if (currentCustomImage) {
+		// Custom image already encodes the full group layout with correct opacities
+		const customH = currentCustomImage.height ?? IMG_H;
+		const customW = Math.round(154 / 90 * customH);
+		diagram.style.width = customW + "px";
+		diagram.style.height = customH + "px";
 		const img = document.createElement("img");
-		img.src = "/images/court_iso.svg";
-		img.alt = court.name || "";
+		img.src = currentCustomImage.src;
+		img.alt = "";
 		img.className = "court-diagram-img";
-		img.style.left = (i * STEP_X) + "px";
-		img.style.top = (i * STEP_Y) + "px";
-		img.style.width = IMG_W + "px";
-		img.style.height = IMG_H + "px";
-		img.style.opacity = i === currentIndex ? "1" : "0.3";
+		img.style.left = "0";
+		img.style.top = "0";
+		img.style.width = customW + "px";
+		img.style.height = customH + "px";
 		diagram.appendChild(img);
-	});
+	} else {
+		const n = sorted.length;
+		diagram.style.width = ((n - 1) * STEP_X + IMG_W) + "px";
+		diagram.style.height = ((n - 1) * STEP_Y + IMG_H) + "px";
+		sorted.forEach((court, i) => {
+			const img = document.createElement("img");
+			img.src = "/images/court_iso.svg";
+			img.alt = court.name || "";
+			img.className = "court-diagram-img";
+			img.style.left = (i * STEP_X) + "px";
+			img.style.top = (i * STEP_Y) + "px";
+			img.style.width = IMG_W + "px";
+			img.style.height = IMG_H + "px";
+			img.style.opacity = i === currentIndex ? "1" : "0.3";
+			diagram.appendChild(img);
+		});
+	}
 
 	const label = document.createElement("div");
 	label.className = "court-diagram-label";
-	label.textContent = "Posição do campo";
+	label.textContent = "Disposição do campo";
 	wrapper.appendChild(label);
 	wrapper.appendChild(diagram);
 	const statsEl = secondary.querySelector("#court-stats");
@@ -622,7 +644,7 @@ async function load() {
 	}
 
 	const { data: court, error: courtErr } = await db
-		.from("courts").select("name, city, description, lat, lng, group_id").eq("id", courtId).single();
+		.from("courts").select("name, city, description, lat, lng, group_id").eq("id", courtId).eq("active", true).single();
 
 	if (courtErr || !court) {
 		app.innerHTML = `<p class="message error">Campo não encontrado.</p>`;

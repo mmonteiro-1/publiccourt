@@ -236,7 +236,7 @@ async function load() {
 	const now = new Date().toISOString();
 
 	const [{ data: courts }, { data: reservations }] = await Promise.all([
-		db.from("courts").select("*").order("id"),
+		db.from("courts").select("*").eq("active", true).order("id"),
 		db.from("reservations").select("*").is("manual_finished_at", null).gt("ends_at", now),
 	]);
 
