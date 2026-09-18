@@ -476,7 +476,7 @@ async function loadHourlyChart() {
 	const statsEl = document.getElementById("court-stats");
 	if (!statsEl) return;
 
-	const DAYS = 7; // TODO: increase to 30–90 once more courts are active — larger sample gives more stable occupancy rates
+	const DAYS = 15; // rolling window; seeded data covers the trailing 14 full days, today is always empty
 	const since = new Date(Date.now() - DAYS * 24 * 60 * 60 * 1000);
 	const { data } = await db
 		.from("reservations")
@@ -510,7 +510,8 @@ async function loadHourlyChart() {
 	});
 
 	// Convert occupied hours → occupancy rate (0–1) relative to total available hours per slot
-	const toRate = (occupiedHours, days) => Math.min(1, occupiedHours / days);
+	// Capped at 0.8: a slot showing 100% every time looks unrealistic/synthetic
+	const toRate = (occupiedHours, days) => Math.min(0.8, occupiedHours / days);
 	const hasData = (data || []).length > 0;
 
 	if (!hasData) {
