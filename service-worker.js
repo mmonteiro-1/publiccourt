@@ -9,7 +9,7 @@ const SHELL = [
   "/js/config.js",
   "/js/utils.js",
   "/js/court.js",
-  "/js/dashboard.js",
+  "/js/court-list.js",
   "/images/pig.svg",
   "/images/app_icon_192.png",
   "/images/app_icon_512.png",
