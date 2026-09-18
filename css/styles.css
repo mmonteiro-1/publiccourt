@@ -154,6 +154,10 @@ body {
 	content: none;
 }
 
+.page-court.success .secondary-card {
+	display: none;
+}
+
 .page-court.success .logo-pig {
 	opacity: 0;
 }
