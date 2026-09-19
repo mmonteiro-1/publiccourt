@@ -17,7 +17,37 @@ button, a {
 	font-size: 1em;
 	color: var(--black);
 	font-family: inherit;
-	font-weight: 600;
+	font-weight: 700;
+}
+
+button {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 10px;
+	width: 100%;
+	padding: 15px;
+	border: 2px solid var(--black);
+	border-radius: 10px;
+	background: var(--white);
+	color: var(--black);
+	box-shadow: 4px 4px 0 var(--black);
+	white-space: nowrap;
+}
+
+button:disabled {
+	pointer-events: none;
+	opacity: 0.4;
+}
+
+button.extend-confirming:disabled {
+	opacity: 1;
+}
+
+.button-shallow {
+	background: transparent;
+	box-shadow: none;
+	margin-top: 10px;
 }
 
 [hidden] { display: none !important; }
@@ -203,35 +233,6 @@ body {
 	color: var(--black);
 }
 
-.page-court .finish-btn {
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	gap: 10px;
-	border: 2px solid var(--black);
-	background: var(--white);
-	color: var(--black);
-	box-shadow: 4px 4px 0 var(--black);
-	white-space: nowrap;
-	padding: 15px 10px;
-}
-
-.page-court .submit {
-	background: transparent;
-	border: 2px solid var(--black);
-}
-
-.page-court .dur-btn {
-	border: 2px solid var(--black);
-	background: transparent;
-	color: var(--white);
-}
-
-.page-court .dur-btn.selected {
-	background: var(--white);
-	color: var(--black);
-	box-shadow: 4px 4px 0 var(--black);
-}
 
 .page-court .info-link {
 	position: static;
@@ -315,16 +316,15 @@ header {
 }
 
 .view-toggle-btn {
-	display: flex;
-	align-items: center;
-	justify-content: center;
 	width: 35px;
 	height: 33px;
 	border: none;
 	background: transparent;
+	box-shadow: none;
 	border-radius: 20px;
-	font-family: inherit;
 	text-transform: uppercase;
+	flex: none;
+	padding: 0;
 }
 
 .view-toggle-btn.active {
@@ -350,20 +350,18 @@ header {
 }
 
 .filter-tag {
-	display: inline-flex;
-	align-items: center;
 	height: 40px;
 	gap: 5px;
 	padding: 0 15px;
 	border-radius: 100px;
-	border: 2px solid #000;
 	background: none;
-	font-family: inherit;
+	box-shadow: none;
 	user-select: none;
-	font-weight: 600;
+	font-weight: 700;
 	text-transform: uppercase;
-	transition: all 0.15s;
-	white-space: nowrap;
+	transition: background 0.15s;
+	width: auto;
+	flex: none;
 }
 
 .filter-tag-icon {
@@ -555,18 +553,6 @@ header {
 	outline: none;
 }
 
-.form-btn {
-	width: 100%;
-	padding: 15px;
-	border: 2px solid var(--black);
-	border-radius: 10px;
-	color: var(--black);
-	font-family: inherit;
-	font-size: 1em;
-	font-weight: 700;
-	cursor: pointer;
-	box-shadow: 4px 4px 0 var(--black);
-}
 
 .form-error {
 	text-align: center;
@@ -626,15 +612,9 @@ header {
 }
 
 .owner-logout {
-	background: none;
-	border: 2px solid var(--black);
-	border-radius: 10px;
+	width: auto;
 	padding: 10px 15px;
 	font-size: 0.8em;
-	font-weight: 700;
-	cursor: pointer;
-	color: var(--black);
-	font-family: inherit;
 }
 
 .page-owner #app {
@@ -665,14 +645,15 @@ header {
 
 .owner-nav-btn {
 	flex: 1;
+	width: auto;
 	padding: 15px 5px;
 	border: none;
+	border-radius: 0;
 	background: transparent;
-	font-family: inherit;
+	box-shadow: none;
 	font-size: 0.7em;
 	font-weight: 700;
 	text-transform: uppercase;
-	cursor: pointer;
 	color: var(--black);
 }
 
@@ -721,9 +702,9 @@ header {
 	gap: 10px;
 }
 
-.membership-actions .finish-btn,
-.membership-actions .form-btn {
+.membership-actions button {
 	flex: 1;
+	width: auto;
 }
 
 /* === DECK (page-court only) === */
@@ -771,8 +752,11 @@ header {
 	right: 15px;
 	background: none;
 	border: none;
+	box-shadow: none;
+	border-radius: 0;
 	line-height: 0;
 	padding: 0;
+	width: auto;
 }
 
 .secondary-close img {
@@ -1110,22 +1094,13 @@ header {
 
 .dur-btn {
 	padding: 10px 0;
-	border-radius: 10px;
-	font-family: inherit;
-	font-weight: 500;
-	transition: all 0.15s;
+	background: transparent;
+	box-shadow: none;
 }
 
-.submit {
-	width: 100%;
-	margin-top: 15px;
-	padding: 15px;
-	border: none;
-	border-radius: 10px;
-}
-
-.submit:disabled {
-	pointer-events: none;
+.dur-btn.selected {
+	background: var(--white);
+	box-shadow: 4px 4px 0 var(--black);
 }
 
 .message {
@@ -1134,34 +1109,15 @@ header {
 	font-weight: 400;
 }
 
-
-.finish-btn {
-	width: 100%;
-	padding: 15px;
-	border-radius: 10px;
-	background: transparent;
-	font-family: inherit;
-	font-weight: 600;
-	margin-top: 15px;
-}
-
-.finish-btn:disabled {
-	pointer-events: none;
-	opacity: 0.4;
-}
-
-.finish-btn.extend-confirming:disabled {
-	opacity: 1;
-}
-
 .extend-row {
 	display: grid;
 	grid-template-columns: 1fr 1fr 1fr;
 	gap: 10px;
+	margin-bottom: 10px;
 }
 
-.extend-row .finish-btn {
-	margin-top: 0;
+.extend-row button {
+	width: auto;
 }
 
 .install-nudge {
@@ -1185,8 +1141,6 @@ header {
 	position: absolute;
 	top: 15px;
 	right: 15px;
-	background: none;
-	border: none;
 	line-height: 0;
 }
 

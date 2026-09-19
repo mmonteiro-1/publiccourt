@@ -95,12 +95,12 @@ function renderPendingView() {
 				<p class="membership-courts">${courtNames}</p>
 				<p class="membership-date">${date}</p>
 				<div class="membership-actions">
-					<button class="finish-btn approve-btn" data-id="${m.id}">Aprovar</button>
-					<button class="form-btn deny-btn" data-id="${m.id}">Recusar</button>
+					<button class="approve-btn" data-id="${m.id}">Aprovar</button>
+					<button class="button-shallow deny-btn" data-id="${m.id}">Recusar</button>
 				</div>
 				<div class="deny-form" id="deny-form-${m.id}" hidden>
 					<input class="form-input" id="deny-reason-${m.id}" placeholder="Motivo da recusa (opcional)" type="text">
-					<button class="form-btn confirm-deny-btn" data-id="${m.id}" style="margin-top:10px">Confirmar recusa</button>
+					<button class="confirm-deny-btn" data-id="${m.id}">Confirmar recusa</button>
 				</div>
 			</div>
 		`;

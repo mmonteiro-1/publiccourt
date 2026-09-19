@@ -32,7 +32,7 @@ async function loadProfile(user) {
 	app.innerHTML = `
 		<p class="profile-name">Olá, ${profile.name}</p>
 		<p class="profile-email">${user.email}</p>
-		<button class="form-btn" id="logout-btn">Sair</button>
+		<button id="logout-btn">Sair</button>
 	`;
 	document.getElementById("logout-btn").addEventListener("click", async () => {
 		await db.auth.signOut();

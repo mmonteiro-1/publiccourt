@@ -92,12 +92,12 @@ export function renderPreview(court, active) {
 		<p class="margin-bottom-20 card-sub">${bodyText}</p>
 		${isOwner ? `
 		<div class="extend-row">
-			<button class="finish-btn extend-btn" data-mins="15" ${localStorage.getItem("extended_" + active.id) ? "disabled" : ""}>+ 15MIN</button>
-			<button class="finish-btn extend-btn" data-mins="30" ${localStorage.getItem("extended_" + active.id) ? "disabled" : ""}>+ 30MIN</button>
-			<button class="finish-btn extend-btn" data-mins="60" ${localStorage.getItem("extended_" + active.id) ? "disabled" : ""}>+ 60MIN</button>
+			<button class="extend-btn" data-mins="15" ${localStorage.getItem("extended_" + active.id) ? "disabled" : ""}>+ 15MIN</button>
+			<button class="extend-btn" data-mins="30" ${localStorage.getItem("extended_" + active.id) ? "disabled" : ""}>+ 30MIN</button>
+			<button class="extend-btn" data-mins="60" ${localStorage.getItem("extended_" + active.id) ? "disabled" : ""}>+ 60MIN</button>
 		</div>` : ""}
-		<button class="finish-btn" id="here-btn">${locationIcon} ${actionLabel}</button>
-		<button class="submit" id="back-btn">Voltar</button>
+		<button id="here-btn">${locationIcon} ${actionLabel}</button>
+		<button class="button-shallow" id="back-btn">Voltar</button>
 		${!isOwner ? `<p class="card-sub margin-top-10" style="font-size:0.75em">Por favor permite que este browser confirme a tua localização</p>` : ""}
 	`;
 
@@ -141,9 +141,9 @@ function renderLocationBlocked(court, message) {
 		<p class="court-label">${court.name}</p>
 		<p class="card-status">Tás onde?</p>
 		<p class="card-sub margin-top-10 margin-bottom-20">${message}</p>
-		<button class="finish-btn" id="retry-btn"><img src="images/icon_location_exclamation.svg" class="link-icon" alt=""> Tentar outra vez</button>
-		<button class="finish-btn" id="hint-btn"><img src="images/icon_siren.svg" class="link-icon" alt=""> Não há QR Code na entrada</button>
-		<button class="submit" id="back-btn">Voltar</button>
+		<button id="retry-btn"><img src="images/icon_location_exclamation.svg" class="link-icon" alt=""> Tentar outra vez</button>
+		<button class="margin-top-10" id="hint-btn"><img src="images/icon_siren.svg" class="link-icon" alt=""> Não há QR Code na entrada</button>
+		<button class="button-shallow" id="back-btn">Voltar</button>
 		${locationHint ? `<p class="card-sub margin-top-10" style="font-size: 0.75em">${locationHint}</p>` : ""}
 	`;
 	document.getElementById("retry-btn").addEventListener("click", () => verifyLocationAndProceed(court));
@@ -179,7 +179,7 @@ function renderAvailable(court) {
 			<button class="dur-btn" data-mins="60">60MIN</button>
 			<button class="dur-btn" data-mins="90">90MIN</button>
 		</div>
-		<button class="finish-btn" id="checkin-btn"><img src="images/icon_run.svg" class="link-icon" alt=""> Começar jogo</button>
+		<button id="checkin-btn"><img src="images/icon_run.svg" class="link-icon" alt=""> Começar jogo</button>
 	`;
 
 	document.getElementById("court-footer").innerHTML = `

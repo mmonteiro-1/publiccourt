@@ -29,7 +29,7 @@ export async function renderBookable(court) {
 	if (!user) {
 		app.innerHTML = `${header}
 			<p class="card-sub margin-bottom-20"><b>Olá, jogador.</b> Reservas neste campo estão destinadas a membros. Primeiro faz login no Campo Livre e depois solicita um membership neste campo para poder jogar</p>
-			<button class="finish-btn" id="login-btn">Fazer login</button>
+			<button id="login-btn">Fazer login</button>
 		`;
 		document.getElementById("login-btn").addEventListener("click", () => { location.href = "login.html"; });
 		return;
@@ -74,7 +74,7 @@ export async function renderBookable(court) {
 		app.innerHTML = `${header}
 			<p class="card-sub margin-bottom-20"><b>Olá, ${name}.</b> A tua solicitação foi recusada.${reason} Podes solicitar novamente.</p>
 			${siblingNote}
-			<button class="finish-btn" id="reapply-btn">Solicitar novamente</button>
+			<button id="reapply-btn">Solicitar novamente</button>
 		`;
 		document.getElementById("reapply-btn").addEventListener("click", () => requestMembership(court, user, name, app, header, siblingNote, true));
 		return;
@@ -92,7 +92,7 @@ export async function renderBookable(court) {
 	app.innerHTML = `${header}
 		<p class="card-sub margin-bottom-20"><b>Olá, ${name}.</b> Reservas neste campo estão destinadas a membros. Quer solicitar um membership?</p>
 		${siblingNote}
-		<button class="finish-btn" id="membership-btn">Solicitar membership</button>
+		<button id="membership-btn">Solicitar membership</button>
 	`;
 	document.getElementById("membership-btn").addEventListener("click", () => requestMembership(court, user, name, app, header, siblingNote, false));
 }
