@@ -18,11 +18,22 @@
 			<img src="images/pig.svg" class="logo-pig" alt="">
 			<span>LIVRE</span>
 		</div>
+		<button id="logout-btn" class="owner-logout">Sair</button>
 	</header>
 
 	<main id="app">
-		<p class="form-sent">A carregar...</p>
+		<p class="form-sent" id="loading-msg">A carregar...</p>
+
+		<div id="view-pending" class="owner-view" hidden></div>
+		<div id="view-members" class="owner-view" hidden></div>
+		<div id="view-rules" class="owner-view" hidden></div>
 	</main>
+
+	<nav class="owner-nav" hidden>
+		<button class="owner-nav-btn active" data-view="pending">Pendentes</button>
+		<button class="owner-nav-btn" data-view="members">Membros</button>
+		<button class="owner-nav-btn" data-view="rules">Campo</button>
+	</nav>
 
 	<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 	<script src="js/config.js"></script>

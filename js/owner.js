@@ -1,4 +1,13 @@
 const app = document.getElementById("app");
+let ownerData = null;
+
+function showView(view) {
+	document.querySelectorAll(".owner-view").forEach(el => el.hidden = true);
+	document.getElementById(`view-${view}`).hidden = false;
+	document.querySelectorAll(".owner-nav-btn").forEach(btn => {
+		btn.classList.toggle("active", btn.dataset.view === view);
+	});
+}
 
 async function loadDashboard(user) {
 	const { data: ownedGroups } = await db.from("court_groups").select("id");
@@ -9,10 +18,18 @@ async function loadDashboard(user) {
 
 	const groupIds = ownedGroups.map(g => g.id);
 
-	const [{ data: memberships }, { data: courts }] = await Promise.all([
+	const [
+		{ data: pending },
+		{ data: approved },
+		{ data: courts },
+	] = await Promise.all([
 		db.from("memberships")
 			.select("id, player_id, group_id, court_id, created_at")
 			.eq("status", "pending")
+			.in("group_id", groupIds),
+		db.from("memberships")
+			.select("id, player_id, group_id, court_id, approved_at")
+			.eq("status", "approved")
 			.in("group_id", groupIds),
 		db.from("courts")
 			.select("id, name, group_id")
@@ -20,10 +37,10 @@ async function loadDashboard(user) {
 			.eq("active", true),
 	]);
 
-	const playerIds = [...new Set((memberships || []).map(m => m.player_id))];
+	const allPlayerIds = [...new Set([...(pending || []), ...(approved || [])].map(m => m.player_id))];
 	let profiles = {};
-	if (playerIds.length > 0) {
-		const { data: profileData } = await db.from("profiles").select("id, name").in("id", playerIds);
+	if (allPlayerIds.length > 0) {
+		const { data: profileData } = await db.from("profiles").select("id, name").in("id", allPlayerIds);
 		profiles = Object.fromEntries((profileData || []).map(p => [p.id, p]));
 	}
 
@@ -33,60 +50,24 @@ async function loadDashboard(user) {
 		courtsByGroup[c.group_id].push(c.name);
 	});
 
-	if (!memberships || memberships.length === 0) {
-		app.innerHTML = `
-			<p class="owner-section">Memberships pendentes</p>
-			<p class="form-sent">Sem solicitações pendentes.</p>
-			<button class="form-btn" id="logout-btn" style="margin-top:30px">Sair</button>
-		`;
-		document.getElementById("logout-btn").addEventListener("click", async () => {
-			await db.auth.signOut();
-			location.href = "login.html";
-		});
-		return;
-	}
+	ownerData = {
+		pending: pending || [],
+		approved: approved || [],
+		courts: courts || [],
+		profiles,
+		courtsByGroup,
+	};
 
-	app.innerHTML = `
-		<p class="owner-section">Memberships pendentes</p>
-		${memberships.map(m => {
-			const playerName = profiles[m.player_id]?.name || "Jogador desconhecido";
-			const courtNames = (courtsByGroup[m.group_id] || []).join(", ");
-			const date = new Date(m.created_at).toLocaleDateString("pt-PT");
-			return `
-				<div class="membership-card" data-id="${m.id}">
-					<p class="membership-player">${playerName}</p>
-					<p class="membership-courts">${courtNames}</p>
-					<p class="membership-date">${date}</p>
-					<div class="membership-actions">
-						<button class="finish-btn approve-btn" data-id="${m.id}">Aprovar</button>
-						<button class="form-btn deny-btn" data-id="${m.id}">Recusar</button>
-					</div>
-					<div class="deny-form" id="deny-form-${m.id}" hidden>
-						<input class="form-input" id="deny-reason-${m.id}" placeholder="Motivo da recusa (opcional)" type="text">
-						<button class="form-btn confirm-deny-btn" data-id="${m.id}" style="margin-top:10px">Confirmar recusa</button>
-					</div>
-				</div>
-			`;
-		}).join("")}
-		<button class="form-btn" id="logout-btn" style="margin-top:15px">Sair</button>
-	`;
+	document.getElementById("loading-msg").hidden = true;
+	document.querySelector(".owner-nav").hidden = false;
 
-	document.querySelectorAll(".approve-btn").forEach(btn => {
-		btn.addEventListener("click", () => approveMembership(btn.dataset.id));
-	});
+	renderPendingView();
+	renderMembersView();
+	renderRulesView();
+	showView("pending");
 
-	document.querySelectorAll(".deny-btn").forEach(btn => {
-		btn.addEventListener("click", () => {
-			document.getElementById(`deny-form-${btn.dataset.id}`).hidden = false;
-			btn.hidden = true;
-		});
-	});
-
-	document.querySelectorAll(".confirm-deny-btn").forEach(btn => {
-		btn.addEventListener("click", () => {
-			const reason = document.getElementById(`deny-reason-${btn.dataset.id}`).value.trim();
-			denyMembership(btn.dataset.id, reason);
-		});
+	document.querySelectorAll(".owner-nav-btn").forEach(btn => {
+		btn.addEventListener("click", () => showView(btn.dataset.view));
 	});
 
 	document.getElementById("logout-btn").addEventListener("click", async () => {
@@ -95,8 +76,100 @@ async function loadDashboard(user) {
 	});
 }
 
+function renderPendingView() {
+	const container = document.getElementById("view-pending");
+	const { pending, profiles, courtsByGroup } = ownerData;
+
+	if (pending.length === 0) {
+		container.innerHTML = `<p class="form-sent">Sem solicitações pendentes.</p>`;
+		return;
+	}
+
+	container.innerHTML = pending.map(m => {
+		const playerName = profiles[m.player_id]?.name || "Jogador desconhecido";
+		const courtNames = (courtsByGroup[m.group_id] || []).join(", ");
+		const date = new Date(m.created_at).toLocaleDateString("pt-PT");
+		return `
+			<div class="membership-card" data-id="${m.id}">
+				<p class="membership-player">${playerName}</p>
+				<p class="membership-courts">${courtNames}</p>
+				<p class="membership-date">${date}</p>
+				<div class="membership-actions">
+					<button class="finish-btn approve-btn" data-id="${m.id}">Aprovar</button>
+					<button class="form-btn deny-btn" data-id="${m.id}">Recusar</button>
+				</div>
+				<div class="deny-form" id="deny-form-${m.id}" hidden>
+					<input class="form-input" id="deny-reason-${m.id}" placeholder="Motivo da recusa (opcional)" type="text">
+					<button class="form-btn confirm-deny-btn" data-id="${m.id}" style="margin-top:10px">Confirmar recusa</button>
+				</div>
+			</div>
+		`;
+	}).join("");
+
+	container.querySelectorAll(".approve-btn").forEach(btn => {
+		btn.addEventListener("click", () => approveMembership(btn.dataset.id));
+	});
+
+	container.querySelectorAll(".deny-btn").forEach(btn => {
+		btn.addEventListener("click", () => {
+			document.getElementById(`deny-form-${btn.dataset.id}`).hidden = false;
+			btn.hidden = true;
+		});
+	});
+
+	container.querySelectorAll(".confirm-deny-btn").forEach(btn => {
+		btn.addEventListener("click", () => {
+			const reason = document.getElementById(`deny-reason-${btn.dataset.id}`).value.trim();
+			denyMembership(btn.dataset.id, reason);
+		});
+	});
+}
+
+function renderMembersView() {
+	const container = document.getElementById("view-members");
+	const { approved, profiles, courtsByGroup } = ownerData;
+
+	if (approved.length === 0) {
+		container.innerHTML = `<p class="form-sent">Nenhum membro ativo.</p>`;
+		return;
+	}
+
+	const sorted = [...approved].sort((a, b) => new Date(b.approved_at) - new Date(a.approved_at));
+
+	container.innerHTML = sorted.map(m => {
+		const playerName = profiles[m.player_id]?.name || "Jogador desconhecido";
+		const courtNames = (courtsByGroup[m.group_id] || []).join(", ");
+		const date = m.approved_at ? new Date(m.approved_at).toLocaleDateString("pt-PT") : "—";
+		return `
+			<div class="membership-card">
+				<p class="membership-player">${playerName}</p>
+				<p class="membership-courts">${courtNames}</p>
+				<p class="membership-date">Aprovado ${date}</p>
+			</div>
+		`;
+	}).join("");
+}
+
+function renderRulesView() {
+	const container = document.getElementById("view-rules");
+	const { courts } = ownerData;
+
+	const uniqueCourts = courts.map(c => `
+		<div class="membership-card">
+			<p class="membership-player">${c.name}</p>
+		</div>
+	`).join("");
+
+	container.innerHTML = `
+		<p class="owner-section">Campos</p>
+		${uniqueCourts}
+		<p class="owner-section" style="margin-top:20px">Disponibilidade</p>
+		<p class="form-sent" style="text-align:left;font-weight:400">Em desenvolvimento.</p>
+	`;
+}
+
 async function approveMembership(id) {
-	const card = document.querySelector(`.membership-card[data-id="${id}"]`);
+	const card = document.querySelector(`#view-pending .membership-card[data-id="${id}"]`);
 	const btn = card.querySelector(".approve-btn");
 	btn.disabled = true;
 	btn.textContent = "A aprovar...";
@@ -112,7 +185,7 @@ async function approveMembership(id) {
 }
 
 async function denyMembership(id, reason) {
-	const card = document.querySelector(`.membership-card[data-id="${id}"]`);
+	const card = document.querySelector(`#view-pending .membership-card[data-id="${id}"]`);
 	const btn = card.querySelector(".confirm-deny-btn");
 	btn.disabled = true;
 	btn.textContent = "A recusar...";
