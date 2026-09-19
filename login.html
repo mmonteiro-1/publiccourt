@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="pt">
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Campo Livre</title>
+	<link rel="preconnect" href="https://fonts.googleapis.com">
+	<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300..700&display=swap" rel="stylesheet">
+	<link rel="stylesheet" href="css/styles.css">
+</head>
+
+<body class="page-login">
+
+	<header>
+		<div class="logo">
+			<span>CAMPO</span>
+			<img src="images/pig.svg" class="logo-pig" alt="">
+			<span>LIVRE</span>
+		</div>
+	</header>
+
+	<main id="app">
+		<form id="login-form">
+			<input class="form-input" type="text" id="name-input" placeholder="Nome" autocomplete="name" required>
+			<input class="form-input" type="email" id="email-input" placeholder="Email" autocomplete="email" required>
+			<button class="form-btn" type="submit">Entrar</button>
+		</form>
+	</main>
+
+	<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+	<script src="js/config.js"></script>
+	<script src="js/login.js"></script>
+
+</body>
+
+</html>
