@@ -1,13 +1,30 @@
 const app = document.getElementById("app");
 let ownerData = null;
 
-const DURATION_OPTIONS = [
+const MEMBERSHIP_DURATION_OPTIONS = [
 	{ label: "Sem validade", months: "" },
 	{ label: "1 mês", months: 1 },
 	{ label: "3 meses", months: 3 },
 	{ label: "6 meses", months: 6 },
 	{ label: "1 ano", months: 12 },
 	{ label: "2 anos", months: 24 },
+];
+
+const SLOT_DURATION_OPTIONS = [
+	{ label: "—", minutes: "" },
+	{ label: "30 min", minutes: 30 },
+	{ label: "45 min", minutes: 45 },
+	{ label: "60 min", minutes: 60 },
+	{ label: "90 min", minutes: 90 },
+	{ label: "120 min", minutes: 120 },
+];
+
+const MIN_GAME_DURATION_OPTIONS = [
+	{ label: "—", minutes: "" },
+	{ label: "30 min", minutes: 30 },
+	{ label: "45 min", minutes: 45 },
+	{ label: "60 min", minutes: 60 },
+	{ label: "90 min", minutes: 90 },
 ];
 
 function showView(view) {
@@ -19,7 +36,7 @@ function showView(view) {
 }
 
 async function loadDashboard(user) {
-	const { data: ownedGroups } = await db.from("court_groups").select("id, membership_duration_months");
+	const { data: ownedGroups } = await db.from("court_groups").select("id, membership_duration_months, slot_duration_minutes, min_game_duration_minutes, price_per_slot_cents");
 	if (!ownedGroups || ownedGroups.length === 0) {
 		location.href = "profile.html";
 		return;
@@ -202,39 +219,82 @@ async function revokeMembership(id) {
 	card.remove();
 }
 
+function makeSelect(options, currentValue, classes, dataAttrs) {
+	const attrs = Object.entries(dataAttrs).map(([k, v]) => `data-${k}="${v}"`).join(" ");
+	const opts = options.map(opt => {
+		const val = opt.minutes !== undefined ? opt.minutes : opt.months;
+		return `<option value="${val}" ${currentValue == val ? "selected" : ""}>${opt.label}</option>`;
+	}).join("");
+	return `<select class="${classes}" ${attrs}>${opts}</select>`;
+}
+
 function renderRulesView() {
 	const container = document.getElementById("view-rules");
 	const { ownedGroups, courtsByGroup } = ownerData;
 
 	container.innerHTML = ownedGroups.map(group => {
 		const courtNames = (courtsByGroup[group.id] || []).join(", ");
-		const current = group.membership_duration_months ?? "";
-		const options = DURATION_OPTIONS.map(opt =>
-			`<option value="${opt.months}" ${current == opt.months ? "selected" : ""}>${opt.label}</option>`
-		).join("");
+		const priceEuros = group.price_per_slot_cents != null ? (group.price_per_slot_cents / 100).toFixed(2) : "";
+
 		return `
-			<div class="membership-card">
+			<div class="membership-card" data-group-id="${group.id}">
 				<p class="membership-player">${courtNames}</p>
+
+				<p class="membership-courts membership-rule-label">Duração do slot</p>
+				${makeSelect(SLOT_DURATION_OPTIONS, group.slot_duration_minutes ?? "", "form-input rule-input", { field: "slot_duration_minutes" })}
+
+				<p class="membership-courts membership-rule-label">Preço por slot</p>
+				<input class="form-input rule-input" type="number" inputmode="decimal" min="0" step="0.01" placeholder="€0.00" value="${priceEuros}" data-field="price_per_slot_cents">
+
+				<p class="membership-courts membership-rule-label">Duração mínima de jogo</p>
+				${makeSelect(MIN_GAME_DURATION_OPTIONS, group.min_game_duration_minutes ?? "", "form-input rule-input", { field: "min_game_duration_minutes" })}
+
 				<p class="membership-courts membership-rule-label">Validade do membership</p>
-				<select class="form-input duration-select" data-group-id="${group.id}">
-					${options}
-				</select>
+				${makeSelect(MEMBERSHIP_DURATION_OPTIONS, group.membership_duration_months ?? "", "form-input rule-input", { field: "membership_duration_months" })}
+
+				<button class="save-rules-btn margin-top-10" data-group-id="${group.id}" disabled>Guardar alterações</button>
 			</div>
 		`;
 	}).join("");
 
-	container.querySelectorAll(".duration-select").forEach(sel => {
-		sel.addEventListener("change", () => saveDuration(parseInt(sel.dataset.groupId), sel.value));
+	container.querySelectorAll(".membership-card").forEach(card => {
+		const groupId = card.dataset.groupId;
+		const saveBtn = card.querySelector(".save-rules-btn");
+
+		card.querySelectorAll(".rule-input").forEach(input => {
+			input.addEventListener("change", () => saveBtn.disabled = false);
+		});
+
+		saveBtn.addEventListener("click", () => saveRules(groupId, card, saveBtn));
 	});
 }
 
-async function saveDuration(groupId, value) {
-	const months = value === "" ? null : parseInt(value);
-	await db.from("court_groups")
-		.update({ membership_duration_months: months })
-		.eq("id", groupId);
-	const group = ownerData.ownedGroups.find(g => g.id === groupId);
-	if (group) group.membership_duration_months = months;
+async function saveRules(groupId, card, saveBtn) {
+	saveBtn.disabled = true;
+	saveBtn.textContent = "A guardar...";
+
+	const updates = {};
+	card.querySelectorAll(".rule-input").forEach(input => {
+		const field = input.dataset.field;
+		if (field === "price_per_slot_cents") {
+			const euros = parseFloat(input.value);
+			updates[field] = isNaN(euros) ? null : Math.round(euros * 100);
+		} else {
+			updates[field] = input.value === "" ? null : parseInt(input.value);
+		}
+	});
+
+	const { error } = await db.from("court_groups").update(updates).eq("id", groupId);
+
+	if (error) {
+		saveBtn.disabled = false;
+		saveBtn.textContent = "Guardar alterações";
+		return;
+	}
+
+	const group = ownerData.ownedGroups.find(g => g.id == groupId);
+	if (group) Object.assign(group, updates);
+	saveBtn.textContent = "Guardado";
 }
 
 async function approveMembership(id) {
