@@ -151,10 +151,10 @@ function renderLocationBlocked(court, message) {
 	const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
 	const isAndroid = /android/i.test(navigator.userAgent);
 	const locationHint = isIOS
-		? "Se negaste a localização, vai a Definições → Safari/Chrome → Localização e permite o acesso."
-		: isAndroid
-		? "Se negaste a localização, vai às Definições do browser → Permissões → Localização e permite o acesso."
-		: "";
+		? "Se o telefone não pede permissão, o bloqueio pode estar em 2 sítios: 1) Definições → Safari → Localização. 2) Definições → Privacidade → Serviços de Localização → Websites do Safari."
+	: isAndroid
+		? "Se o telefone não pede permissão, o bloqueio pode estar em 2 sítios: 1) Definições → Aplicações → Chrome → Permissões → Localização. 2) Chrome → ⋮ → Definições → Definições de sites → Localização."
+	: "";
 
 	app.innerHTML = `
 		<p class="court-label">${court.name}</p>
@@ -163,7 +163,7 @@ function renderLocationBlocked(court, message) {
 		<button class="finish-btn" id="retry-btn"><img src="images/icon_location_exclamation.svg" class="link-icon" alt=""> Tentar outra vez</button>
 		<button class="finish-btn" id="hint-btn"><img src="images/icon_siren.svg" class="link-icon" alt=""> Não há QR Code na entrada</button>
 		<button class="submit" id="back-btn">Voltar</button>
-		${locationHint ? `<p class="card-sub margin-top-10" style="font-size: 0.75em">${locationHint}</p>` : ""}
+		${locationHint ? `<p class="card-sub margin-top-10" style="font-size: 0.7em">${locationHint}</p>` : ""}
 	`;
 	document.getElementById("retry-btn").addEventListener("click", () => verifyLocationAndProceed(court));
 	document.getElementById("back-btn").addEventListener("click", () => { location.href = "index.html"; });
