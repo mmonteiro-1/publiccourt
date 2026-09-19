@@ -47,7 +47,6 @@ button.extend-confirming:disabled {
 .button-shallow {
 	background: transparent;
 	box-shadow: none;
-	margin-top: 10px;
 }
 
 [hidden] { display: none !important; }

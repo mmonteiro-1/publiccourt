@@ -97,7 +97,7 @@ export function renderPreview(court, active) {
 			<button class="extend-btn" data-mins="60" ${localStorage.getItem("extended_" + active.id) ? "disabled" : ""}>+ 60MIN</button>
 		</div>` : ""}
 		<button id="here-btn">${locationIcon} ${actionLabel}</button>
-		<button class="button-shallow" id="back-btn">Voltar</button>
+		<button class="button-shallow margin-top-10" id="back-btn">Voltar</button>
 		${!isOwner ? `<p class="card-sub margin-top-10" style="font-size:0.75em">Por favor permite que este browser confirme a tua localização</p>` : ""}
 	`;
 
@@ -143,7 +143,7 @@ function renderLocationBlocked(court, message) {
 		<p class="card-sub margin-top-10 margin-bottom-20">${message}</p>
 		<button id="retry-btn"><img src="images/icon_location_exclamation.svg" class="link-icon" alt=""> Tentar outra vez</button>
 		<button class="margin-top-10" id="hint-btn"><img src="images/icon_siren.svg" class="link-icon" alt=""> Não há QR Code na entrada</button>
-		<button class="button-shallow" id="back-btn">Voltar</button>
+		<button class="button-shallow margin-top-10" id="back-btn">Voltar</button>
 		${locationHint ? `<p class="card-sub margin-top-10" style="font-size: 0.75em">${locationHint}</p>` : ""}
 	`;
 	document.getElementById("retry-btn").addEventListener("click", () => verifyLocationAndProceed(court));
