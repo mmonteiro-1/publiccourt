@@ -1,6 +1,15 @@
 const app = document.getElementById("app");
 let ownerData = null;
 
+const DURATION_OPTIONS = [
+	{ label: "Sem validade", months: "" },
+	{ label: "1 mês", months: 1 },
+	{ label: "3 meses", months: 3 },
+	{ label: "6 meses", months: 6 },
+	{ label: "1 ano", months: 12 },
+	{ label: "2 anos", months: 24 },
+];
+
 function showView(view) {
 	document.querySelectorAll(".owner-view").forEach(el => el.hidden = true);
 	document.getElementById(`view-${view}`).hidden = false;
@@ -10,7 +19,7 @@ function showView(view) {
 }
 
 async function loadDashboard(user) {
-	const { data: ownedGroups } = await db.from("court_groups").select("id");
+	const { data: ownedGroups } = await db.from("court_groups").select("id, membership_duration_months");
 	if (!ownedGroups || ownedGroups.length === 0) {
 		location.href = "profile.html";
 		return;
@@ -28,7 +37,7 @@ async function loadDashboard(user) {
 			.eq("status", "pending")
 			.in("group_id", groupIds),
 		db.from("memberships")
-			.select("id, player_id, group_id, court_id, approved_at")
+			.select("id, player_id, group_id, court_id, approved_at, expires_at")
 			.eq("status", "approved")
 			.in("group_id", groupIds),
 		db.from("courts")
@@ -51,6 +60,7 @@ async function loadDashboard(user) {
 	});
 
 	ownerData = {
+		ownedGroups,
 		pending: pending || [],
 		approved: approved || [],
 		courts: courts || [],
@@ -139,12 +149,14 @@ function renderMembersView() {
 	container.innerHTML = sorted.map(m => {
 		const playerName = profiles[m.player_id]?.name || "Jogador desconhecido";
 		const courtNames = (courtsByGroup[m.group_id] || []).join(", ");
-		const date = m.approved_at ? new Date(m.approved_at).toLocaleDateString("pt-PT") : "—";
+		const approvedDate = m.approved_at ? new Date(m.approved_at).toLocaleDateString("pt-PT") : "—";
+		const expiresDate = m.expires_at ? new Date(m.expires_at).toLocaleDateString("pt-PT") : null;
 		return `
 			<div class="membership-card">
 				<p class="membership-player">${playerName}</p>
 				<p class="membership-courts">${courtNames}</p>
-				<p class="membership-date">Aprovado ${date}</p>
+				<p class="membership-date">Aprovado ${approvedDate}</p>
+				<p class="membership-date">${expiresDate ? `Expira ${expiresDate}` : "Sem validade"}</p>
 			</div>
 		`;
 	}).join("");
@@ -152,20 +164,37 @@ function renderMembersView() {
 
 function renderRulesView() {
 	const container = document.getElementById("view-rules");
-	const { courts } = ownerData;
+	const { ownedGroups, courtsByGroup } = ownerData;
 
-	const uniqueCourts = courts.map(c => `
-		<div class="membership-card">
-			<p class="membership-player">${c.name}</p>
-		</div>
-	`).join("");
+	container.innerHTML = ownedGroups.map(group => {
+		const courtNames = (courtsByGroup[group.id] || []).join(", ");
+		const current = group.membership_duration_months ?? "";
+		const options = DURATION_OPTIONS.map(opt =>
+			`<option value="${opt.months}" ${current == opt.months ? "selected" : ""}>${opt.label}</option>`
+		).join("");
+		return `
+			<div class="membership-card">
+				<p class="membership-player">${courtNames}</p>
+				<p class="membership-courts membership-rule-label">Validade do membership</p>
+				<select class="form-input duration-select" data-group-id="${group.id}">
+					${options}
+				</select>
+			</div>
+		`;
+	}).join("");
 
-	container.innerHTML = `
-		<p class="owner-section">Campos</p>
-		${uniqueCourts}
-		<p class="owner-section" style="margin-top:20px">Disponibilidade</p>
-		<p class="form-sent" style="text-align:left;font-weight:400">Em desenvolvimento.</p>
-	`;
+	container.querySelectorAll(".duration-select").forEach(sel => {
+		sel.addEventListener("change", () => saveDuration(parseInt(sel.dataset.groupId), sel.value));
+	});
+}
+
+async function saveDuration(groupId, value) {
+	const months = value === "" ? null : parseInt(value);
+	await db.from("court_groups")
+		.update({ membership_duration_months: months })
+		.eq("id", groupId);
+	const group = ownerData.ownedGroups.find(g => g.id === groupId);
+	if (group) group.membership_duration_months = months;
 }
 
 async function approveMembership(id) {
@@ -174,8 +203,19 @@ async function approveMembership(id) {
 	btn.disabled = true;
 	btn.textContent = "A aprovar...";
 
+	const membership = ownerData.pending.find(m => m.id === id);
+	const group = ownerData.ownedGroups.find(g => g.id === membership?.group_id);
+
+	const approvedAt = new Date().toISOString();
+	let expiresAt = null;
+	if (group?.membership_duration_months) {
+		const d = new Date(approvedAt);
+		d.setMonth(d.getMonth() + group.membership_duration_months);
+		expiresAt = d.toISOString();
+	}
+
 	const { error } = await db.from("memberships")
-		.update({ status: "approved", approved_at: new Date().toISOString() })
+		.update({ status: "approved", approved_at: approvedAt, expires_at: expiresAt })
 		.eq("id", id);
 
 	if (error) { btn.disabled = false; btn.textContent = "Aprovar"; return; }
