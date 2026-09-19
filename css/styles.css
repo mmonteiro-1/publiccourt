@@ -610,6 +610,67 @@ header {
 	margin-bottom: 5px;
 }
 
+/* === OWNER DASHBOARD === */
+
+.page-owner {
+	justify-content: flex-start;
+	align-items: center;
+}
+
+.page-owner #app {
+	display: flex;
+	flex-direction: column;
+	gap: 15px;
+	width: 100%;
+	max-width: 480px;
+	padding: 20px;
+}
+
+.owner-section {
+	font-size: 0.8em;
+	font-weight: 700;
+	text-transform: uppercase;
+	color: var(--gray);
+	margin-bottom: 5px;
+}
+
+.membership-card {
+	display: flex;
+	flex-direction: column;
+	gap: 5px;
+	border: 2px solid var(--black);
+	border-radius: 15px;
+	padding: 20px;
+}
+
+.membership-player {
+	font-size: 1.2em;
+	font-weight: 700;
+}
+
+.membership-courts {
+	font-size: 0.8em;
+	font-weight: 400;
+	color: var(--gray);
+}
+
+.membership-date {
+	font-size: 0.7em;
+	font-weight: 400;
+	color: var(--gray);
+	margin-bottom: 10px;
+}
+
+.membership-actions {
+	display: flex;
+	gap: 10px;
+}
+
+.membership-actions .finish-btn,
+.membership-actions .form-btn {
+	flex: 1;
+}
+
 /* === DECK (page-court only) === */
 .page-court .deck {
 	display: grid;

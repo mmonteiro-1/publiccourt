@@ -1,6 +1,13 @@
 const app = document.getElementById("app");
 
 async function loadProfile(user) {
+	// Redirect owners to their dashboard
+	const { data: ownedGroups } = await db.from("court_groups").select("id").limit(1);
+	if (ownedGroups && ownedGroups.length > 0) {
+		location.href = "owner.html";
+		return;
+	}
+
 	let { data: profile } = await db
 		.from("profiles")
 		.select("name")
