@@ -38,21 +38,39 @@ export async function renderBookable(court) {
 	const { data: profile } = await db.from("profiles").select("name").eq("id", user.id).single();
 	const name = profile?.name || user.user_metadata?.name || "jogador";
 
-	// Fetch sibling courts if this court belongs to a group
+	// Fetch sibling courts and group rules in parallel
 	let siblingCourts = [];
+	let groupRules = null;
 	if (court.group_id) {
-		const { data } = await db.from("courts")
-			.select("id, name")
-			.eq("group_id", court.group_id)
-			.eq("active", true)
-			.neq("id", court.id)
-			.order("group_position");
-		siblingCourts = data || [];
+		const [{ data: siblings }, { data: rules }] = await Promise.all([
+			db.from("courts")
+				.select("id, name")
+				.eq("group_id", court.group_id)
+				.eq("active", true)
+				.neq("id", court.id)
+				.order("group_position"),
+			db.from("court_groups")
+				.select("slot_duration_minutes, min_game_duration_minutes, price_per_slot_cents")
+				.eq("id", court.group_id)
+				.single(),
+		]);
+		siblingCourts = siblings || [];
+		groupRules = rules;
 	}
 
 	const siblingNote = siblingCourts.length > 0
 		? `<p class="card-sub margin-bottom-20">Este membership é também válido para: ${siblingCourts.map(c => c.name).join(", ")}.</p>`
 		: "";
+
+	const rulesHtml = (() => {
+		if (!groupRules) return "";
+		const items = [];
+		if (groupRules.slot_duration_minutes) items.push(`Slots de ${groupRules.slot_duration_minutes} min`);
+		if (groupRules.price_per_slot_cents != null) items.push(`€${(groupRules.price_per_slot_cents / 100).toFixed(2)} por slot`);
+		if (groupRules.min_game_duration_minutes) items.push(`Mínimo ${groupRules.min_game_duration_minutes} min`);
+		if (items.length === 0) return "";
+		return `<p class="card-sub margin-bottom-20">${items.join(" · ")}</p>`;
+	})();
 
 	// Check membership — group-scoped if court has a group, otherwise court-scoped
 	const membershipQuery = court.group_id
@@ -83,7 +101,8 @@ export async function renderBookable(court) {
 	if (membership?.status === "approved") {
 		// Future: booking UI goes here
 		app.innerHTML = `${header}
-			<p class="card-sub"><b>Olá, ${name}.</b> És membro deste campo.</p>
+			<p class="card-sub margin-bottom-20"><b>Olá, ${name}.</b> És membro deste campo.</p>
+			${rulesHtml}
 			${siblingNote}
 		`;
 		return;
@@ -91,6 +110,7 @@ export async function renderBookable(court) {
 
 	app.innerHTML = `${header}
 		<p class="card-sub margin-bottom-20"><b>Olá, ${name}.</b> Reservas neste campo estão destinadas a membros. Quer solicitar um membership?</p>
+		${rulesHtml}
 		${siblingNote}
 		<button id="membership-btn">Solicitar membership</button>
 	`;

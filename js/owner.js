@@ -1,6 +1,8 @@
 const app = document.getElementById("app");
 let ownerData = null;
 
+const DAYS = ["Domingo", "Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira", "Sexta-feira", "Sábado"];
+
 const MEMBERSHIP_DURATION_OPTIONS = [
 	{ label: "Sem validade", months: "" },
 	{ label: "1 mês", months: 1 },
@@ -36,7 +38,7 @@ function showView(view) {
 }
 
 async function loadDashboard(user) {
-	const { data: ownedGroups } = await db.from("court_groups").select("id, membership_duration_months, slot_duration_minutes, min_game_duration_minutes, price_per_slot_cents");
+	const { data: ownedGroups } = await db.from("court_groups").select("id, membership_duration_months, slot_duration_minutes, min_game_duration_minutes, price_per_slot_cents").eq("owner_id", user.id);
 	if (!ownedGroups || ownedGroups.length === 0) {
 		location.href = "profile.html";
 		return;
@@ -48,6 +50,7 @@ async function loadDashboard(user) {
 		{ data: pending },
 		{ data: approved },
 		{ data: courts },
+		{ data: openingHours },
 	] = await Promise.all([
 		db.from("memberships")
 			.select("id, player_id, group_id, court_id, created_at")
@@ -61,6 +64,9 @@ async function loadDashboard(user) {
 			.select("id, name, group_id")
 			.in("group_id", groupIds)
 			.eq("active", true),
+		db.from("court_opening_hours")
+			.select("*")
+			.in("group_id", groupIds),
 	]);
 
 	const allPlayerIds = [...new Set([...(pending || []), ...(approved || [])].map(m => m.player_id))];
@@ -76,6 +82,12 @@ async function loadDashboard(user) {
 		courtsByGroup[c.group_id].push(c.name);
 	});
 
+	const openingHoursByGroup = {};
+	(openingHours || []).forEach(h => {
+		if (!openingHoursByGroup[h.group_id]) openingHoursByGroup[h.group_id] = {};
+		openingHoursByGroup[h.group_id][h.day_of_week] = h;
+	});
+
 	ownerData = {
 		ownedGroups,
 		pending: pending || [],
@@ -83,6 +95,7 @@ async function loadDashboard(user) {
 		courts: courts || [],
 		profiles,
 		courtsByGroup,
+		openingHoursByGroup,
 	};
 
 	document.getElementById("loading-msg").hidden = true;
@@ -228,6 +241,39 @@ function makeSelect(options, currentValue, classes, dataAttrs) {
 	return `<select class="${classes}" ${attrs}>${opts}</select>`;
 }
 
+function makeTimeInput(field, value) {
+	const v = value ? value.slice(0, 5) : "";
+	return `<input type="time" class="form-input opening-input" data-field="${field}" value="${v}">`;
+}
+
+function renderOpeningHoursSection(groupId) {
+	const hours = ownerData.openingHoursByGroup[groupId] || {};
+	return DAYS.map((dayName, dayIndex) => {
+		const h = hours[dayIndex] || {};
+		const isClosed = h.closed ?? false;
+		return `
+			<div class="opening-hours-day" data-day="${dayIndex}" data-closed="${isClosed}">
+				<div class="opening-hours-header">
+					<p class="membership-courts" style="margin:0">${dayName}</p>
+					<button class="day-toggle ${isClosed ? "" : "button-shallow"}">${isClosed ? "Fechado" : "Aberto"}</button>
+				</div>
+				<div class="opening-hours-times" ${isClosed ? "hidden" : ""}>
+					<div class="rule-time-row">
+						<div>
+							<p class="membership-date">Abertura</p>
+							${makeTimeInput("open", h.open)}
+						</div>
+						<div>
+							<p class="membership-date">Fecho</p>
+							${makeTimeInput("close", h.close)}
+						</div>
+					</div>
+				</div>
+			</div>
+		`;
+	}).join("");
+}
+
 function renderRulesView() {
 	const container = document.getElementById("view-rules");
 	const { ownedGroups, courtsByGroup } = ownerData;
@@ -252,6 +298,9 @@ function renderRulesView() {
 				<p class="membership-courts membership-rule-label">Validade do membership</p>
 				${makeSelect(MEMBERSHIP_DURATION_OPTIONS, group.membership_duration_months ?? "", "form-input rule-input", { field: "membership_duration_months" })}
 
+				<p class="membership-courts membership-rule-label" style="margin-top:10px">Horário de funcionamento</p>
+				${renderOpeningHoursSection(group.id)}
+
 				<button class="save-rules-btn margin-top-10" data-group-id="${group.id}" disabled>Guardar alterações</button>
 			</div>
 		`;
@@ -261,8 +310,21 @@ function renderRulesView() {
 		const groupId = card.dataset.groupId;
 		const saveBtn = card.querySelector(".save-rules-btn");
 
-		card.querySelectorAll(".rule-input").forEach(input => {
+		card.querySelectorAll(".rule-input, .opening-input").forEach(input => {
 			input.addEventListener("change", () => saveBtn.disabled = false);
+		});
+
+		card.querySelectorAll(".day-toggle").forEach(btn => {
+			btn.addEventListener("click", () => {
+				const dayEl = btn.closest(".opening-hours-day");
+				const isClosed = dayEl.dataset.closed === "true";
+				const nowClosed = !isClosed;
+				dayEl.dataset.closed = nowClosed;
+				dayEl.querySelector(".opening-hours-times").hidden = nowClosed;
+				btn.textContent = nowClosed ? "Fechado" : "Aberto";
+				btn.classList.toggle("button-shallow", !nowClosed);
+				saveBtn.disabled = false;
+			});
 		});
 
 		saveBtn.addEventListener("click", () => saveRules(groupId, card, saveBtn));
@@ -284,9 +346,28 @@ async function saveRules(groupId, card, saveBtn) {
 		}
 	});
 
-	const { error } = await db.from("court_groups").update(updates).eq("id", groupId);
+	const hoursRows = [];
+	card.querySelectorAll(".opening-hours-day").forEach(dayEl => {
+		const day = parseInt(dayEl.dataset.day);
+		const closed = dayEl.dataset.closed === "true";
+		const get = field => dayEl.querySelector(`[data-field="${field}"]`)?.value || null;
+		hoursRows.push({
+			group_id: groupId,
+			day_of_week: day,
+			closed,
+			open: closed ? null : get("open"),
+			close: closed ? null : get("close"),
+			pause_start: closed ? null : get("pause_start"),
+			pause_end: closed ? null : get("pause_end"),
+		});
+	});
 
-	if (error) {
+	const [{ error: groupError }, { error: hoursError }] = await Promise.all([
+		db.from("court_groups").update(updates).eq("id", groupId),
+		db.from("court_opening_hours").upsert(hoursRows, { onConflict: "group_id,day_of_week" }),
+	]);
+
+	if (groupError || hoursError) {
 		saveBtn.disabled = false;
 		saveBtn.textContent = "Guardar alterações";
 		return;
@@ -294,6 +375,10 @@ async function saveRules(groupId, card, saveBtn) {
 
 	const group = ownerData.ownedGroups.find(g => g.id == groupId);
 	if (group) Object.assign(group, updates);
+	hoursRows.forEach(r => {
+		if (!ownerData.openingHoursByGroup[groupId]) ownerData.openingHoursByGroup[groupId] = {};
+		ownerData.openingHoursByGroup[groupId][r.day_of_week] = r;
+	});
 	saveBtn.textContent = "Guardado";
 }
 

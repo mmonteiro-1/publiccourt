@@ -706,6 +706,34 @@ header {
 	width: auto;
 }
 
+.rule-time-row {
+	display: flex;
+	gap: 10px;
+}
+
+.rule-time-row > div {
+	flex: 1;
+}
+
+.opening-hours-day {
+	padding: 10px 0;
+	border-top: 1px solid var(--border);
+}
+
+.opening-hours-header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 10px;
+	margin-bottom: 10px;
+}
+
+.day-toggle {
+	width: auto;
+	padding: 5px 15px;
+	font-size: 0.8em;
+}
+
 /* === DECK (page-court only) === */
 .page-court .deck {
 	display: grid;
