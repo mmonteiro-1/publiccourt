@@ -528,6 +528,149 @@ header {
 	background: var(--gray);
 }
 
+/* === LOGIN === */
+
+.page-login {
+	justify-content: center;
+	align-items: center;
+}
+
+#login-form {
+	display: flex;
+	flex-direction: column;
+	gap: 15px;
+	width: 100%;
+}
+
+.form-input {
+	width: 100%;
+	padding: 15px;
+	border: 2px solid var(--black);
+	border-radius: 10px;
+	font-family: inherit;
+	font-size: 1em;
+	font-weight: 400;
+	background: var(--white);
+	color: var(--black);
+	outline: none;
+}
+
+.form-btn {
+	width: 100%;
+	padding: 15px;
+	border: 2px solid var(--black);
+	border-radius: 10px;
+	background: var(--black);
+	color: var(--white);
+	font-family: inherit;
+	font-size: 1em;
+	font-weight: 700;
+	cursor: pointer;
+	box-shadow: 4px 4px 0 var(--black);
+}
+
+.form-error {
+	text-align: center;
+	color: var(--orange);
+	font-weight: 700;
+}
+
+.form-sent {
+	text-align: center;
+	font-weight: 400;
+	color: var(--black);
+}
+
+/* === PROFILE === */
+
+.page-profile {
+	justify-content: center;
+	align-items: center;
+}
+
+.page-profile #app {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 15px;
+	width: 100%;
+}
+
+.profile-name {
+	font-size: 2em;
+	font-weight: 700;
+	text-align: center;
+}
+
+.profile-email {
+	font-size: 0.8em;
+	font-weight: 400;
+	color: var(--gray);
+	text-align: center;
+	margin-bottom: 5px;
+}
+
+/* === OWNER DASHBOARD === */
+
+.page-owner {
+	justify-content: flex-start;
+	align-items: center;
+}
+
+.page-owner #app {
+	display: flex;
+	flex-direction: column;
+	gap: 15px;
+	width: 100%;
+	max-width: 480px;
+	padding: 20px;
+}
+
+.owner-section {
+	font-size: 0.8em;
+	font-weight: 700;
+	text-transform: uppercase;
+	color: var(--gray);
+	margin-bottom: 5px;
+}
+
+.membership-card {
+	display: flex;
+	flex-direction: column;
+	gap: 5px;
+	border: 2px solid var(--black);
+	border-radius: 15px;
+	padding: 20px;
+}
+
+.membership-player {
+	font-size: 1.2em;
+	font-weight: 700;
+}
+
+.membership-courts {
+	font-size: 0.8em;
+	font-weight: 400;
+	color: var(--gray);
+}
+
+.membership-date {
+	font-size: 0.7em;
+	font-weight: 400;
+	color: var(--gray);
+	margin-bottom: 10px;
+}
+
+.membership-actions {
+	display: flex;
+	gap: 10px;
+}
+
+.membership-actions .finish-btn,
+.membership-actions .form-btn {
+	flex: 1;
+}
+
 /* === DECK (page-court only) === */
 .page-court .deck {
 	display: grid;
