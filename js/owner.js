@@ -106,6 +106,8 @@ async function approveMembership(id) {
 		.eq("id", id);
 
 	if (error) { btn.disabled = false; btn.textContent = "Aprovar"; return; }
+
+	await db.functions.invoke("notify-membership", { body: { membershipId: id } });
 	card.remove();
 }
 
@@ -120,6 +122,8 @@ async function denyMembership(id, reason) {
 		.eq("id", id);
 
 	if (error) { btn.disabled = false; btn.textContent = "Confirmar recusa"; return; }
+
+	await db.functions.invoke("notify-membership", { body: { membershipId: id } });
 	card.remove();
 }
 
