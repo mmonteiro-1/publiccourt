@@ -51,7 +51,7 @@ export async function renderBookable(court) {
 	}
 
 	const siblingNote = siblingCourts.length > 0
-		? `<p class="card-sub margin-top-10" style="font-size:0.8em">Este membership é também válido para: ${siblingCourts.map(c => c.name).join(", ")}.</p>`
+		? `<p class="card-sub margin-bottom-20">Este membership é também válido para: ${siblingCourts.map(c => c.name).join(", ")}.</p>`
 		: "";
 
 	// Check membership — group-scoped if court has a group, otherwise court-scoped

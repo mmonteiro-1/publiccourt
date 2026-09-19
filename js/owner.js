@@ -152,14 +152,54 @@ function renderMembersView() {
 		const approvedDate = m.approved_at ? new Date(m.approved_at).toLocaleDateString("pt-PT") : "—";
 		const expiresDate = m.expires_at ? new Date(m.expires_at).toLocaleDateString("pt-PT") : null;
 		return `
-			<div class="membership-card">
+			<div class="membership-card" data-id="${m.id}">
 				<p class="membership-player">${playerName}</p>
 				<p class="membership-courts">${courtNames}</p>
 				<p class="membership-date">Aprovado ${approvedDate}</p>
 				<p class="membership-date">${expiresDate ? `Expira ${expiresDate}` : "Sem validade"}</p>
+				<div class="membership-actions">
+					<button class="button-shallow revoke-btn" data-id="${m.id}">Revogar</button>
+				</div>
+				<div class="revoke-confirm" id="revoke-confirm-${m.id}" hidden>
+					<p class="membership-date">Esta ação não pode ser revertida.</p>
+					<div class="membership-actions">
+						<button class="confirm-revoke-btn" data-id="${m.id}">Revogar</button>
+						<button class="button-shallow cancel-revoke-btn" data-id="${m.id}">Cancelar</button>
+					</div>
+				</div>
 			</div>
 		`;
 	}).join("");
+
+	container.querySelectorAll(".revoke-btn").forEach(btn => {
+		btn.addEventListener("click", () => {
+			btn.closest(".membership-card").querySelector(".membership-actions").hidden = true;
+			document.getElementById(`revoke-confirm-${btn.dataset.id}`).hidden = false;
+		});
+	});
+
+	container.querySelectorAll(".cancel-revoke-btn").forEach(btn => {
+		btn.addEventListener("click", () => {
+			document.getElementById(`revoke-confirm-${btn.dataset.id}`).hidden = true;
+			btn.closest(".membership-card").querySelector(".membership-actions").hidden = false;
+		});
+	});
+
+	container.querySelectorAll(".confirm-revoke-btn").forEach(btn => {
+		btn.addEventListener("click", () => revokeMembership(btn.dataset.id));
+	});
+}
+
+async function revokeMembership(id) {
+	const card = document.querySelector(`#view-members .membership-card[data-id="${id}"]`);
+	const btn = card.querySelector(".confirm-revoke-btn");
+	btn.disabled = true;
+	btn.textContent = "A revogar...";
+
+	const { error } = await db.from("memberships").delete().eq("id", id);
+	if (error) { btn.disabled = false; btn.textContent = "Revogar"; return; }
+
+	card.remove();
 }
 
 function renderRulesView() {
