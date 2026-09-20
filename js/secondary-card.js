@@ -64,7 +64,7 @@ export async function loadHourlyChart(courtId) {
 	const DAYS = 15;
 	const since = new Date(Date.now() - DAYS * 24 * 60 * 60 * 1000);
 	const { data } = await db
-		.from("reservations")
+		.from("walk_ins")
 		.select("started_at, ends_at, manual_finished_at")
 		.eq("court_id", courtId)
 		.gte("started_at", since.toISOString());

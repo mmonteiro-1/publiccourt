@@ -734,6 +734,123 @@ header {
 	font-size: 0.8em;
 }
 
+/* === SLOT PICKER === */
+.day-strip {
+	display: flex;
+	gap: 5px;
+	margin-bottom: 20px;
+}
+
+.day-cell {
+	flex: 1;
+	display: flex;
+	flex-direction: column;
+	gap: 5px;
+}
+
+.day-cell::before {
+	content: '';
+	display: block;
+	width: 5px;
+	height: 5px;
+	border-radius: 50%;
+	margin: 0 auto;
+}
+
+.day-cell--active::before {
+	background: var(--white);
+}
+
+.day-cell--closed {
+	opacity: 0.4;
+	pointer-events: none;
+}
+
+.day-cell-bottom {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+}
+
+.day-name {
+	color: var(--white);
+	font-size: 0.8em;
+	font-weight: 700;
+}
+
+.day-number {
+	color: var(--muted);
+	font-size: 0.8em;
+	font-weight: 400;
+}
+
+.day-weather {
+	opacity: 0.6;
+	width: 15px;
+	height: 15px;
+}
+
+.slot-grid {
+	display: grid;
+	grid-template-columns: repeat(4, 1fr);
+	gap: 10px;
+	margin-bottom: 20px;
+}
+
+.slot-cell {
+	border: 2px solid var(--black);
+	background: var(--green);
+	color: var(--black);
+	border-radius: 10px;
+	padding: 15px 5px;
+	text-align: center;
+	font-size: 0.8em;
+	font-weight: 700;
+}
+
+.slot-past {
+	opacity: 0.4;
+}
+
+.slot-occupied {
+	background: var(--orange);
+}
+
+.slot-mine {
+	background: var(--white);
+}
+
+.slot-break {
+	background: repeating-linear-gradient(
+		45deg,
+		var(--muted-black) 0px,
+		var(--muted-black) 3px,
+		transparent 3px,
+		transparent 6px
+	);
+}
+
+.slot-legend {
+	flex-wrap: wrap;
+	gap: 10px 15px;
+	margin-top: 10px;
+	margin-bottom: 20px;
+}
+
+.legend-slot-free { background: var(--green); border: 2px solid var(--black); }
+.legend-slot-occupied { background: var(--orange); border: 2px solid var(--black); }
+.legend-slot-mine { background: var(--white); border: 2px solid var(--black); }
+.legend-slot-break {
+	background: repeating-linear-gradient(
+		45deg,
+		var(--muted-black) 0px,
+		var(--muted-black) 2px,
+		transparent 2px,
+		transparent 3px
+	);
+	border: 1px solid var(--black);
+}
+
 /* === DECK (page-court only) === */
 .page-court .deck {
 	display: grid;

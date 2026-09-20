@@ -37,7 +37,7 @@ function getCurrentPosition() {
 export async function fetchActiveReservation() {
 	const now = new Date().toISOString();
 	const { data: rows } = await db
-		.from("reservations")
+		.from("walk_ins")
 		.select("*")
 		.eq("court_id", courtId)
 		.is("manual_finished_at", null)
@@ -213,7 +213,7 @@ async function extendGame(court, active, minutes) {
 
 	const newEndsAt = new Date(new Date(active.ends_at).getTime() + minutes * 60 * 1000).toISOString();
 
-	const { error } = await db.from("reservations")
+	const { error } = await db.from("walk_ins")
 		.update({ ends_at: newEndsAt })
 		.eq("id", active.id);
 
@@ -250,7 +250,7 @@ async function finishOwnGame(court, reservationId) {
 	const btn = document.getElementById("here-btn");
 	btn.disabled = true;
 
-	const { error } = await db.from("reservations")
+	const { error } = await db.from("walk_ins")
 		.update({ manual_finished_at: new Date().toISOString() })
 		.eq("id", reservationId);
 
@@ -296,7 +296,7 @@ async function finishOwnGame(court, reservationId) {
 }
 
 async function finishGame(reservationId) {
-	const { error } = await db.from("reservations")
+	const { error } = await db.from("walk_ins")
 		.update({ manual_finished_at: new Date().toISOString() })
 		.eq("id", reservationId);
 
@@ -310,7 +310,7 @@ async function checkIn(court) {
 
 	const endsAt = new Date(Date.now() + selectedDuration * 60 * 1000).toISOString();
 
-	const { error } = await db.from("reservations").insert({
+	const { error } = await db.from("walk_ins").insert({
 		court_id: courtId,
 		ends_at: endsAt,
 		device_id: getDeviceId(),

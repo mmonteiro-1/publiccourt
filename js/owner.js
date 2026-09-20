@@ -1,6 +1,8 @@
 const app = document.getElementById("app");
+// IN-MEMORY CACHE OF ALL OWNER DATA; POPULATED ONCE ON LOAD, PATCHED IN-PLACE AFTER SAVES
 let ownerData = null;
 
+// DAY NAMES INDEXED BY JS getDay() (0 = SUNDAY) — USED FOR OPENING HOURS ROWS
 const DAYS = ["Domingo", "Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira", "Sexta-feira", "Sábado"];
 
 const MEMBERSHIP_DURATION_OPTIONS = [
@@ -15,20 +17,16 @@ const MEMBERSHIP_DURATION_OPTIONS = [
 const SLOT_DURATION_OPTIONS = [
 	{ label: "—", minutes: "" },
 	{ label: "30 min", minutes: 30 },
-	{ label: "45 min", minutes: 45 },
 	{ label: "60 min", minutes: 60 },
-	{ label: "90 min", minutes: 90 },
-	{ label: "120 min", minutes: 120 },
 ];
 
 const MIN_GAME_DURATION_OPTIONS = [
 	{ label: "—", minutes: "" },
-	{ label: "30 min", minutes: 30 },
-	{ label: "45 min", minutes: 45 },
 	{ label: "60 min", minutes: 60 },
 	{ label: "90 min", minutes: 90 },
 ];
 
+// SWITCH BETWEEN THE PENDING / MEMBERS / RULES TABS; HIDES ALL VIEWS THEN SHOWS THE ONE REQUESTED
 function showView(view) {
 	document.querySelectorAll(".owner-view").forEach(el => el.hidden = true);
 	document.getElementById(`view-${view}`).hidden = false;
@@ -37,6 +35,7 @@ function showView(view) {
 	});
 }
 
+// LOAD ALL OWNER DATA IN ONE BATCH; REDIRECTS TO PROFILE IF THE USER OWNS NO GROUPS
 async function loadDashboard(user) {
 	const { data: ownedGroups } = await db.from("court_groups").select("id, membership_duration_months, slot_duration_minutes, min_game_duration_minutes, price_per_slot_cents").eq("owner_id", user.id);
 	if (!ownedGroups || ownedGroups.length === 0) {
@@ -69,6 +68,7 @@ async function loadDashboard(user) {
 			.in("group_id", groupIds),
 	]);
 
+	// FETCH PLAYER PROFILES IN A SINGLE QUERY; SET DEDUPLICATES IDS ACROSS PENDING AND APPROVED
 	const allPlayerIds = [...new Set([...(pending || []), ...(approved || [])].map(m => m.player_id))];
 	let profiles = {};
 	if (allPlayerIds.length > 0) {
@@ -76,6 +76,7 @@ async function loadDashboard(user) {
 		profiles = Object.fromEntries((profileData || []).map(p => [p.id, p]));
 	}
 
+	// INDEX COURTS AND OPENING HOURS BY GROUP FOR O(1) LOOKUPS IN RENDER FUNCTIONS
 	const courtsByGroup = {};
 	(courts || []).forEach(c => {
 		if (!courtsByGroup[c.group_id]) courtsByGroup[c.group_id] = [];
@@ -116,6 +117,7 @@ async function loadDashboard(user) {
 	});
 }
 
+// RENDER THE LIST OF PENDING MEMBERSHIP REQUESTS WITH APPROVE / DENY ACTIONS
 function renderPendingView() {
 	const container = document.getElementById("view-pending");
 	const { pending, profiles, courtsByGroup } = ownerData;
@@ -150,6 +152,7 @@ function renderPendingView() {
 		btn.addEventListener("click", () => approveMembership(btn.dataset.id));
 	});
 
+	// DENY SHOWS A REASON INPUT INLINE RATHER THAN A SEPARATE PAGE
 	container.querySelectorAll(".deny-btn").forEach(btn => {
 		btn.addEventListener("click", () => {
 			document.getElementById(`deny-form-${btn.dataset.id}`).hidden = false;
@@ -165,6 +168,7 @@ function renderPendingView() {
 	});
 }
 
+// RENDER THE LIST OF APPROVED MEMBERS, SORTED MOST-RECENTLY-APPROVED FIRST
 function renderMembersView() {
 	const container = document.getElementById("view-members");
 	const { approved, profiles, courtsByGroup } = ownerData;
@@ -220,6 +224,7 @@ function renderMembersView() {
 	});
 }
 
+// DELETE THE MEMBERSHIP ROW AND REMOVE ITS CARD FROM THE DOM
 async function revokeMembership(id) {
 	const card = document.querySelector(`#view-members .membership-card[data-id="${id}"]`);
 	const btn = card.querySelector(".confirm-revoke-btn");
@@ -232,6 +237,7 @@ async function revokeMembership(id) {
 	card.remove();
 }
 
+// HTML HELPERS FOR FORM CONTROLS USED IN THE RULES VIEW
 function makeSelect(options, currentValue, classes, dataAttrs) {
 	const attrs = Object.entries(dataAttrs).map(([k, v]) => `data-${k}="${v}"`).join(" ");
 	const opts = options.map(opt => {
@@ -246,6 +252,43 @@ function makeTimeInput(field, value) {
 	return `<input type="time" class="form-input opening-input" data-field="${field}" value="${v}">`;
 }
 
+// LUNCH BREAK INPUTS: ONE PAIR FOR WEEKDAYS (REPRESENTATIVE: DAY 1) AND ONE FOR WEEKENDS (DAY 6).
+// THE SAME PAUSE IS APPLIED TO ALL DAYS IN EACH GROUP WHEN SAVING.
+function renderPauseSection(groupId) {
+	const hours = ownerData.openingHoursByGroup[groupId] || {};
+	const wd = hours[1] || {};
+	const we = hours[6] || {};
+	const wdStart = wd.pause_start ? wd.pause_start.slice(0, 5) : "";
+	const wdEnd = wd.pause_end ? wd.pause_end.slice(0, 5) : "";
+	const weStart = we.pause_start ? we.pause_start.slice(0, 5) : "";
+	const weEnd = we.pause_end ? we.pause_end.slice(0, 5) : "";
+	return `
+		<p class="membership-date">Seg–Sex</p>
+		<div class="rule-time-row">
+			<div>
+				<p class="membership-date">Início</p>
+				<input type="time" class="form-input opening-input" data-field="pause_weekday_start" value="${wdStart}">
+			</div>
+			<div>
+				<p class="membership-date">Fim</p>
+				<input type="time" class="form-input opening-input" data-field="pause_weekday_end" value="${wdEnd}">
+			</div>
+		</div>
+		<p class="membership-date" style="margin-top:10px">Sab–Dom</p>
+		<div class="rule-time-row">
+			<div>
+				<p class="membership-date">Início</p>
+				<input type="time" class="form-input opening-input" data-field="pause_weekend_start" value="${weStart}">
+			</div>
+			<div>
+				<p class="membership-date">Fim</p>
+				<input type="time" class="form-input opening-input" data-field="pause_weekend_end" value="${weEnd}">
+			</div>
+		</div>
+	`;
+}
+
+// RENDERS ONE ROW PER DAY WITH AN OPEN/CLOSED TOGGLE AND TIME INPUTS
 function renderOpeningHoursSection(groupId) {
 	const hours = ownerData.openingHoursByGroup[groupId] || {};
 	return DAYS.map((dayName, dayIndex) => {
@@ -274,6 +317,7 @@ function renderOpeningHoursSection(groupId) {
 	}).join("");
 }
 
+// RENDERS THE RULES FORM FOR EACH OWNED GROUP; SAVE BUTTON IS DISABLED UNTIL AN INPUT CHANGES
 function renderRulesView() {
 	const container = document.getElementById("view-rules");
 	const { ownedGroups, courtsByGroup } = ownerData;
@@ -300,6 +344,9 @@ function renderRulesView() {
 
 				<p class="membership-courts membership-rule-label" style="margin-top:10px">Horário de funcionamento</p>
 				${renderOpeningHoursSection(group.id)}
+
+				<p class="membership-courts membership-rule-label" style="margin-top:10px">Pausa de almoço</p>
+				${renderPauseSection(group.id)}
 
 				<button class="save-rules-btn margin-top-10" data-group-id="${group.id}" disabled>Guardar alterações</button>
 			</div>
@@ -331,6 +378,7 @@ function renderRulesView() {
 	});
 }
 
+// SAVES COURT RULES AND OPENING HOURS IN PARALLEL; PATCHES ownerData IN MEMORY TO AVOID A RE-FETCH
 async function saveRules(groupId, card, saveBtn) {
 	saveBtn.disabled = true;
 	saveBtn.textContent = "A guardar...";
@@ -339,6 +387,7 @@ async function saveRules(groupId, card, saveBtn) {
 	card.querySelectorAll(".rule-input").forEach(input => {
 		const field = input.dataset.field;
 		if (field === "price_per_slot_cents") {
+			// STORE PRICE AS INTEGER CENTS TO AVOID FLOATING POINT IN THE DB
 			const euros = parseFloat(input.value);
 			updates[field] = isNaN(euros) ? null : Math.round(euros * 100);
 		} else {
@@ -346,22 +395,33 @@ async function saveRules(groupId, card, saveBtn) {
 		}
 	});
 
+	const wdPS = card.querySelector('[data-field="pause_weekday_start"]')?.value || null;
+	const wdPE = card.querySelector('[data-field="pause_weekday_end"]')?.value || null;
+	const wePB = card.querySelector('[data-field="pause_weekend_start"]')?.value || null;
+	const wePE = card.querySelector('[data-field="pause_weekend_end"]')?.value || null;
+	// BOTH START AND END MUST BE SET FOR THE PAUSE TO BE VALID; OTHERWISE CLEAR BOTH
+	const weekdayPause = (wdPS && wdPE) ? { start: wdPS, end: wdPE } : { start: null, end: null };
+	const weekendPause = (wePB && wePE) ? { start: wePB, end: wePE } : { start: null, end: null };
+
 	const hoursRows = [];
 	card.querySelectorAll(".opening-hours-day").forEach(dayEl => {
 		const day = parseInt(dayEl.dataset.day);
 		const closed = dayEl.dataset.closed === "true";
 		const get = field => dayEl.querySelector(`[data-field="${field}"]`)?.value || null;
+		// APPLY THE SAME WEEKDAY OR WEEKEND PAUSE TO EVERY DAY IN THAT GROUP
+		const pause = (day === 0 || day === 6) ? weekendPause : weekdayPause;
 		hoursRows.push({
 			group_id: groupId,
 			day_of_week: day,
 			closed,
 			open: closed ? null : get("open"),
 			close: closed ? null : get("close"),
-			pause_start: closed ? null : get("pause_start"),
-			pause_end: closed ? null : get("pause_end"),
+			pause_start: pause.start,
+			pause_end: pause.end,
 		});
 	});
 
+	// UPSERT ON group_id + day_of_week; ONE ROW PER DAY PER GROUP IS THE INVARIANT
 	const [{ error: groupError }, { error: hoursError }] = await Promise.all([
 		db.from("court_groups").update(updates).eq("id", groupId),
 		db.from("court_opening_hours").upsert(hoursRows, { onConflict: "group_id,day_of_week" }),
@@ -382,6 +442,7 @@ async function saveRules(groupId, card, saveBtn) {
 	saveBtn.textContent = "Guardado";
 }
 
+// APPROVE A MEMBERSHIP; CALCULATES expiry FROM THE GROUP'S membership_duration_months IF SET
 async function approveMembership(id) {
 	const card = document.querySelector(`#view-pending .membership-card[data-id="${id}"]`);
 	const btn = card.querySelector(".approve-btn");
@@ -405,10 +466,12 @@ async function approveMembership(id) {
 
 	if (error) { btn.disabled = false; btn.textContent = "Aprovar"; return; }
 
+	// FIRE THE NOTIFICATION EDGE FUNCTION AFTER THE DB WRITE SUCCEEDS
 	await db.functions.invoke("notify-membership", { body: { membershipId: id } });
 	card.remove();
 }
 
+// DENY A MEMBERSHIP AND OPTIONALLY RECORD THE REASON; FIRES NOTIFICATION EDGE FUNCTION
 async function denyMembership(id, reason) {
 	const card = document.querySelector(`#view-pending .membership-card[data-id="${id}"]`);
 	const btn = card.querySelector(".confirm-deny-btn");
@@ -425,6 +488,7 @@ async function denyMembership(id, reason) {
 	card.remove();
 }
 
+// ENTRY POINT: LOAD DASHBOARD ON LOGIN, REDIRECT TO LOGIN ON NO SESSION
 db.auth.onAuthStateChange((event, session) => {
 	if (session) {
 		loadDashboard(session.user);
