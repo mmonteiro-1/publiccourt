@@ -1,7 +1,7 @@
 const app = document.getElementById("app");
 const form = document.getElementById("login-form");
 
-// Already logged in — go straight to profile
+// ALREADY LOGGED IN — SKIP THE FORM AND GO STRAIGHT TO PROFILE
 db.auth.getSession().then(({ data: { session } }) => {
 	if (session) location.href = "profile.html";
 });
@@ -9,7 +9,6 @@ db.auth.getSession().then(({ data: { session } }) => {
 form.addEventListener("submit", async (e) => {
 	e.preventDefault();
 
-	const name = document.getElementById("name-input").value.trim();
 	const email = document.getElementById("email-input").value.trim();
 	const btn = form.querySelector("button");
 
@@ -18,10 +17,7 @@ form.addEventListener("submit", async (e) => {
 
 	const { error } = await db.auth.signInWithOtp({
 		email,
-		options: {
-			data: { name },
-			emailRedirectTo: `${location.origin}/profile.html`,
-		},
+		options: { emailRedirectTo: `${location.origin}/profile.html` },
 	});
 
 	if (error) {

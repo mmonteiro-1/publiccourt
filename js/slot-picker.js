@@ -20,9 +20,9 @@ function buildDayStrip(days, selectedIndex, openingHours) {
 		const cls = ['day-cell', i === selectedIndex ? 'day-cell--active' : '', isClosed ? 'day-cell--closed' : ''].filter(Boolean).join(' ');
 		return `
 			<div class="${cls}" data-index="${i}">
-				<span class="day-name">${DAY_NAMES[d.getDay()]}</span>
+				<div class="day-name">${DAY_NAMES[d.getDay()]}</div>
 				<div class="day-cell-bottom">
-					<span class="day-number">${d.getDate()}</span>
+					<div class="day-number">${d.getDate()}</div>
 					<img src="images/icon_cloudy.svg" class="day-weather" alt="">
 				</div>
 			</div>

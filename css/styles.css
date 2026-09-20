@@ -594,6 +594,29 @@ header {
 	margin-bottom: 5px;
 }
 
+/* === ONBOARDING === */
+
+.onboarding-step {
+	margin-bottom: 10px;
+}
+
+.onboarding-question {
+	font-size: 1.5em;
+	font-weight: 700;
+	margin-bottom: 20px;
+}
+
+.onboarding-back {
+	background: none;
+	border: none;
+	padding: 0;
+	color: var(--muted);
+	font-size: 0.8em;
+	font-weight: 400;
+	margin-bottom: 20px;
+	font-family: inherit;
+}
+
 /* === OWNER DASHBOARD === */
 
 .page-owner {
@@ -737,7 +760,7 @@ header {
 /* === SLOT PICKER === */
 .day-strip {
 	display: flex;
-	gap: 5px;
+	gap: 10px;
 	margin-bottom: 20px;
 }
 
@@ -774,8 +797,8 @@ header {
 
 .day-name {
 	color: var(--white);
-	font-size: 0.8em;
 	font-weight: 700;
+	line-height: 1;
 }
 
 .day-number {
@@ -793,7 +816,7 @@ header {
 .slot-grid {
 	display: grid;
 	grid-template-columns: repeat(4, 1fr);
-	gap: 10px;
+	gap: 5px;
 	margin-bottom: 20px;
 }
 
@@ -822,11 +845,11 @@ header {
 
 .slot-break {
 	background: repeating-linear-gradient(
-		45deg,
-		var(--muted-black) 0px,
-		var(--muted-black) 3px,
-		transparent 3px,
-		transparent 6px
+		-45deg,
+		#fff3 0px,
+		#fff3 3px,
+		transparent 4px,
+		transparent 8px
 	);
 }
 
@@ -842,9 +865,9 @@ header {
 .legend-slot-mine { background: var(--white); border: 2px solid var(--black); }
 .legend-slot-break {
 	background: repeating-linear-gradient(
-		45deg,
-		var(--muted-black) 0px,
-		var(--muted-black) 2px,
+		-45deg,
+		#ffffff6b 0px,
+		#ffffff6b 2px,
 		transparent 2px,
 		transparent 3px
 	);
