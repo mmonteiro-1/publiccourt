@@ -1,4 +1,5 @@
 import { renderSlotPicker } from './slot-picker.js';
+import { setSecondaryCardInfo } from './secondary-card.js';
 
 // ENTRY POINT: RENDERS THE FULL BOOKABLE COURT VIEW, BRANCHING ON AUTH AND MEMBERSHIP STATUS
 export async function renderBookable(court) {
@@ -10,7 +11,7 @@ export async function renderBookable(court) {
 	const user = session?.user ?? null;
 
 	const descriptionLine = court.description ? `<p class="card-sub">${court.description}</p>` : "";
-	const flipLink = `<a class="card-sub deck-flip-link" data-action="flip-deck" href="#">Mais informações deste campo<img src="images/icon_info.svg" class="link-icon" alt=""></a>`;
+	const flipLink = `<a class="card-sub deck-flip-link" data-action="flip-deck" href="#">Mais informações<img src="images/icon_info.svg" class="link-icon" alt=""></a>`;
 
 	const header = `
 		<div class="card-header">
@@ -28,34 +29,12 @@ export async function renderBookable(court) {
 			Voltar
 		</a>`;
 
-	// NOT LOGGED IN → PROMPT TO LOGIN; NO MEMBERSHIP CHECK NEEDED
-	if (!user) {
-		app.innerHTML = `${header}
-			<p class="card-sub margin-bottom-20">Este campo <b>requer reservas</b> para poderes jogar. <br><br> Para fazeres reserva, o Campo Livre irá repassar as tuas informações aos administradores do campo. Após aceite, já podes reservar e jogar.</p>
-			${flipLink}
-			<button id="login-btn"><img src="images/icon_login.svg" alt=""> Fazer login</button>
-		`;
-		document.getElementById("login-btn").addEventListener("click", () => { location.href = "login.html"; });
-		return;
-	}
-
-	const { data: profile } = await db.from("profiles").select("name").eq("id", user.id).single();
-	const name = profile?.name || user.user_metadata?.name || "jogador";
-
-	// FETCH SIBLING COURTS, GROUP RULES AND OPENING HOURS IN PARALLEL; ALL ARE GROUP-SCOPED
+	// FETCH GROUP DATA FOR SECONDARY CARD — DONE UPFRONT SO NON-LOGGED-IN PLAYERS SEE IT TOO
 	let siblingCourts = [];
 	let groupRules = null;
 	let openingHours = [];
-	let existingBookings = [];
-	let playerActiveBooking = null;
 	if (court.group_id) {
-		// FETCH WINDOW: TODAY MIDNIGHT → 7 DAYS OUT, COVERING ALL DAY STRIP SLOTS
-		const fetchStart = new Date();
-		fetchStart.setHours(0, 0, 0, 0);
-		const fetchEnd = new Date(fetchStart);
-		fetchEnd.setDate(fetchEnd.getDate() + 7);
-
-		const [{ data: siblings }, { data: rules }, { data: hours }, { data: bookings }, { data: activeBooking }] = await Promise.all([
+		const [{ data: siblings }, { data: rules }, { data: hours }] = await Promise.all([
 			db.from("courts")
 				.select("id, name")
 				.eq("group_id", court.group_id)
@@ -69,6 +48,22 @@ export async function renderBookable(court) {
 			db.from("court_opening_hours")
 				.select("day_of_week, open, close, closed, pause_start, pause_end")
 				.eq("group_id", court.group_id),
+		]);
+		siblingCourts = siblings || [];
+		groupRules = rules;
+		openingHours = hours || [];
+	}
+
+	// FETCH BOOKING DATA — ONLY NEEDED WHEN LOGGED IN
+	let existingBookings = [];
+	let playerActiveBooking = null;
+	if (user && court.group_id) {
+		const fetchStart = new Date();
+		fetchStart.setHours(0, 0, 0, 0);
+		const fetchEnd = new Date(fetchStart);
+		fetchEnd.setDate(fetchEnd.getDate() + 7);
+
+		const [{ data: bookings }, { data: activeBooking }] = await Promise.all([
 			db.from("bookings")
 				.select("start_at, end_at, player_id")
 				.eq("court_id", court.id)
@@ -87,28 +82,60 @@ export async function renderBookable(court) {
 				.limit(1)
 				.maybeSingle(),
 		]);
-		siblingCourts = siblings || [];
-		groupRules = rules;
-		openingHours = hours || [];
 		existingBookings = bookings || [];
 		playerActiveBooking = activeBooking;
 	}
 
-	// NOTE SHOWN TO MEMBERS: LISTS OTHER COURTS IN THE SAME GROUP COVERED BY THIS MEMBERSHIP
-	const siblingNote = siblingCourts.length > 0
-		? `<p class="card-sub margin-bottom-20">Este membership é também válido para: ${siblingCourts.map(c => c.name).join(", ")}.</p>`
-		: "";
-
-	// RULES SUMMARY LINE SHOWN ABOVE THE SLOT PICKER (SLOT SIZE, PRICE, MIN DURATION)
 	const rulesHtml = (() => {
 		if (!groupRules) return "";
 		const items = [];
-		if (groupRules.slot_duration_minutes) items.push(`Slots de ${groupRules.slot_duration_minutes} min`);
-		if (groupRules.price_per_slot_cents != null) items.push(`€${(groupRules.price_per_slot_cents / 100).toFixed(2)} por slot`);
-		if (groupRules.min_game_duration_minutes) items.push(`Mínimo ${groupRules.min_game_duration_minutes} min`);
+		if (groupRules.slot_duration_minutes) items.push({ value: `${groupRules.slot_duration_minutes}min`, label: "slots" });
+		if (groupRules.price_per_slot_cents != null) items.push({ value: `€${(groupRules.price_per_slot_cents / 100).toFixed(2)}`, label: "preço por slot" });
+		if (groupRules.min_game_duration_minutes) items.push({ value: `${groupRules.min_game_duration_minutes}min`, label: "duração mínima" });
 		if (items.length === 0) return "";
-		return `<p class="card-sub margin-bottom-20">${items.join(" · ")}</p>`;
+		return `<div class="rules-grid margin-bottom-30">${items.map(i => `<div class="rules-item"><span class="rules-value">${i.value}</span><span class="rules-label">${i.label}</span></div>`).join("")}</div>`;
 	})();
+
+	const siblingSubtitle = siblingCourts.length > 0
+		? `<p class="secondary-card-subtitle">Válido também para o campo: ${siblingCourts.map(c => c.name).join(", ")}.</p>`
+		: "";
+
+	const openingHoursHtml = (() => {
+		if (!openingHours.length) return "";
+		const dayNames = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"];
+		const fmt = t => t ? t.slice(0, 5) : "";
+		const rows = [...openingHours]
+			.sort((a, b) => a.day_of_week - b.day_of_week)
+			.map(h => {
+				const day = dayNames[h.day_of_week] ?? h.day_of_week;
+				const hours = h.closed
+					? "Fechado"
+					: h.pause_start
+						? `${fmt(h.open)} – ${fmt(h.pause_start)}<br>${fmt(h.pause_end)} – ${fmt(h.close)}`
+						: `${fmt(h.open)} – ${fmt(h.close)}`;
+				return `<div class="hours-item"><div class="hours-day">${day}</div><div class="hours-time">${hours}</div></div>`;
+			});
+		return `<p class="secondary-card-title">Horário</p><div class="hours-grid">${rows.join("")}</div>`;
+	})();
+
+	const secondaryInfoHtml = (rulesHtml || siblingSubtitle || openingHoursHtml)
+		? `<p class="secondary-card-title">Informações do campo</p>${siblingSubtitle}${rulesHtml}${openingHoursHtml}`
+		: "";
+	setSecondaryCardInfo(secondaryInfoHtml);
+
+	// NOT LOGGED IN → PROMPT TO LOGIN; NO MEMBERSHIP CHECK NEEDED
+	if (!user) {
+		app.innerHTML = `${header}
+			<p class="card-sub margin-bottom-20">Este campo <b>opera sob o sistema de reservas</b>. <br><br> Para fazeres reserva, o Campo Livre precisa repassar as tuas informações aos administradores do campo. Após aceite, já podes reservar e jogar.</p>
+			${flipLink}
+			<button id="login-btn"><img src="images/icon_login.svg" alt=""> Fazer login</button>
+		`;
+		document.getElementById("login-btn").addEventListener("click", () => { location.href = "login.html"; });
+		return;
+	}
+
+	const { data: profile } = await db.from("profiles").select("name").eq("id", user.id).single();
+	const playerName = profile?.name || user.user_metadata?.name || "jogador";
 
 	// MEMBERSHIP IS GROUP-SCOPED IF THE COURT BELONGS TO A GROUP, OTHERWISE COURT-SCOPED
 	const membershipQuery = court.group_id
@@ -119,8 +146,7 @@ export async function renderBookable(court) {
 
 	if (membership?.status === "pending") {
 		app.innerHTML = `${header}
-			<p class="card-sub"><b>Olá, ${name}.</b> A tua solicitação de membership está pendente de aprovação.</p>
-			${siblingNote}
+			<p class="card-sub"><b>Olá, ${playerName}.</b> A tua solicitação está pendente de aprovação.</p>
 		`;
 		return;
 	}
@@ -128,12 +154,11 @@ export async function renderBookable(court) {
 	if (membership?.status === "denied") {
 		const reason = membership.denied_reason ? ` Motivo: ${membership.denied_reason}.` : "";
 		app.innerHTML = `${header}
-			<p class="card-sub margin-bottom-20"><b>Olá, ${name}.</b> A tua solicitação foi recusada.${reason} Podes solicitar novamente.</p>
-			${siblingNote}
+			<p class="card-sub margin-bottom-20"><b>Olá, ${playerName}.</b> A tua solicitação foi recusada.${reason} Podes solicitar novamente.</p>
 			${flipLink}
 			<button id="reapply-btn">Solicitar novamente</button>
 		`;
-		document.getElementById("reapply-btn").addEventListener("click", () => requestMembership(court, user, name, app, header, siblingNote, true));
+		document.getElementById("reapply-btn").addEventListener("click", () => requestMembership(court, user, playerName, app, header, true));
 		return;
 	}
 
@@ -149,20 +174,17 @@ export async function renderBookable(court) {
 			if (playerActiveBooking.court_id !== court.id) {
 				// BOOKING IS ON A SIBLING COURT — BLOCK ENTIRELY, SHOW DETAILS
 				app.innerHTML = `${header}
-					<p class="card-sub"><b>Olá, ${name}.</b> És membro deste campo.</p>
-					<p class="card-sub">${siblingCourts.length > 0 ? 'Já tens uma reserva ativa neste grupo de campos' : 'Já tens uma reserva ativa'}:</p>
-					<p class="card-sub margin-bottom-20"><b>${dayLabel}, ${fmt(s)}–${fmt(e)}</b></p>
-					${siblingNote}
+					<p class="card-sub"><b>Olá, ${playerName}.</b> És membro deste campo.</p>
+					<p class="card-sub"><b>${dayLabel}, ${fmt(s)}–${fmt(e)}</b></p>
+					<p class="card-sub">${siblingCourts.length > 0 ? 'Já tens uma reserva ativa neste grupo de campos.' : 'Já tens uma reserva ativa.'}</p>
 				`;
 				return;
 			}
 
 			// BOOKING IS ON THIS COURT — RENDER LOCKED PICKER SO PLAYER SEES THEIR CONFIRMED SLOT
 			app.innerHTML = `${header}
-				<p class="card-sub"><b>Olá, ${name}.</b> És membro deste campo.</p>
+				<p class="card-sub"><b>Olá, ${playerName}.</b> És membro deste campo.</p>
 				<p class="card-sub margin-bottom-20">Reserva: ${dayLabel}, ${fmt(s)}–${fmt(e)}</p>
-				${rulesHtml}
-				${siblingNote}
 				<div id="slot-picker"></div>
 			`;
 			renderSlotPicker(document.getElementById("slot-picker"), groupRules, openingHours, null, existingBookings, user.id, true);
@@ -170,10 +192,8 @@ export async function renderBookable(court) {
 		}
 
 		app.innerHTML = `${header}
-			<p class="card-sub"><b>Olá, ${name}.</b> És membro deste campo.</p>
+			<p class="card-sub"><b>Olá, ${playerName}.</b> És membro deste campo.</p>
 			<p class="card-sub margin-bottom-20" id="booking-feedback" hidden></p>
-			${rulesHtml}
-			${siblingNote}
 			<div id="slot-picker"></div>
 		`;
 
@@ -207,17 +227,15 @@ export async function renderBookable(court) {
 
 	// NO MEMBERSHIP YET → OFFER TO REQUEST ONE
 	app.innerHTML = `${header}
-		<p class="card-sub margin-bottom-20"><b>Olá, ${name}.</b> Reservas neste campo estão destinadas a membros. Quer solicitar um membership?</p>
-		${rulesHtml}
-		${siblingNote}
+		<p class="card-sub margin-bottom-20"><b>Olá, ${playerName}.</b> Este campo é exclusivo para membros registados. Podes solicitar acesso agora.</p>
 		${flipLink}
-		<button id="membership-btn">Solicitar membership</button>
+		<button id="membership-btn">Solicitar acesso</button>
 	`;
-	document.getElementById("membership-btn").addEventListener("click", () => requestMembership(court, user, name, app, header, siblingNote, false));
+	document.getElementById("membership-btn").addEventListener("click", () => requestMembership(court, user, playerName, app, header, false));
 }
 
 // SUBMIT A MEMBERSHIP REQUEST; ON RE-APPLY, DELETES THE DENIED ROW FIRST SO INSERT IS CLEAN
-async function requestMembership(court, user, name, app, header, siblingNote, isReapply) {
+async function requestMembership(court, user, name, app, header, isReapply) {
 	const btn = document.getElementById("membership-btn") || document.getElementById("reapply-btn");
 	if (btn) { btn.disabled = true; btn.textContent = "A enviar..."; }
 
@@ -240,7 +258,6 @@ async function requestMembership(court, user, name, app, header, siblingNote, is
 	}
 
 	app.innerHTML = `${header}
-		<p class="card-sub"><b>Olá, ${name}.</b> A tua solicitação de membership está pendente de aprovação.</p>
-		${siblingNote}
+		<p class="card-sub"><b>Olá, ${name}.</b> A tua solicitação está pendente de aprovação.</p>
 	`;
 }

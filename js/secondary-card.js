@@ -53,8 +53,13 @@ export function renderSecondaryCard(court) {
 	secondary.querySelector(".secondary-content")?.remove();
 	const content = document.createElement("div");
 	content.className = "secondary-content";
-	content.innerHTML = `<div id="court-stats"></div>`;
+	content.innerHTML = `<div id="secondary-info"></div><div id="court-stats"></div>`;
 	secondary.querySelector(".secondary-close").insertAdjacentElement("afterend", content);
+}
+
+export function setSecondaryCardInfo(html) {
+	const el = document.getElementById("secondary-info");
+	if (el) el.innerHTML = html;
 }
 
 export async function loadHourlyChart(courtId) {
@@ -110,7 +115,7 @@ export async function loadHourlyChart(courtId) {
 	});
 
 	statsEl.innerHTML = `
-		<div class="court-stats-label">Taxa de ocupação por hora</div>
+		<div class="secondary-card-title">Taxa de ocupação por hora</div>
 		<div class="chart-legend">(% de vezes em que o campo esteve ocupado)</div>
 		<div class="court-chart">
 			<div class="chart-area">
@@ -193,7 +198,7 @@ export function renderCourtGroupDiagram(groupCourts, courtId) {
 	}
 
 	const label = document.createElement("div");
-	label.className = "court-diagram-label";
+	label.className = "secondary-card-title";
 	label.textContent = "Disposição do campo";
 	wrapper.appendChild(label);
 	wrapper.appendChild(diagram);

@@ -41,17 +41,8 @@ async function load() {
 
 	// Route: bookable courts go to court-bookable.js, walk-in courts go to court-walkin.js.
 	if (court.bookable) {
-		await renderBookable(court);
 		renderSecondaryCard(court);
-		if (court.group_id) {
-			db.from("courts")
-				.select("id, name, group_position")
-				.eq("group_id", court.group_id)
-				.order("group_position")
-				.then(({ data }) => {
-					if (data && data.length > 1) renderCourtGroupDiagram(data, courtId);
-				});
-		}
+		await renderBookable(court);
 		return;
 	}
 

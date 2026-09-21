@@ -89,6 +89,7 @@ body {
 
 .margin-bottom-10 { margin-bottom: 10px; }
 .margin-bottom-20 { margin-bottom: 20px; }
+.margin-bottom-30 { margin-bottom: 30px; }
 
 .padding-10 { padding: 10px; }
 
@@ -1172,8 +1173,61 @@ header {
 
 /* Secondary card content */
 
-.court-stats-label {
+.rules-grid {
+	display: flex;
+	justify-content: space-between;
+}
+
+.rules-item {
+	display: flex;
+	flex-direction: column;
+}
+
+.rules-value {
+	color: var(--white);
+	font-weight: 700;
+	font-size: 1.2em;
+}
+
+.rules-label {
+	color: var(--muted);
+	font-weight: 400;
+	font-size: 0.7em;
 	text-transform: uppercase;
+}
+
+.hours-grid {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 5px 0;
+}
+
+.hours-item {
+	display: flex;
+	flex-direction: column;
+	flex: 1;
+	min-width: 30%;
+}
+
+.hours-time {
+	color: var(--muted);
+	font-weight: 400;
+	font-size: 0.7em;
+	text-transform: uppercase;
+}
+
+.secondary-card-title {
+	align-self: flex-start;
+	text-transform: uppercase;
+	margin-bottom: 10px;
+}
+
+.secondary-card-subtitle {
+	font-size: 0.7em;
+	font-weight: 400;
+	color: var(--muted);
+	margin-bottom: 10px;
+	margin-top: -10px;
 }
 
 .court-stats-row {
@@ -1294,11 +1348,6 @@ header {
 	padding-bottom: 30px;
 }
 
-.court-diagram-label {
-	align-self: flex-start;
-	margin-bottom: 20px;
-	text-transform: uppercase;
-}
 
 .court-group-diagram {
 	position: relative;
