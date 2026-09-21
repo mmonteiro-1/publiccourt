@@ -51,7 +51,6 @@ async function load() {
 				.then(({ data }) => {
 					if (data && data.length > 1) renderCourtGroupDiagram(data, courtId);
 				});
-			loadHourlyChart(courtId);
 		}
 		return;
 	}

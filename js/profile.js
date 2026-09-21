@@ -33,9 +33,9 @@ function startOnboarding(user) {
 
 	// NAME IS REQUIRED; PHONE AND NIF ARE OPTIONAL
 	const steps = [
-		{ question: 'Qual é o teu nome?', field: 'name', type: 'text', placeholder: 'Nome', autocomplete: 'name', required: true },
-		{ question: 'Qual é o teu número de telefone?', field: 'phone', type: 'tel', placeholder: 'Telefone (opcional)', autocomplete: 'tel', required: false },
-		{ question: 'Qual é o teu NIF?', field: 'nif', type: 'text', placeholder: 'NIF (opcional)', autocomplete: 'off', required: false },
+		{ question: 'Como devemos chamar-te?', field: 'name', type: 'text', placeholder: 'Nome', autocomplete: 'name', required: true },
+		{ question: 'Queres deixar o telefone registado?', field: 'phone', type: 'tel', placeholder: 'Telefone (opcional)', autocomplete: 'tel', required: false },
+		{ question: 'Queres deixar o NIF registado?', field: 'nif', type: 'number', placeholder: 'NIF (opcional)', autocomplete: 'off', required: false },
 	];
 
 	function render() {
@@ -46,14 +46,17 @@ function startOnboarding(user) {
 		const canAdvance = !s.required || collected[s.field].length > 0;
 
 		app.innerHTML = `
-			${!isFirst ? `<button id="back-btn" class="onboarding-back">← Voltar</button>` : ''}
 			<p class="card-sub onboarding-step">${step + 1} / ${steps.length}</p>
 			<p class="onboarding-question">${s.question}</p>
 			<input class="form-input" type="${s.type}" id="onboarding-input"
 				placeholder="${s.placeholder}"
 				autocomplete="${s.autocomplete}"
 				value="${collected[s.field]}">
-			<button id="next-btn" ${canAdvance ? '' : 'disabled'}>${isLast ? 'Concluir' : 'Continuar'}</button>
+			<div class="onboarding-actions margin-top-10">
+				${!isFirst ? `<button id="back-btn" class="button-shallow">Voltar</button>` : ''}
+				<button id="next-btn" ${canAdvance ? '' : 'disabled'}>${isLast ? 'Concluir' : 'Continuar'}</button>
+			</div>
+			<p class="card-sub margin-top-10 margin-bottom-10" style="font-size: .7em; color: var(--black)">Estas informações serão necessárias para o administrador do campo quando solicitares uma reserva. Por este motivo o Campo Livre irá guardar os teus dados, embora não tenha interesse neles.</p>
 		`;
 
 		const input = document.getElementById('onboarding-input');

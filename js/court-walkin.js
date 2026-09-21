@@ -66,7 +66,8 @@ export function renderPreview(court, active) {
 		</div>`
 		: statusBadge;
 
-	const descriptionLine = `<a class="card-sub deck-flip-link" data-action="flip-deck" href="#">${court.description || "Mais sobre este campo"}<img src="images/icon_info.svg" class="link-icon" alt=""></a>`;
+	const descriptionLine = court.description ? `<p class="card-sub">${court.description}</p>` : "";
+	const flipLink = `<a class="card-sub deck-flip-link" data-action="flip-deck" href="#">Mais informações deste campo<img src="images/icon_info.svg" class="link-icon" alt=""></a>`;
 
 	const isOwner = active && active.device_id === getDeviceId();
 	const bodyText = active
@@ -96,6 +97,7 @@ export function renderPreview(court, active) {
 			<button class="extend-btn" data-mins="30" ${localStorage.getItem("extended_" + active.id) ? "disabled" : ""}>+ 30MIN</button>
 			<button class="extend-btn" data-mins="60" ${localStorage.getItem("extended_" + active.id) ? "disabled" : ""}>+ 60MIN</button>
 		</div>` : ""}
+		${flipLink}
 		<button id="here-btn">${locationIcon} ${actionLabel}</button>
 		<button class="button-shallow margin-top-10" id="back-btn">Voltar</button>
 		${!isOwner ? `<p class="card-sub margin-top-10" style="font-size:0.75em">Por favor permite que este browser confirme a tua localização</p>` : ""}
@@ -163,7 +165,8 @@ function renderAvailable(court) {
 	app.classList.add("available");
 	app.classList.remove("inuse");
 
-	const descriptionLine = `<a class="card-sub deck-flip-link" data-action="flip-deck" href="#">${court.description || "Mais sobre este campo"}<img src="images/icon_info.svg" class="link-icon" alt=""></a>`;
+	const descriptionLine = court.description ? `<p class="card-sub">${court.description}</p>` : "";
+	const flipLink = `<a class="card-sub deck-flip-link" data-action="flip-deck" href="#">Mais informações deste campo<img src="images/icon_info.svg" class="link-icon" alt=""></a>`;
 
 	app.innerHTML = `
 		<div class="card-header">
@@ -179,6 +182,7 @@ function renderAvailable(court) {
 			<button class="dur-btn" data-mins="60">60MIN</button>
 			<button class="dur-btn" data-mins="90">90MIN</button>
 		</div>
+		${flipLink}
 		<button id="checkin-btn"><img src="images/icon_run.svg" class="link-icon" alt=""> Começar jogo</button>
 	`;
 

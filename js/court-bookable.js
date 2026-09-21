@@ -9,7 +9,8 @@ export async function renderBookable(court) {
 	const { data: { session } } = await db.auth.getSession();
 	const user = session?.user ?? null;
 
-	const descriptionLine = `<a class="card-sub deck-flip-link" data-action="flip-deck" href="#">${court.description || "Mais sobre este campo"}<img src="images/icon_info.svg" class="link-icon" alt=""></a>`;
+	const descriptionLine = court.description ? `<p class="card-sub">${court.description}</p>` : "";
+	const flipLink = `<a class="card-sub deck-flip-link" data-action="flip-deck" href="#">Mais informações deste campo<img src="images/icon_info.svg" class="link-icon" alt=""></a>`;
 
 	const header = `
 		<div class="card-header">
@@ -30,8 +31,9 @@ export async function renderBookable(court) {
 	// NOT LOGGED IN → PROMPT TO LOGIN; NO MEMBERSHIP CHECK NEEDED
 	if (!user) {
 		app.innerHTML = `${header}
-			<p class="card-sub margin-bottom-20"><b>Olá, jogador.</b> Reservas neste campo estão destinadas a membros. Primeiro faz login no Campo Livre e depois solicita um membership neste campo para poder jogar</p>
-			<button id="login-btn">Fazer login</button>
+			<p class="card-sub margin-bottom-20">Este campo <b>requer reservas</b> para poderes jogar. <br><br> Para fazeres reserva, o Campo Livre irá repassar as tuas informações aos administradores do campo. Após aceite, já podes reservar e jogar.</p>
+			${flipLink}
+			<button id="login-btn"><img src="images/icon_login.svg" alt=""> Fazer login</button>
 		`;
 		document.getElementById("login-btn").addEventListener("click", () => { location.href = "login.html"; });
 		return;
@@ -128,6 +130,7 @@ export async function renderBookable(court) {
 		app.innerHTML = `${header}
 			<p class="card-sub margin-bottom-20"><b>Olá, ${name}.</b> A tua solicitação foi recusada.${reason} Podes solicitar novamente.</p>
 			${siblingNote}
+			${flipLink}
 			<button id="reapply-btn">Solicitar novamente</button>
 		`;
 		document.getElementById("reapply-btn").addEventListener("click", () => requestMembership(court, user, name, app, header, siblingNote, true));
@@ -207,6 +210,7 @@ export async function renderBookable(court) {
 		<p class="card-sub margin-bottom-20"><b>Olá, ${name}.</b> Reservas neste campo estão destinadas a membros. Quer solicitar um membership?</p>
 		${rulesHtml}
 		${siblingNote}
+		${flipLink}
 		<button id="membership-btn">Solicitar membership</button>
 	`;
 	document.getElementById("membership-btn").addEventListener("click", () => requestMembership(court, user, name, app, header, siblingNote, false));

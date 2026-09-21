@@ -525,584 +525,6 @@ header {
 	background: var(--gray);
 }
 
-/* === LOGIN === */
-
-.page-login {
-	justify-content: center;
-	align-items: center;
-}
-
-#login-form {
-	display: flex;
-	flex-direction: column;
-	gap: 15px;
-	width: 100%;
-}
-
-.form-input {
-	width: 100%;
-	padding: 15px;
-	border: 2px solid var(--black);
-	border-radius: 10px;
-	font-family: inherit;
-	font-size: 1em;
-	font-weight: 400;
-	background: var(--white);
-	color: var(--black);
-	outline: none;
-}
-
-
-.form-error {
-	text-align: center;
-	color: var(--orange);
-	font-weight: 700;
-}
-
-.form-sent {
-	text-align: center;
-	font-weight: 400;
-	color: var(--black);
-}
-
-/* === PROFILE === */
-
-.page-profile {
-	justify-content: center;
-	align-items: center;
-}
-
-.page-profile #app {
-	display: flex;
-	flex-direction: column;
-	align-items: center;
-	gap: 15px;
-	width: 100%;
-}
-
-.profile-name {
-	font-size: 2em;
-	font-weight: 700;
-	text-align: center;
-}
-
-.profile-email {
-	font-size: 0.8em;
-	font-weight: 400;
-	color: var(--gray);
-	text-align: center;
-	margin-bottom: 5px;
-}
-
-/* === ONBOARDING === */
-
-.onboarding-step {
-	margin-bottom: 10px;
-}
-
-.onboarding-question {
-	font-size: 1.5em;
-	font-weight: 700;
-	margin-bottom: 20px;
-}
-
-.onboarding-back {
-	background: none;
-	border: none;
-	padding: 0;
-	color: var(--muted);
-	font-size: 0.8em;
-	font-weight: 400;
-	margin-bottom: 20px;
-	font-family: inherit;
-}
-
-/* === OWNER DASHBOARD === */
-
-.page-owner {
-	justify-content: flex-start;
-	align-items: stretch;
-	padding: 0;
-}
-
-.page-owner header {
-	display: flex;
-	justify-content: space-between;
-	align-items: center;
-	padding: 20px;
-	margin-bottom: 0;
-}
-
-.owner-logout {
-	width: auto;
-	padding: 10px 15px;
-	font-size: 0.8em;
-}
-
-.page-owner #app {
-	display: flex;
-	flex-direction: column;
-	gap: 15px;
-	width: 100%;
-	padding: 20px;
-	padding-bottom: 70px;
-}
-
-.owner-view {
-	display: flex;
-	flex-direction: column;
-	gap: 15px;
-}
-
-.owner-nav {
-	position: fixed;
-	bottom: 0;
-	left: 0;
-	right: 0;
-	display: flex;
-	border-top: 2px solid var(--black);
-	background: var(--pink);
-	z-index: 10;
-}
-
-.owner-nav-btn {
-	flex: 1;
-	width: auto;
-	padding: 15px 5px;
-	border: none;
-	border-radius: 0;
-	background: transparent;
-	box-shadow: none;
-	font-size: 0.7em;
-	font-weight: 700;
-	text-transform: uppercase;
-	color: var(--black);
-}
-
-.owner-nav-btn.active {
-	background: var(--black);
-	color: var(--white);
-}
-
-.owner-section {
-	font-size: 0.8em;
-	font-weight: 700;
-	text-transform: uppercase;
-	color: var(--gray);
-	margin-bottom: 5px;
-}
-
-.membership-card {
-	display: flex;
-	flex-direction: column;
-	gap: 5px;
-	border: 2px solid var(--black);
-	border-radius: 15px;
-	padding: 20px;
-}
-
-.membership-player {
-	font-size: 1.2em;
-	font-weight: 700;
-}
-
-.membership-courts {
-	font-size: 0.8em;
-	font-weight: 400;
-	color: var(--gray);
-}
-
-.membership-date {
-	font-size: 0.7em;
-	font-weight: 400;
-	color: var(--gray);
-	margin-bottom: 10px;
-}
-
-.membership-actions {
-	display: flex;
-	gap: 10px;
-}
-
-.membership-actions button {
-	flex: 1;
-	width: auto;
-}
-
-.rule-time-row {
-	display: flex;
-	gap: 10px;
-}
-
-.rule-time-row > div {
-	flex: 1;
-}
-
-.opening-hours-day {
-	padding: 10px 0;
-	border-top: 1px solid var(--border);
-}
-
-.opening-hours-header {
-	display: flex;
-	align-items: center;
-	justify-content: space-between;
-	gap: 10px;
-	margin-bottom: 10px;
-}
-
-.day-toggle {
-	width: auto;
-	padding: 5px 15px;
-	font-size: 0.8em;
-}
-
-/* === SLOT PICKER === */
-.day-strip {
-	display: flex;
-	gap: 10px;
-	margin-bottom: 20px;
-}
-
-.day-cell {
-	flex: 1;
-	display: flex;
-	flex-direction: column;
-	gap: 5px;
-}
-
-.day-cell::before {
-	content: '';
-	display: block;
-	width: 5px;
-	height: 5px;
-	border-radius: 50%;
-	margin: 0 auto;
-}
-
-.day-cell--active::before {
-	background: var(--white);
-}
-
-.day-cell--closed {
-	opacity: 0.4;
-	pointer-events: none;
-}
-
-.day-cell-bottom {
-	display: flex;
-	justify-content: space-between;
-	align-items: center;
-}
-
-.day-name {
-	color: var(--white);
-	font-weight: 700;
-	line-height: 1;
-}
-
-.day-number {
-	color: var(--muted);
-	font-size: 0.8em;
-	font-weight: 400;
-}
-
-.day-weather {
-	opacity: 0.6;
-	width: 15px;
-	height: 15px;
-}
-
-.slot-grid {
-	display: grid;
-	grid-template-columns: repeat(4, 1fr);
-	gap: 5px;
-	margin-bottom: 20px;
-}
-
-.slot-cell {
-	border: 2px solid var(--black);
-	background: var(--green);
-	color: var(--black);
-	border-radius: 10px;
-	padding: 15px 5px;
-	text-align: center;
-	font-size: 0.8em;
-	font-weight: 700;
-}
-
-.slot-past {
-	opacity: 0.4;
-}
-
-.slot-occupied {
-	background: var(--orange);
-}
-
-.slot-mine {
-	background: var(--white);
-}
-
-.slot-break {
-	background: repeating-linear-gradient(
-		-45deg,
-		#fff3 0px,
-		#fff3 3px,
-		transparent 4px,
-		transparent 8px
-	);
-}
-
-.slot-legend {
-	flex-wrap: wrap;
-	gap: 10px 15px;
-	margin-top: 10px;
-	margin-bottom: 20px;
-}
-
-.legend-slot-free { background: var(--green); border: 2px solid var(--black); }
-.legend-slot-occupied { background: var(--orange); border: 2px solid var(--black); }
-.legend-slot-mine { background: var(--white); border: 2px solid var(--black); }
-.legend-slot-break {
-	background: repeating-linear-gradient(
-		-45deg,
-		#ffffff6b 0px,
-		#ffffff6b 2px,
-		transparent 2px,
-		transparent 3px
-	);
-	border: 1px solid var(--black);
-}
-
-/* === DECK (page-court only) === */
-.page-court .deck {
-	display: grid;
-}
-
-.page-court .deck .card {
-	grid-area: 1 / 1;
-}
-
-.page-court .deck .card::after {
-	display: none;
-}
-
-/* Default positions: #app on top, secondary behind */
-.page-court .deck #app {
-	z-index: 1;
-}
-
-.page-court .deck .secondary-card {
-	transform: translate(6px, 6px);
-	z-index: 0;
-}
-
-/* Secondary card color tracks #app */
-.page-court .deck:has(#app.available) .secondary-card { background: var(--green); }
-.page-court .deck:has(#app.inuse) .secondary-card { background: var(--orange); }
-
-/* Flipped state: secondary on top, #app behind */
-.page-court .deck.flipped #app {
-	transform: translate(6px, 6px);
-	z-index: 0;
-}
-
-.page-court .deck.flipped .secondary-card {
-	transform: translate(0, 0);
-	z-index: 1;
-}
-
-/* Secondary card close button */
-.secondary-close {
-	position: absolute;
-	top: 15px;
-	right: 15px;
-	background: none;
-	border: none;
-	box-shadow: none;
-	border-radius: 0;
-	line-height: 0;
-	padding: 0;
-	width: auto;
-}
-
-.secondary-close img {
-	width: 20px;
-	height: 20px;
-}
-
-/* Secondary card content */
-
-.court-stats-label {
-	text-transform: uppercase;
-}
-
-.court-stats-row {
-	display: flex;
-	flex-wrap: wrap;
-	gap: 20px 0;
-}
-
-.court-stat {
-	width: 50%;
-}
-
-.court-stat-value {
-	font-size: 1.5em;
-	font-weight: 600;
-	line-height: 1;
-}
-
-.court-stat-label {
-	font-size: 0.7em;
-	text-transform: uppercase;
-	color: var(--muted);
-	font-weight: 400;
-}
-
-/* Hourly usage chart inside secondary card */
-
-.court-chart { width: 100%; }
-
-.chart-area {
-	display: flex;
-	gap: 10px;
-	margin-top: 10px;
-}
-
-.chart-y-axis {
-	display: flex;
-	flex-direction: column;
-	justify-content: space-between;
-	font-size: 0.5em;
-	font-weight: 400;
-	text-align: right;
-	margin-bottom: 20px
-}
-
-.chart-bars {
-	display: flex;
-	align-items: flex-end;
-	width: 100%;
-	gap: 10px;
-	margin-bottom: 10px
-}
-
-.chart-col {
-	flex: 1;
-	display: flex;
-	flex-direction: column;
-	align-items: center;
-	gap: 5px;
-}
-
-.chart-col-bars {
-	position: relative;
-	width: 100%;
-	height: 100px;
-}
-
-.chart-bar {
-	position: absolute;
-	bottom: 0;
-	width: 100%;
-	min-height: 4px;
-}
-
-.chart-bar-weekday, .legend-weekday {
-	background: var(--muted);
-}
-
-.chart-bar-weekend, .legend-weekend {
-	border: 1px solid var(--white);
-}
-
-.chart-label {
-	font-size: 0.5em;
-	font-weight: 400;
-}
-
-.chart-legend {
-	display: flex;
-	gap: 20px;
-	font-size: 0.7em;
-	font-weight: 400;
-}
-
-.legend-item {
-	display: flex;
-	align-items: center;
-	gap: 5px;
-}
-
-.legend-dot {
-	width: 10px;
-	height: 10px;
-	border-radius: 50%;
-	flex-shrink: 0;
-}
-
-/* Court group diagram inside secondary card */
-.court-diagram-wrapper {
-	display: flex;
-	flex-direction: column;
-	align-items: center;
-	pointer-events: none;
-	padding-bottom: 30px;
-}
-
-.court-diagram-label {
-	align-self: flex-start;
-	margin-bottom: 20px;
-	text-transform: uppercase;
-}
-
-.court-group-diagram {
-	position: relative;
-}
-
-.court-diagram-img {
-	position: absolute;
-	display: block;
-}
-
-/* Flip trigger link inside main card */
-.deck-flip-link {
-	display: block;
-	font-size: 0.8em;
-	text-decoration: underline;
-	text-underline-offset: 3px;
-}
-
-.deck-flip-link img {
-	height: 13px;
-	margin-left: 5px;
-	filter: invert(1);
-	opacity: .6;
-	vertical-align: middle;
-}
-
-/* Animation keyframes */
-@keyframes deck-to-back {
-	0%   { transform: translate(0, 0) rotate(0deg); animation-timing-function: ease-in; }
-	50%  { transform: translate(110vw, 10px) rotate(45deg); animation-timing-function: ease-out; }
-	100% { transform: translate(6px, 6px) rotate(0deg); }
-}
-
-@keyframes deck-to-front {
-	0%   { transform: translate(6px, 6px); }
-	70%  { transform: translate(-1px, -1px); }
-	100% { transform: translate(0, 0); }
-}
-
-.page-court .deck .card.to-back {
-	animation: deck-to-back 600ms ease-out forwards;
-}
-
-.page-court .deck .card.to-front {
-	animation: deck-to-front 600ms ease-out forwards;
-}
-
 .card-header {
 	display: flex;
 	align-items: flex-start;
@@ -1296,6 +718,11 @@ header {
 	border-radius: 20px 20px 20px 0;
 }
 
+.page-court:has(#app.available) .install-nudge { background: var(--green); }
+.page-court:has(#app.inuse) .install-nudge { background: var(--orange); }
+.install-nudge.available { background: var(--green); }
+.install-nudge.inuse { background: var(--orange); }
+
 .install-nudge a {
 	color: var(--white);
 }
@@ -1315,6 +742,627 @@ header {
 	text-transform: uppercase;
 }
 
+/* === LOGIN === */
+
+.page-login,
+.page-profile {
+	justify-content: center;
+	align-items: center;
+	padding: 40px;
+}
+
+.page-login header,
+.page-profile header {
+	margin-bottom: 0;
+}
+
+.page-login #app,
+.page-profile #app {
+	margin-top: auto;
+	margin-bottom: auto;
+}
+
+#login-form {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+	width: 100%;
+}
+
+.form-input {
+	width: 100%;
+	padding: 15px;
+	border: 2px solid var(--black);
+	border-radius: 10px;
+	font-family: inherit;
+	font-size: 1em;
+	font-weight: 400;
+	background: var(--muted);
+	color: var(--black);
+	outline: none;
+}
+
+
+.form-error {
+	color: var(--orange);
+	font-weight: 700;
+	text-transform: uppercase;
+}
+
+.form-sent {
+	text-align: center;
+	font-weight: 400;
+	font-size: 1.2em;
+}
+
+.form-sent strong {
+	text-transform: uppercase;
+}
+
+/* === PROFILE === */
+.profile-name {
+	font-size: 2em;
+	font-weight: 700;
+	text-align: center;
+}
+
+.profile-email {
+	font-size: 0.8em;
+	font-weight: 400;
+	color: var(--gray);
+	text-align: center;
+	margin-bottom: 5px;
+}
+
+/* === ONBOARDING === */
+
+.onboarding-actions {
+	display: flex;
+	gap: 10px;
+}
+
+.onboarding-step {
+	margin-bottom: 10px;
+	color: var(--black);
+}
+
+.onboarding-question {
+	font-size: 1.2em;
+	font-weight: 700;
+	margin-bottom: 10px;
+}
+
+.onboarding-back {
+	background: none;
+	border: none;
+	padding: 0;
+	color: var(--muted);
+	font-size: 0.8em;
+	font-weight: 400;
+	margin-bottom: 20px;
+	font-family: inherit;
+}
+
+/* === OWNER DASHBOARD === */
+
+.page-owner {
+	justify-content: flex-start;
+	align-items: stretch;
+	padding: 0;
+}
+
+.page-owner header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 20px;
+	margin-bottom: 0;
+}
+
+.owner-logout {
+	width: auto;
+	padding: 10px 15px;
+	font-size: 0.8em;
+}
+
+.page-owner #app {
+	display: flex;
+	flex-direction: column;
+	gap: 15px;
+	width: 100%;
+	padding: 20px;
+	padding-bottom: 70px;
+}
+
+.owner-view {
+	display: flex;
+	flex-direction: column;
+	gap: 15px;
+}
+
+.owner-nav {
+	position: fixed;
+	bottom: 0;
+	left: 0;
+	right: 0;
+	display: flex;
+	border-top: 2px solid var(--black);
+	background: var(--pink);
+	z-index: 10;
+}
+
+.owner-nav-btn {
+	flex: 1;
+	width: auto;
+	padding: 15px 5px;
+	border: none;
+	border-radius: 0;
+	background: transparent;
+	box-shadow: none;
+	font-size: 0.7em;
+	font-weight: 700;
+	text-transform: uppercase;
+	color: var(--black);
+}
+
+.owner-nav-btn.active {
+	background: var(--black);
+	color: var(--white);
+}
+
+.owner-section {
+	font-size: 0.8em;
+	font-weight: 700;
+	text-transform: uppercase;
+	color: var(--gray);
+	margin-bottom: 5px;
+}
+
+.membership-card {
+	display: flex;
+	flex-direction: column;
+	gap: 5px;
+	border: 2px solid var(--black);
+	border-radius: 15px;
+	padding: 20px;
+}
+
+.membership-player {
+	font-size: 1.2em;
+	font-weight: 700;
+}
+
+.membership-courts {
+	font-size: 0.8em;
+	font-weight: 400;
+	color: var(--gray);
+}
+
+.membership-date {
+	font-size: 0.7em;
+	font-weight: 400;
+	color: var(--gray);
+	margin-bottom: 10px;
+}
+
+.membership-actions {
+	display: flex;
+	gap: 10px;
+}
+
+.membership-actions button {
+	flex: 1;
+	width: auto;
+}
+
+.rule-time-row {
+	display: flex;
+	gap: 10px;
+}
+
+.rule-time-row>div {
+	flex: 1;
+}
+
+.opening-hours-day {
+	padding: 10px 0;
+	border-top: 1px solid var(--border);
+}
+
+.opening-hours-header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 10px;
+	margin-bottom: 10px;
+}
+
+.day-toggle {
+	width: auto;
+	padding: 5px 15px;
+	font-size: 0.8em;
+}
+
+/* === SLOT PICKER === */
+.day-strip {
+	display: flex;
+	gap: 10px;
+	margin-bottom: 20px;
+}
+
+.day-cell {
+	flex: 1;
+	display: flex;
+	flex-direction: column;
+	gap: 5px;
+}
+
+.day-cell::before {
+	content: '';
+	display: block;
+	width: 5px;
+	height: 5px;
+	border-radius: 50%;
+	margin: 0 auto;
+}
+
+.day-cell--active::before {
+	background: var(--white);
+}
+
+.day-cell--closed {
+	opacity: 0.4;
+	pointer-events: none;
+}
+
+.day-cell-bottom {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+}
+
+.day-name {
+	color: var(--white);
+	font-weight: 700;
+	line-height: 1;
+}
+
+.day-number {
+	color: var(--muted);
+	font-size: 0.8em;
+	font-weight: 400;
+}
+
+.day-weather {
+	opacity: 0.6;
+	width: 15px;
+	height: 15px;
+}
+
+.slot-grid {
+	display: grid;
+	grid-template-columns: repeat(4, 1fr);
+	gap: 5px;
+	margin-bottom: 20px;
+}
+
+.slot-cell {
+	border: 2px solid var(--black);
+	background: var(--green);
+	color: var(--black);
+	border-radius: 10px;
+	padding: 15px 5px;
+	text-align: center;
+	font-size: 0.8em;
+	font-weight: 700;
+}
+
+.slot-past {
+	opacity: 0.4;
+}
+
+.slot-occupied {
+	background: var(--orange);
+}
+
+.slot-mine {
+	background: var(--white);
+}
+
+.slot-break {
+	background: repeating-linear-gradient(-45deg,
+			#fff3 0px,
+			#fff3 3px,
+			transparent 4px,
+			transparent 8px);
+}
+
+.slot-legend {
+	flex-wrap: wrap;
+	gap: 10px 15px;
+	margin-top: 10px;
+	margin-bottom: 20px;
+}
+
+.legend-slot-free {
+	background: var(--green);
+	border: 2px solid var(--black);
+}
+
+.legend-slot-occupied {
+	background: var(--orange);
+	border: 2px solid var(--black);
+}
+
+.legend-slot-mine {
+	background: var(--white);
+	border: 2px solid var(--black);
+}
+
+.legend-slot-break {
+	background: repeating-linear-gradient(-45deg,
+			#ffffff6b 0px,
+			#ffffff6b 2px,
+			transparent 2px,
+			transparent 3px);
+	border: 1px solid var(--black);
+}
+
+/* === DECK (page-court only) === */
+.page-court .deck {
+	display: grid;
+}
+
+.page-court .deck .card {
+	grid-area: 1 / 1;
+}
+
+.page-court .deck .card::after {
+	display: none;
+}
+
+/* Default positions: #app on top, secondary behind */
+.page-court .deck #app {
+	z-index: 1;
+}
+
+.page-court .deck .secondary-card {
+	transform: translate(6px, 6px);
+	z-index: 0;
+}
+
+/* Secondary card color tracks #app */
+.page-court .deck:has(#app.available) .secondary-card {
+	background: var(--green);
+}
+
+.page-court .deck:has(#app.inuse) .secondary-card {
+	background: var(--orange);
+}
+
+/* Flipped state: secondary on top, #app behind */
+.page-court .deck.flipped #app {
+	transform: translate(6px, 6px);
+	z-index: 0;
+}
+
+.page-court .deck.flipped .secondary-card {
+	transform: translate(0, 0);
+	z-index: 1;
+}
+
+/* Secondary card close button */
+.secondary-close {
+	position: absolute;
+	top: 15px;
+	right: 15px;
+	background: none;
+	border: none;
+	box-shadow: none;
+	border-radius: 0;
+	line-height: 0;
+	padding: 0;
+	width: auto;
+}
+
+.secondary-close img {
+	width: 20px;
+	height: 20px;
+}
+
+/* Secondary card content */
+
+.court-stats-label {
+	text-transform: uppercase;
+}
+
+.court-stats-row {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 20px 0;
+}
+
+.court-stat {
+	width: 50%;
+}
+
+.court-stat-value {
+	font-size: 1.5em;
+	font-weight: 600;
+	line-height: 1;
+}
+
+.court-stat-label {
+	font-size: 0.7em;
+	text-transform: uppercase;
+	color: var(--muted);
+	font-weight: 400;
+}
+
+/* Hourly usage chart inside secondary card */
+
+.court-chart {
+	width: 100%;
+}
+
+.chart-area {
+	display: flex;
+	gap: 10px;
+	margin-top: 10px;
+}
+
+.chart-y-axis {
+	display: flex;
+	flex-direction: column;
+	justify-content: space-between;
+	font-size: 0.5em;
+	font-weight: 400;
+	text-align: right;
+	margin-bottom: 20px
+}
+
+.chart-bars {
+	display: flex;
+	align-items: flex-end;
+	width: 100%;
+	gap: 10px;
+	margin-bottom: 10px
+}
+
+.chart-col {
+	flex: 1;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 5px;
+}
+
+.chart-col-bars {
+	position: relative;
+	width: 100%;
+	height: 100px;
+}
+
+.chart-bar {
+	position: absolute;
+	bottom: 0;
+	width: 100%;
+	min-height: 4px;
+}
+
+.chart-bar-weekday,
+.legend-weekday {
+	background: var(--muted);
+}
+
+.chart-bar-weekend,
+.legend-weekend {
+	border: 1px solid var(--white);
+}
+
+.chart-label {
+	font-size: 0.5em;
+	font-weight: 400;
+}
+
+.chart-legend {
+	display: flex;
+	gap: 20px;
+	font-size: 0.7em;
+	font-weight: 400;
+}
+
+.legend-item {
+	display: flex;
+	align-items: center;
+	gap: 5px;
+}
+
+.legend-dot {
+	width: 10px;
+	height: 10px;
+	border-radius: 50%;
+	flex-shrink: 0;
+}
+
+/* Court group diagram inside secondary card */
+.court-diagram-wrapper {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	pointer-events: none;
+	padding-bottom: 30px;
+}
+
+.court-diagram-label {
+	align-self: flex-start;
+	margin-bottom: 20px;
+	text-transform: uppercase;
+}
+
+.court-group-diagram {
+	position: relative;
+}
+
+.court-diagram-img {
+	position: absolute;
+	display: block;
+}
+
+/* Flip trigger link inside main card */
+.deck-flip-link {
+	display: block;
+	margin-bottom: 20px;
+	text-decoration: underline;
+	text-underline-offset: 3px;
+}
+
+.deck-flip-link img {
+	height: 13px;
+	margin-left: 5px;
+	filter: invert(1);
+	opacity: .6;
+	vertical-align: middle;
+}
+
+/* Animation keyframes */
+@keyframes deck-to-back {
+	0% {
+		transform: translate(0, 0) rotate(0deg);
+		animation-timing-function: ease-in;
+	}
+
+	50% {
+		transform: translate(110vw, 10px) rotate(45deg);
+		animation-timing-function: ease-out;
+	}
+
+	100% {
+		transform: translate(6px, 6px) rotate(0deg);
+	}
+}
+
+@keyframes deck-to-front {
+	0% {
+		transform: translate(6px, 6px);
+	}
+
+	70% {
+		transform: translate(-1px, -1px);
+	}
+
+	100% {
+		transform: translate(0, 0);
+	}
+}
+
+.page-court .deck .card.to-back {
+	animation: deck-to-back 600ms ease-out forwards;
+}
+
+.page-court .deck .card.to-front {
+	animation: deck-to-front 600ms ease-out forwards;
+}
 @media (min-width: 768px) {
 	body {
 		max-width: 430px;

@@ -28,6 +28,6 @@ form.addEventListener("submit", async (e) => {
 	}
 
 	app.innerHTML = `
-		<p class="form-sent">Enviámos um link para <strong>${email}</strong>.<br>Clica nele para entrar.</p>
+		<p class="form-sent">Enviámos um link de acesso para <strong>${email}</strong>. Abre o email e clica no link para entrar.</p>
 	`;
 });
