@@ -107,19 +107,6 @@ body {
 	object-fit: cover;
 }
 
-#eye {
-	animation: eye-move 8s ease-out 2s 1;
-	transform-box: fill-box;
-	transform-origin: center;
-}
-
-@keyframes eye-move {
-	0%   { transform: translate(0, 0); }
-	12%  { transform: translate(8.38px, 0.36px); }
-	50%  { transform: translate(8.38px, 0.36px); }
-	62%  { transform: translate(0, 0); }
-	100% { transform: translate(0, 0); }
-}
 
 .page-court-list {
 	padding: 0;
