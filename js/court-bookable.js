@@ -126,7 +126,7 @@ export async function renderBookable(court) {
 	// NOT LOGGED IN → PROMPT TO LOGIN; NO MEMBERSHIP CHECK NEEDED
 	if (!user) {
 		app.innerHTML = `${header}
-			<p class="card-sub margin-bottom-20">Este campo <b>opera sob o sistema de reservas</b>. <br><br> Para fazeres reserva, o Campo Livre precisa repassar as tuas informações aos administradores do campo. Após aceite, já podes reservar e jogar.</p>
+			<p class="card-sub margin-bottom-20">Este campo opera sob o <b>sistema de reservas</b>. <br><br> Para fazeres reserva, o Campo Livre precisa repassar as tuas informações aos administradores do campo. Após aceite, já podes reservar e jogar.</p>
 			${flipLink}
 			<button id="login-btn"><img src="images/icon_login.svg" alt=""> Fazer login</button>
 		`;
