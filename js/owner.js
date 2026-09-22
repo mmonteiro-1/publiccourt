@@ -50,6 +50,7 @@ async function loadDashboard(user) {
 		{ data: approved },
 		{ data: courts },
 		{ data: openingHours },
+		{ data: upcomingBookings },
 	] = await Promise.all([
 		db.from("memberships")
 			.select("id, player_id, group_id, court_id, created_at")
@@ -66,6 +67,12 @@ async function loadDashboard(user) {
 		db.from("court_opening_hours")
 			.select("*")
 			.in("group_id", groupIds),
+		db.from("bookings")
+			.select("player_id, group_id, start_at")
+			.in("group_id", groupIds)
+			.eq("status", "confirmed")
+			.gt("start_at", new Date().toISOString())
+			.order("start_at"),
 	]);
 
 	// FETCH PLAYER PROFILES IN A SINGLE QUERY; SET DEDUPLICATES IDS ACROSS PENDING AND APPROVED
@@ -89,6 +96,12 @@ async function loadDashboard(user) {
 		openingHoursByGroup[h.group_id][h.day_of_week] = h;
 	});
 
+	// INDEX NEXT BOOKING PER PLAYER — BOOKINGS ARE ORDERED BY start_at SO FIRST MATCH IS EARLIEST
+	const nextBookingByPlayer = {};
+	(upcomingBookings || []).forEach(b => {
+		if (!nextBookingByPlayer[b.player_id]) nextBookingByPlayer[b.player_id] = b;
+	});
+
 	ownerData = {
 		ownedGroups,
 		pending: pending || [],
@@ -97,6 +110,7 @@ async function loadDashboard(user) {
 		profiles,
 		courtsByGroup,
 		openingHoursByGroup,
+		nextBookingByPlayer,
 	};
 
 	document.getElementById("loading-msg").hidden = true;
@@ -179,25 +193,37 @@ function renderMembersView() {
 	}
 
 	const sorted = [...approved].sort((a, b) => new Date(b.approved_at) - new Date(a.approved_at));
+	const { nextBookingByPlayer } = ownerData;
 
 	container.innerHTML = sorted.map(m => {
 		const playerName = profiles[m.player_id]?.name || "Jogador desconhecido";
 		const courtNames = (courtsByGroup[m.group_id] || []).join(", ");
 		const approvedDate = m.approved_at ? new Date(m.approved_at).toLocaleDateString("pt-PT") : "—";
 		const expiresDate = m.expires_at ? new Date(m.expires_at).toLocaleDateString("pt-PT") : null;
+		const nextBooking = nextBookingByPlayer[m.player_id];
+		const nextGameLabel = nextBooking
+			? new Date(nextBooking.start_at).toLocaleString("pt-PT", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })
+			: "Sem jogos agendados";
 		return `
 			<div class="membership-card" data-id="${m.id}">
-				<p class="membership-player">${playerName}</p>
-				<p class="membership-courts">${courtNames}</p>
-				<p class="membership-date">Aprovado ${approvedDate}</p>
-				<p class="membership-date">${expiresDate ? `Expira ${expiresDate}` : "Sem validade"}</p>
-				<div class="membership-actions">
-					<button class="button-shallow revoke-btn" data-id="${m.id}">Revogar</button>
+				<div class="membership-player-row">
+					<p class="membership-player">${playerName}</p>
+					<img src="images/icon_verified.svg" class="link-icon" alt="">
+				</div>
+				<div class="membership-date-row">
+					<p class="membership-date">Membro desde ${approvedDate}</p>
+					<a class="revoke-btn uppercase" data-id="${m.id}" href="#">Revogar</a>
+				</div>
+				<div class="divider"></div>
+				<div class="membership-data">
+					<p class="membership-courts"><img src="images/icon_court.svg" class="link-icon" alt="">${courtNames}</p>
+					<p class="membership-date">${expiresDate ? `<img src="images/icon_timer.svg" class="link-icon" alt=""> ${expiresDate}` : "Sem data de expiração"}</p>
+					<p class="membership-date"><img src="images/icon_calendar_clock.svg" class="link-icon" alt="">${nextGameLabel}</p>
 				</div>
 				<div class="revoke-confirm" id="revoke-confirm-${m.id}" hidden>
-					<p class="membership-date">Esta ação não pode ser revertida.</p>
+					<p class="margin-top-10 margin-bottom-10">Esta ação não pode ser revertida. ${playerName} será comunicado por email.</p>
 					<div class="membership-actions">
-						<button class="confirm-revoke-btn" data-id="${m.id}">Revogar</button>
+						<button class="confirm-revoke-btn" data-id="${m.id}"><img src="images/icon_death.svg" class="link-icon margin-left-5" alt="">Revogar</button>
 						<button class="button-shallow cancel-revoke-btn" data-id="${m.id}">Cancelar</button>
 					</div>
 				</div>
@@ -206,8 +232,9 @@ function renderMembersView() {
 	}).join("");
 
 	container.querySelectorAll(".revoke-btn").forEach(btn => {
-		btn.addEventListener("click", () => {
-			btn.closest(".membership-card").querySelector(".membership-actions").hidden = true;
+		btn.addEventListener("click", e => {
+			e.preventDefault();
+			btn.hidden = true;
 			document.getElementById(`revoke-confirm-${btn.dataset.id}`).hidden = false;
 		});
 	});
@@ -215,7 +242,7 @@ function renderMembersView() {
 	container.querySelectorAll(".cancel-revoke-btn").forEach(btn => {
 		btn.addEventListener("click", () => {
 			document.getElementById(`revoke-confirm-${btn.dataset.id}`).hidden = true;
-			btn.closest(".membership-card").querySelector(".membership-actions").hidden = false;
+			btn.closest(".membership-card").querySelector(".revoke-btn").hidden = false;
 		});
 	});
 
@@ -489,10 +516,10 @@ async function denyMembership(id, reason) {
 }
 
 // ENTRY POINT: LOAD DASHBOARD ON LOGIN, REDIRECT TO LOGIN ON NO SESSION
+// GUARD AGAINST TOKEN_REFRESHED RE-FIRING loadDashboard ON EVERY JWT RENEWAL
 db.auth.onAuthStateChange((event, session) => {
-	if (session) {
-		loadDashboard(session.user);
-	} else if (event === "INITIAL_SESSION") {
-		location.href = "login.html";
+	if (event === "INITIAL_SESSION" || event === "SIGNED_IN") {
+		if (session) loadDashboard(session.user);
+		else location.href = "login.html";
 	}
 });

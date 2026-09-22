@@ -24,11 +24,13 @@ export function initDeck() {
 		topCard.classList.add("to-back");
 		bottomCard.classList.add("to-front");
 
+		// SWAP Z-INDEX AT THE MIDPOINT SO CROSSING CARDS DON'T CLIP EACH OTHER
 		const mid = setTimeout(() => {
 			topCard.style.zIndex = "0";
 			bottomCard.style.zIndex = "2";
 		}, ANIM_MS / 2);
 
+		// { once: true } PREVENTS LISTENER ACCUMULATION ACROSS REPEATED FLIPS
 		topCard.addEventListener("animationend", () => {
 			clearTimeout(mid);
 			topCard.classList.remove("to-back");
@@ -50,6 +52,7 @@ export function initDeck() {
 export function renderSecondaryCard(court) {
 	const secondary = document.getElementById("secondary-card");
 	if (!secondary) return;
+	// CLEAR STALE CONTENT WHEN SWITCHING COURTS
 	secondary.querySelector(".secondary-content")?.remove();
 	const content = document.createElement("div");
 	content.className = "secondary-content";
@@ -57,9 +60,12 @@ export function renderSecondaryCard(court) {
 	secondary.querySelector(".secondary-close").insertAdjacentElement("afterend", content);
 }
 
-export function setSecondaryCardInfo(html) {
+export function setSecondaryCardInfo({ siblingSubtitle = "", rulesHtml = "", openingHoursHtml = "" } = {}) {
 	const el = document.getElementById("secondary-info");
-	if (el) el.innerHTML = html;
+	if (!el) return;
+	if (!siblingSubtitle && !rulesHtml && !openingHoursHtml) { el.innerHTML = ""; return; }
+	const divider = rulesHtml && openingHoursHtml ? `<div class="divider"></div>` : "";
+	el.innerHTML = `<p class="secondary-card-title">Informações do campo</p>${siblingSubtitle}${rulesHtml}${divider}${openingHoursHtml}`;
 }
 
 export async function loadHourlyChart(courtId) {
@@ -98,9 +104,11 @@ export async function loadHourlyChart(courtId) {
 		});
 	});
 
+	// CAP AT 80% — A FULL BAR WOULD IMPLY THE COURT IS ALWAYS OCCUPIED
 	const toRate = (occupiedHours, days) => Math.min(0.8, occupiedHours / days);
 	const hasData = (data || []).length > 0;
 
+	// NO SESSIONS RECORDED YET — SHOW ILLUSTRATIVE PLACEHOLDER RATHER THAN AN EMPTY CHART
 	if (!hasData) {
 		const rand = (min, max) => Math.random() * (max - min) + min;
 		HOURS.forEach(h => {
@@ -151,10 +159,12 @@ export function renderCourtGroupDiagram(groupCourts, courtId) {
 
 	const IMG_H = 80;
 	const IMG_W = Math.round(154 / 90 * IMG_H);
+	// OFFSETS DERIVED FROM PIXEL POSITIONS INSIDE THE SVG VIEWBOX (154×90)
 	const STEP_X = Math.round((98 - 0.5) / 154 * IMG_W * 0.65);
 	const STEP_Y = Math.round((57.1 - 0.5) / 90 * IMG_H * 0.65);
 
 	const sorted = [...groupCourts].sort((a, b) => a.group_position - b.group_position);
+	// COERCE BOTH SIDES — courtId FROM THE URL IS A STRING, DB IDS ARE NUMBERS
 	const currentIndex = sorted.findIndex(c => String(c.id) === String(courtId));
 	if (currentIndex === -1) return;
 

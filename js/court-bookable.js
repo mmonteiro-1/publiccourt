@@ -90,10 +90,11 @@ export async function renderBookable(court) {
 		if (!groupRules) return "";
 		const items = [];
 		if (groupRules.slot_duration_minutes) items.push({ value: `${groupRules.slot_duration_minutes}min`, label: "slots" });
+		// != null SO 0 (FREE COURTS) ISN'T DROPPED BY A TRUTHINESS CHECK
 		if (groupRules.price_per_slot_cents != null) items.push({ value: `€${(groupRules.price_per_slot_cents / 100).toFixed(2)}`, label: "preço por slot" });
 		if (groupRules.min_game_duration_minutes) items.push({ value: `${groupRules.min_game_duration_minutes}min`, label: "duração mínima" });
 		if (items.length === 0) return "";
-		return `<div class="rules-grid margin-bottom-30">${items.map(i => `<div class="rules-item"><span class="rules-value">${i.value}</span><span class="rules-label">${i.label}</span></div>`).join("")}</div>`;
+		return `<div class="rules-grid">${items.map(i => `<div class="rules-item"><span class="rules-value">${i.value}</span><span class="rules-label">${i.label}</span></div>`).join("")}</div>`;
 	})();
 
 	const siblingSubtitle = siblingCourts.length > 0
@@ -118,10 +119,7 @@ export async function renderBookable(court) {
 		return `<p class="secondary-card-title">Horário</p><div class="hours-grid">${rows.join("")}</div>`;
 	})();
 
-	const secondaryInfoHtml = (rulesHtml || siblingSubtitle || openingHoursHtml)
-		? `<p class="secondary-card-title">Informações do campo</p>${siblingSubtitle}${rulesHtml}${openingHoursHtml}`
-		: "";
-	setSecondaryCardInfo(secondaryInfoHtml);
+	setSecondaryCardInfo({ siblingSubtitle, rulesHtml, openingHoursHtml });
 
 	// NOT LOGGED IN → PROMPT TO LOGIN; NO MEMBERSHIP CHECK NEEDED
 	if (!user) {

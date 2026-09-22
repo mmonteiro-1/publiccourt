@@ -83,6 +83,7 @@ body {
 	flex-direction: column;
 	overflow-x: hidden;
 }
+.margin-left-5 { margin-left: 5px; }
 
 .margin-top-5 { margin-top: 5px; }
 .margin-top-10 { margin-top: 10px; }
@@ -326,6 +327,7 @@ header {
 .link-icon {
 	height: 20px;
 	width: auto;
+	vertical-align: middle;
 }
 
 .view-toggle-btn.active img {
@@ -861,6 +863,10 @@ header {
 	padding-bottom: 70px;
 }
 
+.page-owner .divider {
+	margin: 10px 0;
+}
+
 .owner-view {
 	display: flex;
 	flex-direction: column;
@@ -923,14 +929,61 @@ header {
 	font-weight: 400;
 }
 
+.membership-card .link-icon {
+	max-height: 15px;
+	width: 18px;
+	flex-shrink: 0;
+}
+
+.membership-courts,
+.membership-date {
+	display: flex;
+	align-items: center;
+	gap: 5px;
+}
+
+.membership-player-row {
+	display: flex;
+	justify-content: space-between;
+}
+
+.membership-player-row .link-icon{
+	height: 25px;
+	max-height: unset;
+	width: unset;
+}
+
 .membership-player {
 	font-size: 1.5em;
 	font-weight: 700;
 	text-transform: uppercase;
 }
 
-.membership-date {
-	margin-bottom: 10px;
+.icon-verified {
+	height: 16px;
+	width: auto;
+	flex-shrink: 0;
+}
+
+.membership-date-row {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+}
+
+.membership-date-row .membership-date {
+	margin-bottom: 0;
+}
+
+.membership-data {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 5px 10px;
+}
+
+.membership-data .membership-date,
+.membership-data .membership-courts {
+	margin-bottom: 0;
 }
 
 .membership-actions {
