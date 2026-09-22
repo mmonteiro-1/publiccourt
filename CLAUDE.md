@@ -58,31 +58,38 @@ Branch: `bookable-mvp` — building the court booking flow for courts that requi
 
 ## Database Schema (Supabase)
 
-**courts** — `id, name, city, description, lat, lng, group_id, group_position, active, bookable, unavailable, missing_qr_hint`
-- `bookable`: court requires membership + slot booking (vs walk-in)
-- `group_id`: links to a `court_groups` record (nullable for standalone courts)
-- `group_position`: order within a group
-- `missing_qr_hint`: counter incremented when users report missing QR
+**courts** — `id int4, name text, city text, description text, lat float8, lng float8, group_id int4, group_position int4, active bool, bookable bool, unavailable bool, missing_qr_hint int4`
+- `bookable`: requires membership + slot booking (vs walk-in)
+- `group_id` → `court_groups.id` (nullable for standalone courts)
+- RLS: SELECT open to all; UPDATE fully open (no condition) — intentional for `missing_qr_hint` increment
 
-**court_groups** — `id, owner_id, membership_duration_months, slot_duration_minutes, min_game_duration_minutes, price_per_slot_cents`
-- Groups multiple courts under one owner with shared rules/membership
+**court_groups** — `id int4, name text, owner_id uuid, membership_duration_months int4, slot_duration_minutes int4, min_game_duration_minutes int4, price_per_slot_cents int4`
+- `owner_id` → `auth.users.id`
+- RLS: SELECT open to all; UPDATE only where `owner_id = auth.uid()`
 
-**court_opening_hours** — `group_id, day_of_week, open, close, closed, pause_start, pause_end`
-- One row per day (0=Sun–6=Sat); `closed` disables the day entirely; `pause_*` is lunch break
+**court_opening_hours** — `id int8, group_id int4, day_of_week int4, closed bool, open time, close time, pause_start time, pause_end time`
+- One row per day (0=Sun–6=Sat); `closed` disables the day; `open`/`close`/`pause_*` are `time` type
+- RLS: SELECT open to all; ALL operations gated on owner via `group_id IN (SELECT id FROM court_groups WHERE owner_id = auth.uid())`
 
-**memberships** — `id, player_id, group_id, court_id, status, denied_reason, created_at, approved_at, expires_at`
-- Scope: either `group_id` (group-wide) or `court_id` (single court), never both
+**memberships** — `id uuid, player_id uuid, group_id int4, court_id int4, status text, denied_reason text, created_at timestamptz, approved_at timestamptz, expires_at timestamptz`
+- Scope: either `group_id` OR `court_id`, never both
 - `status`: `pending` | `approved` | `denied`
+- `player_id` → `auth.users.id`
+- RLS: players read/write own (`auth.uid() = player_id`); owners read/update via court_groups join; players can only DELETE when `status = 'denied'`; owners DELETE via group ownership
 
-**bookings** — `id, player_id, group_id, court_id, start_at, end_at`
-- Only for bookable courts; player must have an active membership
+**bookings** — `id uuid, group_id int4, player_id uuid, court_id int8, start_at timestamptz, end_at timestamptz, status text, created_at timestamptz`
+- `player_id` → `auth.users.id`
+- RLS: players read/insert/cancel own; approved members can read all bookings for their group's courts; cancel (UPDATE) only allowed when `start_at > now()`
 
-**walk_ins** — `id, court_id, device_id, ends_at, started_at, manual_finished_at`
-- For non-bookable courts; owned by `device_id` (localStorage), no auth required
-- Active when `manual_finished_at` IS NULL and `ends_at` > now
+**walk_ins** — `id uuid, court_id int4, device_id uuid, player_name text, started_at timestamptz, ends_at timestamptz, manual_finished_at timestamptz`
+- No auth — fully open RLS (SELECT/INSERT/UPDATE/DELETE all `true`)
+- Active when `manual_finished_at IS NULL AND ends_at > now()`
+- `player_name` is collected at walk-in time (not from profiles)
 
-**profiles** — `id, name`
-- Created on first login/onboarding; `id` = Supabase auth user id
+**profiles** — `id uuid, name text, phone text, nif text, created_at timestamptz`
+- `id` = `auth.users.id`; created on first onboarding
+- `phone` and `nif` collected but not yet used in the UI
+- RLS: players read/insert own; owners can read profiles of their approved members
 
 ## Backend Services
 
