@@ -51,12 +51,12 @@ function getCurrentPosition() {
 async function fetchActiveReservation() {
 	const now = new Date().toISOString();
 	const { data: rows } = await db
-		.from("reservations")
+		.from("walk_ins")
 		.select("*")
 		.eq("court_id", courtId)
 		.is("manual_finished_at", null)
 		.gt("ends_at", now)
-		// Descending + limit 1: if two overlapping reservations somehow exist, pick the one ending latest.
+		// Descending + limit 1: if two overlapping walk_ins somehow exist, pick the one ending latest.
 		.order("ends_at", { ascending: false })
 		.limit(1);
 
@@ -238,7 +238,7 @@ async function extendGame(court, active, minutes) {
 
 	const newEndsAt = new Date(new Date(active.ends_at).getTime() + minutes * 60 * 1000).toISOString();
 
-	const { error } = await db.from("reservations")
+	const { error } = await db.from("walk_ins")
 		.update({ ends_at: newEndsAt })
 		.eq("id", active.id);
 
@@ -276,7 +276,7 @@ async function finishOwnGame(court, reservationId) {
 	const btn = document.getElementById("here-btn");
 	btn.disabled = true;
 
-	const { error } = await db.from("reservations")
+	const { error } = await db.from("walk_ins")
 		.update({ manual_finished_at: new Date().toISOString() })
 		.eq("id", reservationId);
 
@@ -323,7 +323,7 @@ async function finishOwnGame(court, reservationId) {
 
 // END SOMEONE ELSE'S RESERVATION (CALLED AFTER LOCATION IS VERIFIED)
 async function finishGame(reservationId) {
-	const { error } = await db.from("reservations")
+	const { error } = await db.from("walk_ins")
 		.update({ manual_finished_at: new Date().toISOString() })
 		.eq("id", reservationId);
 
@@ -338,7 +338,7 @@ async function checkIn(court) {
 
 	const endsAt = new Date(Date.now() + selectedDuration * 60 * 1000).toISOString();
 
-	const { error } = await db.from("reservations").insert({
+	const { error } = await db.from("walk_ins").insert({
 		court_id: courtId,
 		ends_at: endsAt,
 		device_id: getDeviceId(),
@@ -488,7 +488,7 @@ async function loadHourlyChart() {
 	const DAYS = 15; // rolling window; seeded data covers the trailing 14 full days, today is always empty
 	const since = new Date(Date.now() - DAYS * 24 * 60 * 60 * 1000);
 	const { data } = await db
-		.from("reservations")
+		.from("walk_ins")
 		.select("started_at, ends_at, manual_finished_at")
 		.eq("court_id", courtId)
 		.gte("started_at", since.toISOString());
