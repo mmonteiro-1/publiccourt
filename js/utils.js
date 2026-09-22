@@ -1,3 +1,8 @@
+// RENDER THE SITTING PIG EMPTY STATE INTO A CONTAINER
+function setEmptyState(container, message) {
+	container.innerHTML = `<div class="empty"><img src="images/pig_sitting.svg" class="empty-pig" alt=""><p>${message}</p></div>`;
+}
+
 // FORMAT A TIMESTAMP AS HH:MM, SHARED BY EVERY PAGE
 function formatTime(ts) {
 	return new Date(ts).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });

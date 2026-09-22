@@ -27,12 +27,16 @@ const MIN_GAME_DURATION_OPTIONS = [
 ];
 
 // SWITCH BETWEEN THE PENDING / MEMBERS / RULES TABS; HIDES ALL VIEWS THEN SHOWS THE ONE REQUESTED
+// SYNC LOGO PIG HERE — RENDER FUNCTIONS RUN IN PARALLEL SO THEIR HIDE/SHOW CALLS WOULD FIGHT EACH OTHER
 function showView(view) {
 	document.querySelectorAll(".owner-view").forEach(el => el.hidden = true);
-	document.getElementById(`view-${view}`).hidden = false;
+	const active = document.getElementById(`view-${view}`);
+	active.hidden = false;
 	document.querySelectorAll(".owner-nav-btn").forEach(btn => {
 		btn.classList.toggle("active", btn.dataset.view === view);
 	});
+	const logoPig = document.querySelector(".logo-pig");
+	if (logoPig) logoPig.style.opacity = active.querySelector(".empty-pig") ? "0" : "";
 }
 
 // LOAD ALL OWNER DATA IN ONE BATCH; REDIRECTS TO PROFILE IF THE USER OWNS NO GROUPS
@@ -137,7 +141,7 @@ function renderPendingView() {
 	const { pending, profiles, courtsByGroup } = ownerData;
 
 	if (pending.length === 0) {
-		container.innerHTML = `<p class="form-sent">Sem solicitações pendentes.</p>`;
+		setEmptyState(container, "Sem solicitações<br>pendentes");
 		return;
 	}
 
@@ -188,7 +192,7 @@ function renderMembersView() {
 	const { approved, profiles, courtsByGroup } = ownerData;
 
 	if (approved.length === 0) {
-		container.innerHTML = `<p class="form-sent">Nenhum membro ativo.</p>`;
+		setEmptyState(container, "Nenhum membro ativo<br>infelizmente.");
 		return;
 	}
 
@@ -212,7 +216,7 @@ function renderMembersView() {
 				</div>
 				<div class="membership-date-row">
 					<p class="membership-date">Membro desde ${approvedDate}</p>
-					<a class="revoke-btn uppercase" data-id="${m.id}" href="#">Revogar</a>
+					<a class="revoke-btn uppercase" style="color: var(--orange)" data-id="${m.id}" href="#">Revogar</a>
 				</div>
 				<div class="divider"></div>
 				<div class="membership-data">
@@ -290,26 +294,26 @@ function renderPauseSection(groupId) {
 	const weStart = we.pause_start ? we.pause_start.slice(0, 5) : "";
 	const weEnd = we.pause_end ? we.pause_end.slice(0, 5) : "";
 	return `
-		<p class="court-rules-sublabel">Seg–Sex</p>
-		<div class="rule-time-row">
-			<div>
-				<p class="court-rules-sublabel">Início</p>
-				<input type="time" class="form-input opening-input" data-field="pause_weekday_start" value="${wdStart}">
+		<div class="opening-hours-day">
+			<div class="opening-hours-header">
+				<p class="court-rules-title">Pausa Seg–Sex</p>
 			</div>
-			<div>
-				<p class="court-rules-sublabel">Fim</p>
-				<input type="time" class="form-input opening-input" data-field="pause_weekday_end" value="${wdEnd}">
+			<div class="opening-hours-times">
+				<div class="rule-time-row">
+					<div>${makeTimeInput("pause_weekday_start", wdStart)}</div>
+					<div>${makeTimeInput("pause_weekday_end", wdEnd)}</div>
+				</div>
 			</div>
 		</div>
-		<p class="court-rules-sublabel" style="margin-top:10px">Sab–Dom</p>
-		<div class="rule-time-row">
-			<div>
-				<p class="court-rules-sublabel">Início</p>
-				<input type="time" class="form-input opening-input" data-field="pause_weekend_start" value="${weStart}">
+		<div class="opening-hours-day">
+			<div class="opening-hours-header">
+				<p class="court-rules-title">Pausa Sab–Dom</p>
 			</div>
-			<div>
-				<p class="court-rules-sublabel">Fim</p>
-				<input type="time" class="form-input opening-input" data-field="pause_weekend_end" value="${weEnd}">
+			<div class="opening-hours-times">
+				<div class="rule-time-row">
+					<div>${makeTimeInput("pause_weekend_start", weStart)}</div>
+					<div>${makeTimeInput("pause_weekend_end", weEnd)}</div>
+				</div>
 			</div>
 		</div>
 	`;
@@ -324,7 +328,7 @@ function renderOpeningHoursSection(groupId) {
 		return `
 			<div class="opening-hours-day" data-day="${dayIndex}" data-closed="${isClosed}">
 				<div class="opening-hours-header">
-					<p class="court-rules-day-name">${dayName}</p>
+					<p class="court-rules-title">${dayName}</p>
 					<button class="day-toggle ${isClosed ? "" : "button-shallow"}">${isClosed ? "Fechado" : "Aberto"}</button>
 				</div>
 				<div class="opening-hours-times" ${isClosed ? "hidden" : ""}>
@@ -378,19 +382,15 @@ function renderRulesView() {
 					</div>
 				</div>
 				<div class="divider"></div>
-
-				<div class="court-rules-hours">
-					<div>
-						<p class="court-rules-label">Horário de funcionamento</p>
+				<div>
+					<p class="court-rules-title">Horário de funcionamento</p>
+					<div class="court-rules-hours">
 						${renderOpeningHoursSection(group.id)}
-					</div>
-					<div>
-						<p class="court-rules-label">Pausa de almoço</p>
 						${renderPauseSection(group.id)}
 					</div>
 				</div>
 
-				<button class="save-rules-btn margin-top-10" data-group-id="${group.id}" disabled>Guardar alterações</button>
+				<button class="save-rules-btn margin-top-10" data-group-id="${group.id}" disabled><img src="images/icon_save.svg" class="link-icon" alt="">Guardar alterações</button>
 				</div>
 			</div>
 		`;
@@ -540,9 +540,9 @@ async function denyMembership(id, reason) {
 }
 
 // ENTRY POINT: LOAD DASHBOARD ON LOGIN, REDIRECT TO LOGIN ON NO SESSION
-// GUARD AGAINST TOKEN_REFRESHED RE-FIRING loadDashboard ON EVERY JWT RENEWAL
+// INITIAL_SESSION FIRES EXACTLY ONCE ON PAGE LOAD; SIGNED_IN CAN RE-FIRE ON TOKEN REFRESH IN SOME SUPABASE VERSIONS
 db.auth.onAuthStateChange((event, session) => {
-	if (event === "INITIAL_SESSION" || event === "SIGNED_IN") {
+	if (event === "INITIAL_SESSION") {
 		if (session) loadDashboard(session.user);
 		else location.href = "login.html";
 	}

@@ -238,14 +238,11 @@ function renderGrid() {
 		: sorted;
 
 	const logoPig = document.querySelector(".logo-pig");
-
 	if (finalSorted.length) {
 		grid.innerHTML = finalSorted.map(court => renderCourtCard(court, latestActiveMap[court.id], court.id === myCourtId)).join("");
-		grid.classList.remove("grid--empty");
 		if (logoPig) logoPig.style.opacity = "";
 	} else {
-		grid.innerHTML = `<div class="empty"><img src="images/pig_sitting.svg" class="empty-pig" alt=""> <p>Removeste todos<br> os filtros, Zé.</p></div>`;
-		grid.classList.add("grid--empty");
+		setEmptyState(grid, "Removeste todos<br> os filtros, Zé.");
 		if (logoPig) logoPig.style.opacity = "0";
 	}
 

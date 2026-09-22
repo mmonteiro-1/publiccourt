@@ -33,6 +33,7 @@ button {
 	color: var(--black);
 	box-shadow: 4px 4px 0 var(--black);
 	white-space: nowrap;
+	font-size: 1.2em;
 }
 
 button:disabled {
@@ -383,12 +384,12 @@ header {
 	display: none;
 }
 
-.grid.grid--empty {
-	align-content: center;
-	justify-items: center;
-}
-
 .empty {
+	position: absolute;
+	top: 50%;
+	left: 50%;
+	transform: translate(-50%, -50%);
+	width: 100%;
 	text-align: center;
 	font-size: 1.5em;
 	display: flex;
@@ -860,7 +861,7 @@ header {
 	flex-direction: column;
 	width: 100%;
 	padding: 20px;
-	padding-bottom: 70px;
+	padding-bottom: 90px;
 }
 
 .owner-view {
@@ -1027,9 +1028,13 @@ header {
 	display: flex;
 	align-items: center;
 	gap: 5px;
-	font-size: 1.5em;
+	font-size: 1.2em;
 	font-weight: 700;
 	text-transform: uppercase;
+}
+
+.court-rules-toggle .court-rules-title {
+	font-size: 1.5em;
 }
 
 .court-rules-title .link-icon {
@@ -1051,7 +1056,7 @@ header {
 .court-rules-hours {
 	display: flex;
 	flex-direction: column;
-	gap: 20px;
+	gap: 30px;
 	margin-top: 10px;
 }
 
@@ -1085,14 +1090,11 @@ header {
 .rule-time-row {
 	display: flex;
 	gap: 5px;
+	margin-top: 5px;
 }
 
 .rule-time-row>div {
 	flex: 1;
-}
-
-.opening-hours-day {
-	padding: 20px 0;
 }
 
 .opening-hours-header {
@@ -1100,13 +1102,12 @@ header {
 	align-items: flex-end;
 	justify-content: space-between;
 	margin-bottom: 5px;
-	font-size: 1.2em;
 }
 
 .day-toggle {
 	width: auto;
 	padding: 5px 10px;
-	font-size: 0.7em;
+	font-size: 0.8em;
 }
 
 /* === SLOT PICKER === */
