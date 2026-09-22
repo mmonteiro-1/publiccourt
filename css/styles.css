@@ -860,8 +860,7 @@ header {
 	display: flex;
 	flex-direction: column;
 	width: 100%;
-	padding: 20px;
-	padding-bottom: 90px;
+	padding: 0px 20px 90px 20px;
 }
 
 .owner-view {
@@ -1050,7 +1049,7 @@ header {
 .court-rules-grid {
 	display: grid;
 	grid-template-columns: 1fr 1fr;
-	gap: 10px;
+	gap: 20px 5px;
 }
 
 .court-rules-hours {

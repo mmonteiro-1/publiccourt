@@ -1,6 +1,13 @@
 import { renderSlotPicker } from './slot-picker.js';
 import { setSecondaryCardInfo } from './secondary-card.js';
 
+const hi = name => `<b>Olá, ${name}.</b>`;
+const MSG_PENDING = "Espetáculo! Enviámos a solicitação para os administradores do campo. <br><br>Vamos avisar no email e aqui quando tivermos novidade.";
+const MSG_DENIED = "A tua solicitação foi recusada.";
+const MSG_MEMBER = "És membro deste campo.";
+const MSG_NO_MEMBERSHIP = "Este campo é exclusivo para membros registados. Podes solicitar acesso agora.";
+const MSG_NOT_LOGGED = `Este campo opera sob o <b>sistema de reservas</b>. <br><br> Para fazeres reserva, o Campo Livre precisa repassar as tuas informações aos administradores do campo. Após aceite, já podes reservar e jogar.`;
+
 // ENTRY POINT: RENDERS THE FULL BOOKABLE COURT VIEW, BRANCHING ON AUTH AND MEMBERSHIP STATUS
 export async function renderBookable(court) {
 	const app = document.getElementById("app");
@@ -124,7 +131,7 @@ export async function renderBookable(court) {
 	// NOT LOGGED IN → PROMPT TO LOGIN; NO MEMBERSHIP CHECK NEEDED
 	if (!user) {
 		app.innerHTML = `${header}
-			<p class="card-sub margin-bottom-20">Este campo opera sob o <b>sistema de reservas</b>. <br><br> Para fazeres reserva, o Campo Livre precisa repassar as tuas informações aos administradores do campo. Após aceite, já podes reservar e jogar.</p>
+			<p class="card-sub margin-bottom-20">${MSG_NOT_LOGGED}</p>
 			${flipLink}
 			<button id="login-btn"><img src="images/icon_login.svg" alt=""> Fazer login</button>
 		`;
@@ -134,6 +141,7 @@ export async function renderBookable(court) {
 
 	const { data: profile } = await db.from("profiles").select("name").eq("id", user.id).single();
 	const playerName = profile?.name || user.user_metadata?.name || "jogador";
+	const greeting = `<p class="card-sub">${hi(playerName)} ${MSG_MEMBER}</p>`;
 
 	// MEMBERSHIP IS GROUP-SCOPED IF THE COURT BELONGS TO A GROUP, OTHERWISE COURT-SCOPED
 	const membershipQuery = court.group_id
@@ -144,7 +152,8 @@ export async function renderBookable(court) {
 
 	if (membership?.status === "pending") {
 		app.innerHTML = `${header}
-			<p class="card-sub"><b>Olá, ${playerName}.</b> A tua solicitação está pendente de aprovação.</p>
+			<p class="card-sub margin-bottom-20">${MSG_PENDING}</p>
+			${flipLink}
 		`;
 		return;
 	}
@@ -152,11 +161,11 @@ export async function renderBookable(court) {
 	if (membership?.status === "denied") {
 		const reason = membership.denied_reason ? ` Motivo: ${membership.denied_reason}.` : "";
 		app.innerHTML = `${header}
-			<p class="card-sub margin-bottom-20"><b>Olá, ${playerName}.</b> A tua solicitação foi recusada.${reason} Podes solicitar novamente.</p>
+			<p class="card-sub margin-bottom-20">${hi(playerName)} ${MSG_DENIED}${reason} Podes solicitar novamente.</p>
 			${flipLink}
 			<button id="reapply-btn">Solicitar novamente</button>
 		`;
-		document.getElementById("reapply-btn").addEventListener("click", () => requestMembership(court, user, playerName, app, header, true));
+		document.getElementById("reapply-btn").addEventListener("click", () => requestMembership(court, user, app, header, true));
 		return;
 	}
 
@@ -172,7 +181,7 @@ export async function renderBookable(court) {
 			if (playerActiveBooking.court_id !== court.id) {
 				// BOOKING IS ON A SIBLING COURT — BLOCK ENTIRELY, SHOW DETAILS
 				app.innerHTML = `${header}
-					<p class="card-sub"><b>Olá, ${playerName}.</b> És membro deste campo.</p>
+					${greeting}
 					<p class="card-sub"><b>${dayLabel}, ${fmt(s)}–${fmt(e)}</b></p>
 					<p class="card-sub">${siblingCourts.length > 0 ? 'Já tens uma reserva ativa neste grupo de campos.' : 'Já tens uma reserva ativa.'}</p>
 				`;
@@ -181,7 +190,7 @@ export async function renderBookable(court) {
 
 			// BOOKING IS ON THIS COURT — RENDER LOCKED PICKER SO PLAYER SEES THEIR CONFIRMED SLOT
 			app.innerHTML = `${header}
-				<p class="card-sub"><b>Olá, ${playerName}.</b> És membro deste campo.</p>
+				${greeting}
 				<p class="card-sub margin-bottom-20">Reserva: ${dayLabel}, ${fmt(s)}–${fmt(e)}</p>
 				<div id="slot-picker"></div>
 			`;
@@ -190,7 +199,7 @@ export async function renderBookable(court) {
 		}
 
 		app.innerHTML = `${header}
-			<p class="card-sub"><b>Olá, ${playerName}.</b> És membro deste campo.</p>
+			${greeting}
 			<p class="card-sub margin-bottom-20" id="booking-feedback" hidden></p>
 			<div id="slot-picker"></div>
 		`;
@@ -225,15 +234,15 @@ export async function renderBookable(court) {
 
 	// NO MEMBERSHIP YET → OFFER TO REQUEST ONE
 	app.innerHTML = `${header}
-		<p class="card-sub margin-bottom-20"><b>Olá, ${playerName}.</b> Este campo é exclusivo para membros registados. Podes solicitar acesso agora.</p>
+		<p class="card-sub margin-bottom-20">${hi(playerName)} ${MSG_NO_MEMBERSHIP}</p>
 		${flipLink}
-		<button id="membership-btn">Solicitar acesso</button>
+		<button id="membership-btn"><img src="images/icon_asking.svg" class="link-icon" alt="">Solicitar acesso</button>
 	`;
-	document.getElementById("membership-btn").addEventListener("click", () => requestMembership(court, user, playerName, app, header, false));
+	document.getElementById("membership-btn").addEventListener("click", () => requestMembership(court, user, app, header, false));
 }
 
 // SUBMIT A MEMBERSHIP REQUEST; ON RE-APPLY, DELETES THE DENIED ROW FIRST SO INSERT IS CLEAN
-async function requestMembership(court, user, name, app, header, isReapply) {
+async function requestMembership(court, user, app, header, isReapply) {
 	const btn = document.getElementById("membership-btn") || document.getElementById("reapply-btn");
 	if (btn) { btn.disabled = true; btn.textContent = "A enviar..."; }
 
@@ -256,6 +265,6 @@ async function requestMembership(court, user, name, app, header, isReapply) {
 	}
 
 	app.innerHTML = `${header}
-		<p class="card-sub"><b>Olá, ${name}.</b> A tua solicitação está pendente de aprovação.</p>
+		<p class="card-sub">${MSG_PENDING}</p>
 	`;
 }
