@@ -14,21 +14,35 @@ Deno.serve(async (req) => {
     return new Response("ok", { headers: corsHeaders });
   }
 
+  try {
+
+  console.log("notify-membership invoked");
   const { membershipId } = await req.json();
+  console.log("membershipId:", membershipId);
 
+  console.log("url ok:", !!SUPABASE_URL, "key ok:", !!SUPABASE_SERVICE_KEY);
   const db = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
+  console.log("db created");
 
-  const { data: membership } = await db
+  const { data: membership, error: membershipError } = await db
     .from("memberships")
     .select("status, denied_reason, player_id, group_id, court_id")
     .eq("id", membershipId)
     .single();
+  console.log("membership:", membership, "error:", membershipError);
 
   if (!membership) {
     return new Response(JSON.stringify({ error: "Membership not found" }), { status: 404 });
   }
 
-  const { data: { user } } = await db.auth.admin.getUserById(membership.player_id);
+  const { data: userData, error: userError } = await db.auth.admin.getUserById(membership.player_id);
+  console.log("userData:", userData, "userError:", userError);
+  if (userError || !userData?.user) {
+    console.error("getUserById failed:", userError);
+    return new Response(JSON.stringify({ error: "User not found" }), { status: 500, headers: corsHeaders });
+  }
+  const user = userData.user;
+
   const { data: profile } = await db.from("profiles").select("name").eq("id", membership.player_id).single();
 
   let courtNames = "";
@@ -71,4 +85,9 @@ Deno.serve(async (req) => {
   }
 
   return new Response(JSON.stringify({ ok: true }), { status: 200, headers: corsHeaders });
+
+  } catch (e) {
+    console.error("Unhandled exception:", e);
+    return new Response(JSON.stringify({ error: String(e) }), { status: 500, headers: corsHeaders });
+  }
 });

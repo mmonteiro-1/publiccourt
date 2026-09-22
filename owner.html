@@ -18,7 +18,6 @@
 			<img src="images/pig.svg" class="logo-pig" alt="">
 			<span>LIVRE</span>
 		</div>
-		<button id="logout-btn" class="owner-logout">Sair</button>
 	</header>
 
 	<main id="app">
@@ -27,12 +26,14 @@
 		<div id="view-pending" class="owner-view" hidden></div>
 		<div id="view-members" class="owner-view" hidden></div>
 		<div id="view-rules" class="owner-view" hidden></div>
+		<div id="view-profile" class="owner-view" hidden></div>
 	</main>
 
 	<nav class="owner-nav" hidden>
-		<button class="owner-nav-btn active" data-view="pending"><img src="images/icon_asking.svg" alt="">Pendentes</button>
-		<button class="owner-nav-btn" data-view="members"><img src="images/icon_shelter.svg" alt="">Membros</button>
-		<button class="owner-nav-btn" data-view="rules"><img src="images/icon_gear.svg" alt="">Campo</button>
+		<button class="owner-nav-btn active" data-view="pending"><img src="images/icon_user_exclamation.svg" alt=""></button>
+		<button class="owner-nav-btn" data-view="members"><img src="images/icon_id.svg" alt=""></button>
+		<button class="owner-nav-btn" data-view="rules"><img src="images/icon_court.svg" alt=""></button>
+		<button class="owner-nav-btn" data-view="profile"><img src="images/icon_gear.svg" alt=""></button>
 	</nav>
 
 	<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>

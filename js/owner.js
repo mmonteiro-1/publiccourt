@@ -83,7 +83,7 @@ async function loadDashboard(user) {
 	const allPlayerIds = [...new Set([...(pending || []), ...(approved || [])].map(m => m.player_id))];
 	let profiles = {};
 	if (allPlayerIds.length > 0) {
-		const { data: profileData } = await db.from("profiles").select("id, name").in("id", allPlayerIds);
+		const { data: profileData } = await db.from("profiles").select("id, name, phone, nif").in("id", allPlayerIds);
 		profiles = Object.fromEntries((profileData || []).map(p => [p.id, p]));
 	}
 
@@ -107,6 +107,7 @@ async function loadDashboard(user) {
 	});
 
 	ownerData = {
+		user,
 		ownedGroups,
 		pending: pending || [],
 		approved: approved || [],
@@ -123,15 +124,11 @@ async function loadDashboard(user) {
 	renderPendingView();
 	renderMembersView();
 	renderRulesView();
+	renderProfileView();
 	showView("pending");
 
 	document.querySelectorAll(".owner-nav-btn").forEach(btn => {
 		btn.addEventListener("click", () => showView(btn.dataset.view));
-	});
-
-	document.getElementById("logout-btn").addEventListener("click", async () => {
-		await db.auth.signOut();
-		location.href = "login.html";
 	});
 }
 
@@ -146,14 +143,22 @@ function renderPendingView() {
 	}
 
 	container.innerHTML = pending.map(m => {
-		const playerName = profiles[m.player_id]?.name || "Jogador desconhecido";
+		const profile = profiles[m.player_id];
+		const playerName = profile?.name || "Jogador desconhecido";
 		const courtNames = (courtsByGroup[m.group_id] || []).join(", ");
 		const date = new Date(m.created_at).toLocaleDateString("pt-PT");
+		const phoneLine = profile?.phone ? `<p class="membership-courts"><img src="images/icon_phone.svg" class="link-icon" alt="">${profile.phone}</p>` : "";
+		const nifLine = profile?.nif ? `<p class="membership-courts"><img src="images/icon_id.svg" class="link-icon" alt="">NIF ${profile.nif}</p>` : "";
 		return `
 			<div class="membership-card" data-id="${m.id}">
 				<p class="membership-player">${playerName}</p>
-				<p class="membership-courts">${courtNames}</p>
-				<p class="membership-date">${date}</p>
+				<p class="membership-courts"><img src="images/icon_court.svg" class="link-icon" alt="">${courtNames}</p>
+				<div class="divider"></div>
+				<div class="membership-data">
+					<p class="membership-date"><img src="images/icon_calendar_pen.svg" class="link-icon" alt="">${date}</p>
+					${phoneLine}
+					${nifLine}
+				</div>
 				<div class="membership-actions">
 					<button class="approve-btn" data-id="${m.id}">Aprovar</button>
 					<button class="button-shallow deny-btn" data-id="${m.id}">Recusar</button>
@@ -344,6 +349,22 @@ function renderOpeningHoursSection(groupId) {
 			</div>
 		`;
 	}).join("");
+}
+
+// RENDER THE OWNER PROFILE: EMAIL, NAME FROM PROFILES IF AVAILABLE, AND LOGOUT
+function renderProfileView() {
+	const container = document.getElementById("view-profile");
+	const { user } = ownerData;
+	container.innerHTML = `
+		<p class="membership-player">${user.email}</p>
+		<div class="membership-actions">
+			<button id="logout-btn">Sair</button>
+		</div>
+	`;
+	container.querySelector("#logout-btn").addEventListener("click", async () => {
+		await db.auth.signOut();
+		location.href = "login.html";
+	});
 }
 
 // RENDERS THE RULES FORM FOR EACH OWNED GROUP; SAVE BUTTON IS DISABLED UNTIL AN INPUT CHANGES

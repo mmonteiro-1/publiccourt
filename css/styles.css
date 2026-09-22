@@ -33,7 +33,6 @@ button {
 	color: var(--black);
 	box-shadow: 4px 4px 0 var(--black);
 	white-space: nowrap;
-	font-size: 1.2em;
 }
 
 button:disabled {
@@ -844,7 +843,7 @@ header {
 
 .page-owner header {
 	display: flex;
-	justify-content: space-between;
+	justify-content: center;
 	align-items: center;
 	padding: 20px;
 	margin-bottom: 0;
@@ -906,6 +905,11 @@ header {
 	box-shadow: none;
 	border: none;
 }
+
+.owner-nav-btn img {
+	height: 20px;
+	max-width: 25px;
+}
 .owner-section {
 	font-size: 0.8em;
 	font-weight: 700;
@@ -921,7 +925,6 @@ header {
 	border: 2px solid var(--black);
 	border-radius: 15px;
 	padding: 10px;
-	font-size: 0.8em;
 	font-weight: 400;
 }
 
@@ -940,6 +943,7 @@ header {
 	display: flex;
 	align-items: center;
 	gap: 5px;
+	font-size: 0.8em;
 }
 
 .membership-player-row {
@@ -998,7 +1002,7 @@ header {
 .membership-data {
 	display: flex;
 	flex-wrap: wrap;
-	gap: 5px 10px;
+	gap: 10px;
 }
 
 .membership-data .membership-date,
@@ -1079,6 +1083,7 @@ header {
 .membership-actions {
 	display: flex;
 	gap: 10px;
+	margin-top: 10px;
 }
 
 .membership-actions button {

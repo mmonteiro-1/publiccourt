@@ -96,7 +96,14 @@ Branch: `bookable-mvp` — building the court booking flow for courts that requi
 ## Backend Services
 
 ### Supabase Edge Functions
-Deployed under `supabase/functions/`, run on Deno. Deployed via Supabase CLI.
+Deployed under `supabase/functions/`, run on Deno.
+
+**Deploy command** (run from project root):
+```
+npx supabase link --project-ref xfshczzojvbkfxkmsvsn
+npx supabase functions deploy notify-membership
+```
+`link` only needed once per machine. `supabase` CLI is not globally installed — always use `npx supabase`.
 
 **notify-membership** (`supabase/functions/notify-membership/index.ts`)
 - Triggered by `owner.js` via `db.functions.invoke("notify-membership", { body: { membershipId } })` after approve or deny
@@ -115,6 +122,7 @@ Used exclusively inside edge functions. Not called from the frontend.
 - Email content: plain text only, no HTML
 - More email flows are planned beyond membership notify (booking confirmation, etc.)
 - **When a production domain is set up:** update the Resend from-address AND the Supabase auth redirect URLs (currently pointing to local IPs: `192.168.1.111:8080`, `192.168.10.112:3000`)
+- **Email notifications currently broken:** Resend sandbox only sends to the Resend account owner's email — arbitrary player emails are rejected. Fix: add a verified domain in Resend, update `from` address in the edge function. `notify-membership` also has debug `console.log` statements that should be cleaned up when this is addressed.
 
 ## Conventions
 
