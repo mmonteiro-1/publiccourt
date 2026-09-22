@@ -3,7 +3,7 @@ const app = document.getElementById("app");
 let ownerData = null;
 
 // DAY NAMES INDEXED BY JS getDay() (0 = SUNDAY) — USED FOR OPENING HOURS ROWS
-const DAYS = ["Domingo", "Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira", "Sexta-feira", "Sábado"];
+const DAYS = ["DOM", "SEG", "TER", "QUA", "QUI", "SEX", "SAB"];
 
 const MEMBERSHIP_DURATION_OPTIONS = [
 	{ label: "Sem validade", months: "" },
@@ -290,25 +290,25 @@ function renderPauseSection(groupId) {
 	const weStart = we.pause_start ? we.pause_start.slice(0, 5) : "";
 	const weEnd = we.pause_end ? we.pause_end.slice(0, 5) : "";
 	return `
-		<p class="membership-date">Seg–Sex</p>
+		<p class="court-rules-sublabel">Seg–Sex</p>
 		<div class="rule-time-row">
 			<div>
-				<p class="membership-date">Início</p>
+				<p class="court-rules-sublabel">Início</p>
 				<input type="time" class="form-input opening-input" data-field="pause_weekday_start" value="${wdStart}">
 			</div>
 			<div>
-				<p class="membership-date">Fim</p>
+				<p class="court-rules-sublabel">Fim</p>
 				<input type="time" class="form-input opening-input" data-field="pause_weekday_end" value="${wdEnd}">
 			</div>
 		</div>
-		<p class="membership-date" style="margin-top:10px">Sab–Dom</p>
+		<p class="court-rules-sublabel" style="margin-top:10px">Sab–Dom</p>
 		<div class="rule-time-row">
 			<div>
-				<p class="membership-date">Início</p>
+				<p class="court-rules-sublabel">Início</p>
 				<input type="time" class="form-input opening-input" data-field="pause_weekend_start" value="${weStart}">
 			</div>
 			<div>
-				<p class="membership-date">Fim</p>
+				<p class="court-rules-sublabel">Fim</p>
 				<input type="time" class="form-input opening-input" data-field="pause_weekend_end" value="${weEnd}">
 			</div>
 		</div>
@@ -324,17 +324,15 @@ function renderOpeningHoursSection(groupId) {
 		return `
 			<div class="opening-hours-day" data-day="${dayIndex}" data-closed="${isClosed}">
 				<div class="opening-hours-header">
-					<p class="membership-courts" style="margin:0">${dayName}</p>
+					<p class="court-rules-day-name">${dayName}</p>
 					<button class="day-toggle ${isClosed ? "" : "button-shallow"}">${isClosed ? "Fechado" : "Aberto"}</button>
 				</div>
 				<div class="opening-hours-times" ${isClosed ? "hidden" : ""}>
 					<div class="rule-time-row">
 						<div>
-							<p class="membership-date">Abertura</p>
 							${makeTimeInput("open", h.open)}
 						</div>
 						<div>
-							<p class="membership-date">Fecho</p>
 							${makeTimeInput("close", h.close)}
 						</div>
 					</div>
@@ -354,33 +352,59 @@ function renderRulesView() {
 		const priceEuros = group.price_per_slot_cents != null ? (group.price_per_slot_cents / 100).toFixed(2) : "";
 
 		return `
-			<div class="membership-card" data-group-id="${group.id}">
-				<p class="membership-player">${courtNames}</p>
+			<div class="court-rules-card" data-group-id="${group.id}">
+				<div class="court-rules-toggle">
+					<p class="court-rules-title"><img src="images/icon_court.svg" class="link-icon" alt="">${courtNames}</p>
+					<img src="images/icon_triangle.svg" class="card-toggle-icon" alt="">
+				</div>
+				<div class="court-rules-body">
 
-				<p class="membership-courts membership-rule-label">Duração do slot</p>
-				${makeSelect(SLOT_DURATION_OPTIONS, group.slot_duration_minutes ?? "", "form-input rule-input", { field: "slot_duration_minutes" })}
+				<div class="court-rules-grid">
+					<div>
+						<p class="court-rules-label">Duração do slot</p>
+						${makeSelect(SLOT_DURATION_OPTIONS, group.slot_duration_minutes ?? "", "form-input rule-input", { field: "slot_duration_minutes" })}
+					</div>
+					<div>
+						<p class="court-rules-label">Preço por slot (€)</p>
+						<input class="form-input rule-input" type="number" inputmode="decimal" min="0" step="0.01" placeholder="€0.00" value="${priceEuros}" data-field="price_per_slot_cents">
+					</div>
+					<div>
+						<p class="court-rules-label">Duração mínima jogo</p>
+						${makeSelect(MIN_GAME_DURATION_OPTIONS, group.min_game_duration_minutes ?? "", "form-input rule-input", { field: "min_game_duration_minutes" })}
+					</div>
+					<div>
+						<p class="court-rules-label">Validade do passe</p>
+						${makeSelect(MEMBERSHIP_DURATION_OPTIONS, group.membership_duration_months ?? "", "form-input rule-input", { field: "membership_duration_months" })}
+					</div>
+				</div>
+				<div class="divider"></div>
 
-				<p class="membership-courts membership-rule-label">Preço por slot</p>
-				<input class="form-input rule-input" type="number" inputmode="decimal" min="0" step="0.01" placeholder="€0.00" value="${priceEuros}" data-field="price_per_slot_cents">
-
-				<p class="membership-courts membership-rule-label">Duração mínima de jogo</p>
-				${makeSelect(MIN_GAME_DURATION_OPTIONS, group.min_game_duration_minutes ?? "", "form-input rule-input", { field: "min_game_duration_minutes" })}
-
-				<p class="membership-courts membership-rule-label">Validade do membership</p>
-				${makeSelect(MEMBERSHIP_DURATION_OPTIONS, group.membership_duration_months ?? "", "form-input rule-input", { field: "membership_duration_months" })}
-
-				<p class="membership-courts membership-rule-label" style="margin-top:10px">Horário de funcionamento</p>
-				${renderOpeningHoursSection(group.id)}
-
-				<p class="membership-courts membership-rule-label" style="margin-top:10px">Pausa de almoço</p>
-				${renderPauseSection(group.id)}
+				<div class="court-rules-hours">
+					<div>
+						<p class="court-rules-label">Horário de funcionamento</p>
+						${renderOpeningHoursSection(group.id)}
+					</div>
+					<div>
+						<p class="court-rules-label">Pausa de almoço</p>
+						${renderPauseSection(group.id)}
+					</div>
+				</div>
 
 				<button class="save-rules-btn margin-top-10" data-group-id="${group.id}" disabled>Guardar alterações</button>
+				</div>
 			</div>
 		`;
 	}).join("");
 
-	container.querySelectorAll(".membership-card").forEach(card => {
+	container.querySelectorAll(".court-rules-card").forEach(card => {
+		card.querySelector(".court-rules-toggle").addEventListener("click", () => {
+			const body = card.querySelector(".court-rules-body");
+			const icon = card.querySelector(".card-toggle-icon");
+			const collapsed = body.hidden;
+			body.hidden = !collapsed;
+			icon.style.transform = collapsed ? "" : "rotate(-90deg)";
+		});
+
 		const groupId = card.dataset.groupId;
 		const saveBtn = card.querySelector(".save-rules-btn");
 
