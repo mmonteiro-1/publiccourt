@@ -17,9 +17,11 @@ flowchart TD
     N -- YES --> U{is player\naccount?}
     U -- YES --> P[land on court-list]
     U -- NO --> V[go to owner dashboard]
-    P --> E
 
-    D -- YES --> E{is member\nof that court?}
+    D -- YES --> R{is owner?}
+    R -- YES --> V
+    R -- NO --> P
+    P --> E{is member\nof that court?}
 
     E -- YES --> G[see calendar\nwith availability]
     G --> S{has a game\nbooked already?}
