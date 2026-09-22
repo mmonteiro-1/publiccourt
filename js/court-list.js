@@ -255,9 +255,9 @@ function renderGrid() {
 async function load() {
 	const now = new Date().toISOString();
 
-	const [{ data: courts }, { data: reservations }] = await Promise.all([
+	const [{ data: courts }, { data: walk_ins }] = await Promise.all([
 		db.from("courts").select("*").eq("active", true).order("id"),
-		db.from("reservations").select("*").is("manual_finished_at", null).gt("ends_at", now),
+		db.from("walk_ins").select("*").is("manual_finished_at", null).gt("ends_at", now),
 	]);
 
 	if (!courts || courts.length === 0) {
@@ -266,7 +266,7 @@ async function load() {
 	}
 
 	const activeMap = {};
-	(reservations || []).forEach(r => { activeMap[r.court_id] = r; });
+	(walk_ins || []).forEach(r => { activeMap[r.court_id] = r; });
 
 	latestCourts = courts;
 	latestActiveMap = activeMap;
@@ -280,6 +280,6 @@ async function load() {
 load();
 
 // Re-run the full load on any reservation change so card statuses stay live without polling.
-db.channel("reservations-live")
-  .on("postgres_changes", { event: "*", schema: "public", table: "reservations" }, load)
+db.channel("walk_ins-live")
+  .on("postgres_changes", { event: "*", schema: "public", table: "walk_ins" }, load)
   .subscribe();
