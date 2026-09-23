@@ -244,6 +244,10 @@ Sessions are kept alive indefinitely for active users. Supabase auto-refreshes t
 - [ ] Get the owner to see the player booking and modify it
   - [ ] Owner queries `bookings` for courts in their `court_groups`
   - [ ] Owner sees the exact same availability calendar as the player
+- [ ] Polish pig mascot with Rive animations
+  - [ ] Animate existing pig SVG in Rive editor (idle loop + reaction states)
+  - [ ] Export `.riv` and integrate via `@rive-app/canvas` runtime
+  - [ ] Replace static pig in `setEmptyState` with animated Rive canvas
 
 ## Booking Flow — Implementation Plan
 
