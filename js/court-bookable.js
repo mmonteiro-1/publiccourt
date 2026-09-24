@@ -80,7 +80,7 @@ export async function renderBookable(court) {
 			// CHECK IF THIS PLAYER ALREADY HAS A FUTURE BOOKING ANYWHERE IN THE GROUP
 			// court_id IS NEEDED TO DISTINGUISH "THIS COURT" (SHOW LOCKED PICKER) VS "SIBLING" (BLOCK)
 			db.from("bookings")
-				.select("start_at, end_at, court_id")
+				.select("id, start_at, end_at, court_id")
 				.eq("player_id", user.id)
 				.eq("group_id", court.group_id)
 				.eq("status", "confirmed")
@@ -175,14 +175,15 @@ export async function renderBookable(court) {
 		if (playerActiveBooking) {
 			const s = new Date(playerActiveBooking.start_at);
 			const e = new Date(playerActiveBooking.end_at);
-			const dayLabel = s.toLocaleDateString('pt-PT', { weekday: 'short', day: 'numeric', month: 'short' });
+			const weekday = s.toLocaleDateString('pt-PT', { weekday: 'long' });
+			const dateLabel = `${String(s.getDate()).padStart(2, '0')}/${String(s.getMonth() + 1).padStart(2, '0')}`;
 			const fmt = d => `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+			const bookingGreeting = `<p class="card-sub">${hi(playerName)} Tens reserva ${weekday} ${dateLabel} às ${fmt(s)}–${fmt(e)}</p>`;
 
 			if (playerActiveBooking.court_id !== court.id) {
 				// BOOKING IS ON A SIBLING COURT — BLOCK ENTIRELY, SHOW DETAILS
 				app.innerHTML = `${header}
-					${greeting}
-					<p class="card-sub"><b>${dayLabel}, ${fmt(s)}–${fmt(e)}</b></p>
+					${bookingGreeting}
 					<p class="card-sub">${siblingCourts.length > 0 ? 'Já tens uma reserva ativa neste grupo de campos.' : 'Já tens uma reserva ativa.'}</p>
 				`;
 				return;
@@ -190,21 +191,25 @@ export async function renderBookable(court) {
 
 			// BOOKING IS ON THIS COURT — RENDER LOCKED PICKER SO PLAYER SEES THEIR CONFIRMED SLOT
 			app.innerHTML = `${header}
-				${greeting}
-				<p class="card-sub margin-bottom-20">Reserva: ${dayLabel}, ${fmt(s)}–${fmt(e)}</p>
+				${bookingGreeting}
 				<div id="slot-picker"></div>
 			`;
-			renderSlotPicker(document.getElementById("slot-picker"), groupRules, openingHours, null, existingBookings, user.id, true);
+			// SETS status TO cancelled; RLS ONLY ALLOWS THIS WHILE start_at IS STILL IN THE FUTURE
+			const onCancel = async () => {
+				const { error } = await db.from("bookings").update({ status: "cancelled" }).eq("id", playerActiveBooking.id);
+				if (!error) location.reload();
+				return error;
+			};
+			renderSlotPicker(document.getElementById("slot-picker"), groupRules, openingHours, null, existingBookings, user.id, true, onCancel);
 			return;
 		}
 
 		app.innerHTML = `${header}
 			${greeting}
-			<p class="card-sub margin-bottom-20" id="booking-feedback" hidden></p>
 			<div id="slot-picker"></div>
 		`;
 
-		// INSERT INTO bookings ON CONFIRM; ON SUCCESS UPDATES booking-feedback WITH DAY AND TIME.
+		// INSERT INTO bookings ON CONFIRM; RELOADS ON SUCCESS SO THE PAGE PICKS UP THE LOCKED STATE.
 		// RETURNS error SO THE SLOT PICKER CAN HANDLE RETRY ON FAILURE.
 		const onConfirm = async (startAt, endAt) => {
 			const { error } = await db.from("bookings").insert({
@@ -214,17 +219,7 @@ export async function renderBookable(court) {
 				start_at: startAt,
 				end_at: endAt,
 			});
-			if (!error) {
-				const s = new Date(startAt);
-				const e = new Date(endAt);
-				const dayLabel = s.toLocaleDateString('pt-PT', { weekday: 'short', day: 'numeric', month: 'short' });
-				const fmt = d => `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
-				const feedback = document.getElementById("booking-feedback");
-				if (feedback) {
-					feedback.textContent = `Reserva: ${dayLabel}, ${fmt(s)}–${fmt(e)}`;
-					feedback.hidden = false;
-				}
-			}
+			if (!error) location.reload();
 			return error;
 		};
 

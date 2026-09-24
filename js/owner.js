@@ -299,7 +299,7 @@ function renderPauseSection(groupId) {
 	const weStart = we.pause_start ? we.pause_start.slice(0, 5) : "";
 	const weEnd = we.pause_end ? we.pause_end.slice(0, 5) : "";
 	return `
-		<div class="opening-hours-day">
+		<div class="opening-hours-pause-row">
 			<div class="opening-hours-header">
 				<p class="court-rules-title">Pausa Seg–Sex</p>
 			</div>
@@ -310,7 +310,7 @@ function renderPauseSection(groupId) {
 				</div>
 			</div>
 		</div>
-		<div class="opening-hours-day">
+		<div class="opening-hours-pause-row">
 			<div class="opening-hours-header">
 				<p class="court-rules-title">Pausa Sab–Dom</p>
 			</div>

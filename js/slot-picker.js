@@ -20,11 +20,9 @@ function buildDayStrip(days, selectedIndex, openingHours) {
 		const cls = ['day-cell', i === selectedIndex ? 'day-cell--active' : '', isClosed ? 'day-cell--closed' : ''].filter(Boolean).join(' ');
 		return `
 			<div class="${cls}" data-index="${i}">
-				<div class="day-name">${DAY_NAMES[d.getDay()]}</div>
-				<div class="day-cell-bottom">
-					<div class="day-number">${d.getDate()}</div>
-					<img src="images/icon_cloudy.svg" class="day-weather" alt="">
-				</div>
+				<span class="day-name">${DAY_NAMES[d.getDay()]}</span>
+				<span class="day-number">${d.getDate()}</span>
+				<img src="images/icon_cloudy.svg" class="day-weather" alt="">
 			</div>
 		`;
 	});
@@ -32,12 +30,12 @@ function buildDayStrip(days, selectedIndex, openingHours) {
 }
 
 // BUILDS THE SLOT TIME GRID FOR A GIVEN DAY; ALSO APPENDS THE LEGEND BELOW THE GRID
-function buildSlotGrid(day, dayIndex, groupRules, openingHours, selectionStart, selectionEnd, existingBookings, userId) {
+function buildSlotGrid(day, dayIndex, groupRules, openingHours, selectionStart, selectionEnd, existingBookings, userId, locked) {
 	const dow = day.getDay();
 	const dayHours = (openingHours || []).find(h => h.day_of_week === dow);
 
 	if (!dayHours || dayHours.closed) {
-		return `<p class="card-sub">Fechado.</p>`;
+		return `<p class="card-sub">Hoje não há ténis cá, o campo está encerrado.</p>`;
 	}
 
 	const slotMin = groupRules?.slot_duration_minutes;
@@ -85,7 +83,7 @@ function buildSlotGrid(day, dayIndex, groupRules, openingHours, selectionStart, 
 		const isSelected = selectionStart !== null && (
 			selectionEnd !== null ? t >= selectionStart && t <= selectionEnd : t === selectionStart
 		);
-		const cls = ['slot-cell', 'em-08',
+		const cls = ['slot-cell',
 			isPast ? 'slot-past' : '',
 			isBreak ? 'slot-break' : '',
 			isOccupied ? 'slot-occupied' : '',
@@ -97,15 +95,28 @@ function buildSlotGrid(day, dayIndex, groupRules, openingHours, selectionStart, 
 
 	// LEGEND KEYS: HATCHED = ALMOÇO, ORANGE = OCUPADO, GREEN = LIVRE, WHITE = TEU JOGO
 	const legend = `
-		<div class="chart-legend em-07 slot-legend">
+		<div class="chart-legend slot-legend">
 			<span class="legend-item"><span class="legend-dot legend-slot-free"></span>Livre</span>
 			<span class="legend-item"><span class="legend-dot legend-slot-occupied"></span>Ocupado</span>
 			<span class="legend-item"><span class="legend-dot legend-slot-break"></span>Almoço</span>
 			<span class="legend-item"><span class="legend-dot legend-slot-mine"></span>Teu jogo</span>
 		</div>`;
 
-	// CONFIRM BUTTON IS ALWAYS VISIBLE; updateSlotClasses ENABLES IT WHEN RULES ARE MET
-	return `<div class="slot-grid">${cells.join('')}</div>${legend}<button class="slot-confirm-btn margin-top-10" disabled>Confirmar reserva</button>`;
+	// LOCKED (PLAYER ALREADY HAS A BOOKING HERE) SWAPS THE CONFIRM BUTTON FOR A SHALLOW CANCEL BUTTON.
+	// CANCEL-BOOKING-CONFIRM STARTS HIDDEN; SAME REVEAL/BACK PATTERN AS THE OWNER'S REVOKE-MEMBERSHIP FLOW.
+	const actionButton = locked
+		? `<button class="slot-confirm-btn button-shallow" id="cancel-booking-btn"><img src="images/icon_fall.svg" class="link-icon" alt="">Cancelar reserva</button>
+			<div class="membership-actions" id="cancel-booking-confirm" hidden>
+				<button id="confirm-cancel-booking-btn"><img src="images/icon_skull.svg" class="link-icon" alt="">Cancelar</button>
+				<button class="button-shallow" id="back-cancel-booking-btn">Voltar</button>
+			</div>`
+		: `<button class="slot-confirm-btn" disabled><img src="images/icon_handshake.svg" class="link-icon" alt="">Confirmar reserva</button>`;
+	return `${legend}<div class="slot-grid">${cells.join('')}</div><div class="slot-summary-wrap" hidden><div class="slot-summary"></div><div class="slot-min-warning" hidden></div></div>${actionButton}`;
+}
+
+// FORMATS MINUTES-SINCE-MIDNIGHT AS "HH:MM" FOR DISPLAY
+function toTime(mins) {
+	return `${String(Math.floor(mins / 60)).padStart(2, '0')}:${String(mins % 60).padStart(2, '0')}`;
 }
 
 // CONVERTS A DAY DATE AND A MINUTES-SINCE-MIDNIGHT VALUE TO AN ISO DATETIME STRING
@@ -118,7 +129,8 @@ function toISODateTime(day, mins) {
 // MAIN EXPORT: RENDERS AND MANAGES THE FULL SLOT PICKER INSIDE container.
 // onConfirm(startAt, endAt) IS CALLED ON CONFIRM; SHOULD RETURN AN ERROR OR null.
 // startLocked=true SKIPS INTERACTION ENTIRELY (USED WHEN PLAYER ALREADY HAS A BOOKING ON THIS COURT).
-export function renderSlotPicker(container, groupRules, openingHours, onConfirm, existingBookings, userId, startLocked = false) {
+// onCancel() IS CALLED WHEN THE PLAYER CONFIRMS CANCELLING THEIR BOOKING; SHOULD RETURN AN ERROR OR null.
+export function renderSlotPicker(container, groupRules, openingHours, onConfirm, existingBookings, userId, startLocked = false, onCancel = null) {
 	const days = getDays();
 	let selectedIndex = 0;
 	// SELECTION STATE IN MINUTES-SINCE-MIDNIGHT, MATCHING data-mins ON EACH SLOT CELL
@@ -142,20 +154,31 @@ export function renderSlotPicker(container, groupRules, openingHours, onConfirm,
 		});
 
 		const confirmBtn = container.querySelector('.slot-confirm-btn');
-		if (!confirmBtn) return;
+		const summaryWrapEl = container.querySelector('.slot-summary-wrap');
+		const summaryEl = container.querySelector('.slot-summary');
+		const minWarningEl = container.querySelector('.slot-min-warning');
 
 		if (selectionStart === null) {
-			confirmBtn.disabled = true;
+			if (confirmBtn) confirmBtn.disabled = true;
+			if (summaryWrapEl) summaryWrapEl.hidden = true;
 			return;
 		}
 
 		// SELECTED DURATION = RANGE SPAN + ONE SLOT; COMPARED AGAINST minDuration IF SET
 		const slotMin = groupRules?.slot_duration_minutes || 0;
-		const selectedDuration = selectionEnd !== null
-			? selectionEnd - selectionStart + slotMin
-			: slotMin;
+		const endMins = (selectionEnd ?? selectionStart) + slotMin;
+		const selectedDuration = endMins - selectionStart;
 		const minDuration = groupRules?.min_game_duration_minutes || 0;
-		confirmBtn.disabled = minDuration > 0 && selectedDuration < minDuration;
+		const belowMinDuration = minDuration > 0 && selectedDuration < minDuration;
+		if (confirmBtn) confirmBtn.disabled = belowMinDuration;
+
+		// LIVE SUMMARY AND MIN-DURATION WARNING, GROUPED TOGETHER BETWEEN LEGEND AND CONFIRM BUTTON
+		if (summaryWrapEl) summaryWrapEl.hidden = false;
+		if (summaryEl) summaryEl.textContent = `Teu jogo: ${toTime(selectionStart)} às ${toTime(endMins)}h (${selectedDuration} min)`;
+		if (minWarningEl) {
+			minWarningEl.hidden = !belowMinDuration;
+			if (belowMinDuration) minWarningEl.textContent = `O teu jogo precisa ser de no mínimo ${minDuration} min`;
+		}
 	}
 
 	// LOCKS THE PICKER AFTER A SUCCESSFUL BOOKING.
@@ -234,7 +257,7 @@ export function renderSlotPicker(container, groupRules, openingHours, onConfirm,
 				confirmBtn.disabled = true;
 				confirmBtn.textContent = 'A reservar...';
 				const error = await onConfirm(startAt, endAt);
-				confirmBtn.textContent = 'Confirmar reserva';
+				confirmBtn.innerHTML = '<img src="images/icon_handshake.svg" class="link-icon" alt="">Confirmar reserva';
 				if (!error) {
 					lockPicker(startAt, endAt);
 				} else {
@@ -242,11 +265,40 @@ export function renderSlotPicker(container, groupRules, openingHours, onConfirm,
 				}
 			});
 		}
+
+		// CANCEL-BOOKING FLOW: "Cancelar reserva" REVEALS A Cancelar/Voltar ROW; ONLY THE ROW'S
+		// Cancelar ACTUALLY CANCELS THE BOOKING. SAME REVEAL/BACK PATTERN AS THE OWNER'S REVOKE FLOW.
+		const cancelBookingBtn = container.querySelector('#cancel-booking-btn');
+		const cancelBookingConfirm = container.querySelector('#cancel-booking-confirm');
+		if (cancelBookingBtn && cancelBookingConfirm) {
+			cancelBookingBtn.addEventListener('click', () => {
+				cancelBookingBtn.hidden = true;
+				cancelBookingConfirm.hidden = false;
+			});
+
+			container.querySelector('#back-cancel-booking-btn').addEventListener('click', () => {
+				cancelBookingConfirm.hidden = true;
+				cancelBookingBtn.hidden = false;
+			});
+
+			const confirmCancelBtn = container.querySelector('#confirm-cancel-booking-btn');
+			if (confirmCancelBtn && onCancel) {
+				confirmCancelBtn.addEventListener('click', async () => {
+					confirmCancelBtn.disabled = true;
+					confirmCancelBtn.textContent = 'A cancelar...';
+					const error = await onCancel();
+					if (error) {
+						confirmCancelBtn.disabled = false;
+						confirmCancelBtn.innerHTML = '<img src="images/icon_skull.svg" class="link-icon" alt="">Cancelar';
+					}
+				});
+			}
+		}
 	}
 
 	// FULL RE-RENDER: USED ON INIT AND WHENEVER THE SELECTED DAY CHANGES
 	function render() {
-		container.innerHTML = buildDayStrip(days, selectedIndex, openingHours) + buildSlotGrid(days[selectedIndex], selectedIndex, groupRules, openingHours, selectionStart, selectionEnd, localBookings, userId);
+		container.innerHTML = buildDayStrip(days, selectedIndex, openingHours) + buildSlotGrid(days[selectedIndex], selectedIndex, groupRules, openingHours, selectionStart, selectionEnd, localBookings, userId, locked);
 
 		container.querySelectorAll('.day-cell:not(.day-cell--closed)').forEach(cell => {
 			cell.addEventListener('click', () => {
@@ -262,8 +314,6 @@ export function renderSlotPicker(container, groupRules, openingHours, onConfirm,
 		// STRIP TAPPABLE ON EVERY RE-RENDER AFTER A BOOKING SO NO DAY ALLOWS NEW PICKING
 		if (locked) {
 			container.querySelectorAll('.slot-cell--tappable').forEach(c => c.classList.remove('slot-cell--tappable'));
-			const confirmBtn = container.querySelector('.slot-confirm-btn');
-			if (confirmBtn) confirmBtn.disabled = true;
 		}
 	}
 

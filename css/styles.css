@@ -1115,29 +1115,41 @@ header {
 }
 
 /* === SLOT PICKER === */
+#slot-picker {
+	display: flex;
+	flex-direction: column;
+	gap: 20px;
+	margin-top: 20px;
+}
+
 .day-strip {
 	display: flex;
-	gap: 10px;
-	margin-bottom: 20px;
+	flex-wrap: nowrap;
+	gap: 5px;
+	overflow-x: scroll;
+	margin: 0 -15px;
+	padding: 0 15px;
 }
 
 .day-cell {
-	flex: 1;
 	display: flex;
-	flex-direction: column;
+	align-items: center;
 	gap: 5px;
+	height: 35px;
+	padding: 0 10px;
+	border: 2px solid var(--black);
+	border-radius: 100px;
+	background: none;
+	box-shadow: none;
+	font-weight: 700;
+	text-transform: uppercase;
+	transition: background 0.15s;
+	flex: none;
+	color: var(--black);
+	font-size: .8em;
 }
 
-.day-cell::before {
-	content: '';
-	display: block;
-	width: 5px;
-	height: 5px;
-	border-radius: 50%;
-	margin: 0 auto;
-}
-
-.day-cell--active::before {
+.day-cell--active {
 	background: var(--white);
 }
 
@@ -1146,26 +1158,11 @@ header {
 	pointer-events: none;
 }
 
-.day-cell-bottom {
-	display: flex;
-	justify-content: space-between;
-	align-items: center;
-}
-
-.day-name {
-	color: var(--white);
-	font-weight: 700;
-	line-height: 1;
-}
-
 .day-number {
-	color: var(--muted);
-	font-size: 0.8em;
 	font-weight: 400;
 }
 
 .day-weather {
-	opacity: 0.6;
 	width: 15px;
 	height: 15px;
 }
@@ -1174,7 +1171,6 @@ header {
 	display: grid;
 	grid-template-columns: repeat(4, 1fr);
 	gap: 5px;
-	margin-bottom: 20px;
 }
 
 .slot-cell {
@@ -1211,8 +1207,21 @@ header {
 .slot-legend {
 	flex-wrap: wrap;
 	gap: 10px 15px;
-	margin-top: 10px;
-	margin-bottom: 20px;
+}
+
+.slot-summary-wrap {
+	display: flex;
+	flex-direction: column;
+	gap: 5px;
+}
+
+.slot-summary {
+	font-weight: 400;
+}
+
+.slot-min-warning {
+	font-size: 0.6em;
+	font-weight: 400;
 }
 
 .legend-slot-free {
@@ -1246,6 +1255,7 @@ header {
 
 .page-court .deck .card {
 	grid-area: 1 / 1;
+	min-width: 0;
 }
 
 .page-court .deck .card::after {

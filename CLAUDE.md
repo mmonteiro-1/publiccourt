@@ -223,6 +223,7 @@ Sessions are kept alive indefinitely for active users. Supabase auto-refreshes t
   - [x] Owner can revoke access from this view (hard-delete `memberships` row)
   - [ ] Email notification to player when revoked — send before deleting the row so we still have their email
   - [ ] Allow owner to set membership duration per member on approval (override the group default)
+  - [ ] In-app notification card for membership status changes (accept, deny, revoke) — dedicated card UI, not just inline state on court page
 - [ ] Support multiple owners per court group (receptionists)
   - [ ] Create `court_group_members (group_id UUID, user_id UUID)` table
   - [ ] Migrate existing `court_groups.owner_id` rows into `court_group_members`
@@ -237,8 +238,10 @@ Sessions are kept alive indefinitely for active users. Supabase auto-refreshes t
 - [x] Get the player to see the availability calendar and book a game
   - [x] `bookings` table: `id, group_id, player_id, court_id, start_at, end_at, status, created_at`
   - [x] Player must have an approved `memberships` row for the court's `group_id` to be allowed to book
-- [ ] Get the player to cancel a booking
-  - [ ] Update `bookings` row status; cancellation rules apply (free >48h before, full charge <48h)
+- [x] Get the player to cancel a booking
+  - [x] Update `bookings` row status to `cancelled` (two-step Cancelar/Voltar confirm, mirrors owner's revoke flow)
+  - [ ] Cancellation rules apply (free >48h before, full charge <48h)
+- [ ] Add success pig views after booking and after cancelling a booking
 - [ ] Get the player to see their own booking history
   - [ ] Query `bookings` filtered by `player_id = auth.uid()`
 - [ ] Get the owner to see the player booking and modify it
@@ -253,7 +256,7 @@ Sessions are kept alive indefinitely for active users. Supabase auto-refreshes t
 
 ### Phase 1: Owner UI
 - [x] Opening hours per day (open/close toggle + times)
-- [ ] Pause fields in Campo tab: Seg–Sex and Sab–Dom (two grouped time-range inputs, writes to `pause_start`/`pause_end` on all relevant day rows)
+- [x] Pause fields in Campo tab: Seg–Sex and Sab–Dom (two grouped time-range inputs, writes to `pause_start`/`pause_end` on all relevant day rows)
 
 ### Phase 2: Database
 - [x] Create `bookings` table: `id, group_id, player_id, court_id, start_at, end_at, status, created_at`
@@ -268,9 +271,9 @@ Sessions are kept alive indefinitely for active users. Supabase auto-refreshes t
 - [x] Slot states: past (muted) · occupied/orange · lunch/hatched · available/green · mine/white
 - [x] Selection logic — contiguous, auto-fill between taps, blocked by occupied/lunch/past
 - [x] Min game duration validation — "Confirmar reserva" disabled when selection < min duration
-- [x] "Confirmar reserva" → insert into `bookings`; confirmation text shown on success
+- [x] "Confirmar reserva" → insert into `bookings`; reloads the page on success
 - [x] Lock picker after successful booking — no further slot picking; mine slot stays visible
-- [ ] Selection summary during picking: "Teu jogo: HH:MM às HH:MM · X min" (live, before confirm)
+- [x] Selection summary during picking: "Teu jogo: HH:MM às HH:MM (X min)" (live, before confirm)
 
 ### Phase 4: Integration
 - [x] Wire `renderSlotPicker` from slot-picker.js into court-bookable.js approved branch
