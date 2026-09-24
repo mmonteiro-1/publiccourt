@@ -30,7 +30,7 @@ function buildDayStrip(days, selectedIndex, openingHours) {
 }
 
 // BUILDS THE SLOT TIME GRID FOR A GIVEN DAY; ALSO APPENDS THE LEGEND BELOW THE GRID
-function buildSlotGrid(day, dayIndex, groupRules, openingHours, selectionStart, selectionEnd, existingBookings, userId, locked) {
+function buildSlotGrid(day, dayIndex, groupRules, openingHours, selectionStart, selectionEnd, existingBookings, userId, locked, readOnly) {
 	const dow = day.getDay();
 	const dayHours = (openingHours || []).find(h => h.day_of_week === dow);
 
@@ -56,7 +56,7 @@ function buildSlotGrid(day, dayIndex, groupRules, openingHours, selectionStart, 
 	const now = new Date();
 	const nowMins = dayIndex === 0 ? now.getHours() * 60 + now.getMinutes() : -1;
 
-	// PRE-PROCESS BOOKINGS FOR THIS DAY INTO {startMins, endMins, playerId} FOR O(1) OVERLAP CHECKS
+	// PRE-PROCESS BOOKINGS FOR THIS DAY INTO {startMins, endMins, playerId, playerName} FOR O(1) OVERLAP CHECKS
 	const dayBookings = (existingBookings || [])
 		.filter(b => new Date(b.start_at).toDateString() === day.toDateString())
 		.map(b => {
@@ -66,6 +66,7 @@ function buildSlotGrid(day, dayIndex, groupRules, openingHours, selectionStart, 
 				startMins: s.getHours() * 60 + s.getMinutes(),
 				endMins: e.getHours() * 60 + e.getMinutes(),
 				playerId: b.player_id,
+				playerName: b.player_name,
 			};
 		});
 
@@ -78,8 +79,8 @@ function buildSlotGrid(day, dayIndex, groupRules, openingHours, selectionStart, 
 		const overlapping = dayBookings.filter(b => b.startMins < t + slotMin && b.endMins > t);
 		const isMine = overlapping.some(b => b.playerId === userId);
 		const isOccupied = !isMine && overlapping.length > 0;
-		// slot-cell--tappable DRIVES BOTH TAP HANDLING AND BLOCKER DETECTION IN clampEnd
-		const isTappable = !isPast && !isBreak && !isOccupied && !isMine;
+		// READ-ONLY (OWNER VIEW) IS NEVER TAPPABLE — NO SELECTION, SO NO WHITE "MINE" SLOTS EVER APPEAR
+		const isTappable = !readOnly && !isPast && !isBreak && !isOccupied && !isMine;
 		const isSelected = selectionStart !== null && (
 			selectionEnd !== null ? t >= selectionStart && t <= selectionEnd : t === selectionStart
 		);
@@ -90,17 +91,30 @@ function buildSlotGrid(day, dayIndex, groupRules, openingHours, selectionStart, 
 			(isMine || isSelected) ? 'slot-mine' : '',
 			isTappable ? 'slot-cell--tappable' : '',
 		].filter(Boolean).join(' ');
-		cells.push(`<div class="${cls}" data-mins="${t}">${toLabel(t)}</div>`);
+		// READ-ONLY SHOWS THE BOOKING PLAYER'S NAME BENEATH THE HOUR INSTEAD OF A WHITE/MINE DISTINCTION
+		// FIRST NAME SHORTENED TO ITS INITIAL; SURNAME (LAST WORD) KEPT IN FULL, E.G. "Matheus Monteiro" -> "M. Monteiro"
+		const nameParts = overlapping[0]?.playerName?.trim().split(/\s+/);
+		const shortName = nameParts?.length > 1 ? `${nameParts[0].charAt(0)}. ${nameParts[nameParts.length - 1]}` : nameParts?.[0];
+		const playerLabel = readOnly && shortName
+			? `<span class="slot-cell-player">${shortName}</span>`
+			: '';
+		cells.push(`<div class="${cls}" data-mins="${t}">${toLabel(t)}${playerLabel}</div>`);
 	}
 
-	// LEGEND KEYS: HATCHED = ALMOÇO, ORANGE = OCUPADO, GREEN = LIVRE, WHITE = TEU JOGO
+	// LEGEND KEYS: HATCHED = ALMOÇO, ORANGE = OCUPADO, GREEN = LIVRE, WHITE = TEU JOGO (NEVER SHOWN READ-ONLY)
+	const mineLegendItem = readOnly ? '' : `<span class="legend-item"><span class="legend-dot legend-slot-mine"></span>Teu jogo</span>`;
 	const legend = `
 		<div class="chart-legend slot-legend">
 			<span class="legend-item"><span class="legend-dot legend-slot-free"></span>Livre</span>
 			<span class="legend-item"><span class="legend-dot legend-slot-occupied"></span>Ocupado</span>
 			<span class="legend-item"><span class="legend-dot legend-slot-break"></span>Almoço</span>
-			<span class="legend-item"><span class="legend-dot legend-slot-mine"></span>Teu jogo</span>
+			${mineLegendItem}
 		</div>`;
+
+	// READ-ONLY (OWNER VIEW) HAS NO SELECTION, SO NO SUMMARY OR ACTION BUTTON AT ALL
+	if (readOnly) {
+		return `${legend}<div class="slot-grid">${cells.join('')}</div>`;
+	}
 
 	// LOCKED (PLAYER ALREADY HAS A BOOKING HERE) SWAPS THE CONFIRM BUTTON FOR A SHALLOW CANCEL BUTTON.
 	// CANCEL-BOOKING-CONFIRM STARTS HIDDEN; SAME REVEAL/BACK PATTERN AS THE OWNER'S REVOKE-MEMBERSHIP FLOW.
@@ -130,7 +144,8 @@ function toISODateTime(day, mins) {
 // onConfirm(startAt, endAt) IS CALLED ON CONFIRM; SHOULD RETURN AN ERROR OR null.
 // startLocked=true SKIPS INTERACTION ENTIRELY (USED WHEN PLAYER ALREADY HAS A BOOKING ON THIS COURT).
 // onCancel() IS CALLED WHEN THE PLAYER CONFIRMS CANCELLING THEIR BOOKING; SHOULD RETURN AN ERROR OR null.
-export function renderSlotPicker(container, groupRules, openingHours, onConfirm, existingBookings, userId, startLocked = false, onCancel = null) {
+// readOnly=true IS THE OWNER VIEW: NO TAPPING, NO ACTION BUTTONS, PLAYER NAMES SHOWN ON OCCUPIED SLOTS.
+export function renderSlotPicker(container, groupRules, openingHours, onConfirm, existingBookings, userId, startLocked = false, onCancel = null, readOnly = false) {
 	const days = getDays();
 	let selectedIndex = 0;
 	// SELECTION STATE IN MINUTES-SINCE-MIDNIGHT, MATCHING data-mins ON EACH SLOT CELL
@@ -298,7 +313,7 @@ export function renderSlotPicker(container, groupRules, openingHours, onConfirm,
 
 	// FULL RE-RENDER: USED ON INIT AND WHENEVER THE SELECTED DAY CHANGES
 	function render() {
-		container.innerHTML = buildDayStrip(days, selectedIndex, openingHours) + buildSlotGrid(days[selectedIndex], selectedIndex, groupRules, openingHours, selectionStart, selectionEnd, localBookings, userId, locked);
+		container.innerHTML = buildDayStrip(days, selectedIndex, openingHours) + buildSlotGrid(days[selectedIndex], selectedIndex, groupRules, openingHours, selectionStart, selectionEnd, localBookings, userId, locked, readOnly);
 
 		container.querySelectorAll('.day-cell:not(.day-cell--closed)').forEach(cell => {
 			cell.addEventListener('click', () => {

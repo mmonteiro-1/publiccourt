@@ -1,3 +1,5 @@
+import { renderSlotPicker } from './slot-picker.js';
+
 const app = document.getElementById("app");
 // IN-MEMORY CACHE OF ALL OWNER DATA; POPULATED ONCE ON LOAD, PATCHED IN-PLACE AFTER SAVES
 let ownerData = null;
@@ -72,15 +74,15 @@ async function loadDashboard(user) {
 			.select("*")
 			.in("group_id", groupIds),
 		db.from("bookings")
-			.select("player_id, group_id, start_at")
+			.select("id, player_id, group_id, court_id, start_at, end_at")
 			.in("group_id", groupIds)
 			.eq("status", "confirmed")
 			.gt("start_at", new Date().toISOString())
 			.order("start_at"),
 	]);
 
-	// FETCH PLAYER PROFILES IN A SINGLE QUERY; SET DEDUPLICATES IDS ACROSS PENDING AND APPROVED
-	const allPlayerIds = [...new Set([...(pending || []), ...(approved || [])].map(m => m.player_id))];
+	// FETCH PLAYER PROFILES IN A SINGLE QUERY; SET DEDUPLICATES IDS ACROSS PENDING, APPROVED AND BOOKINGS
+	const allPlayerIds = [...new Set([...(pending || []), ...(approved || []), ...(upcomingBookings || [])].map(m => m.player_id))];
 	let profiles = {};
 	if (allPlayerIds.length > 0) {
 		const { data: profileData } = await db.from("profiles").select("id, name, phone, nif").in("id", allPlayerIds);
@@ -89,9 +91,11 @@ async function loadDashboard(user) {
 
 	// INDEX COURTS AND OPENING HOURS BY GROUP FOR O(1) LOOKUPS IN RENDER FUNCTIONS
 	const courtsByGroup = {};
+	const courtsById = {};
 	(courts || []).forEach(c => {
 		if (!courtsByGroup[c.group_id]) courtsByGroup[c.group_id] = [];
 		courtsByGroup[c.group_id].push(c.name);
+		courtsById[c.id] = c.name;
 	});
 
 	const openingHoursByGroup = {};
@@ -112,8 +116,10 @@ async function loadDashboard(user) {
 		pending: pending || [],
 		approved: approved || [],
 		courts: courts || [],
+		bookings: upcomingBookings || [],
 		profiles,
 		courtsByGroup,
+		courtsById,
 		openingHoursByGroup,
 		nextBookingByPlayer,
 	};
@@ -123,9 +129,10 @@ async function loadDashboard(user) {
 
 	renderPendingView();
 	renderMembersView();
+	renderBookingsView();
 	renderRulesView();
 	renderProfileView();
-	showView("pending");
+	showView("bookings");
 
 	document.querySelectorAll(".owner-nav-btn").forEach(btn => {
 		btn.addEventListener("click", () => showView(btn.dataset.view));
@@ -260,6 +267,81 @@ function renderMembersView() {
 	});
 }
 
+// RENDER THE LIST OF UPCOMING BOOKINGS ACROSS ALL OWNED COURTS, SOONEST FIRST
+function renderBookingsView() {
+	const container = document.getElementById("view-bookings");
+	const { bookings, profiles, courtsById } = ownerData;
+
+	if (bookings.length === 0) {
+		setEmptyState(container, "Sem reservas<br>agendadas");
+		return;
+	}
+
+	container.innerHTML = bookings.map(b => {
+		const playerName = profiles[b.player_id]?.name || "Jogador desconhecido";
+		const courtName = courtsById[b.court_id] || "Campo desconhecido";
+		const s = new Date(b.start_at);
+		const e = new Date(b.end_at);
+		const fmt = d => `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+		const dateLabel = s.toLocaleDateString("pt-PT", { weekday: "short", day: "numeric", month: "short" });
+		return `
+			<div class="membership-card" data-id="${b.id}">
+				<p class="membership-player">${playerName}</p>
+				<p class="membership-courts"><img src="images/icon_court.svg" class="link-icon" alt="">${courtName}</p>
+				<div class="divider"></div>
+				<div class="membership-date-row">
+					<p class="membership-date"><img src="images/icon_calendar_clock.svg" class="link-icon" alt="">${dateLabel}, ${fmt(s)}–${fmt(e)}</p>
+					<a class="cancel-booking-anchor uppercase" style="color: var(--orange)" data-id="${b.id}" href="#">Cancelar</a>
+				</div>
+				<div class="cancel-booking-confirm" id="cancel-booking-confirm-${b.id}" hidden>
+					<p class="margin-top-10 margin-bottom-10">Esta ação não pode ser revertida. ${playerName} será notificado.</p>
+					<div class="membership-actions">
+						<button class="confirm-cancel-booking-btn" data-id="${b.id}"><img src="images/icon_death.svg" class="link-icon" alt="">Cancelar</button>
+						<button class="button-shallow back-cancel-booking-btn" data-id="${b.id}">Voltar</button>
+					</div>
+				</div>
+			</div>
+		`;
+	}).join("");
+
+	container.querySelectorAll(".cancel-booking-anchor").forEach(btn => {
+		btn.addEventListener("click", e => {
+			e.preventDefault();
+			btn.hidden = true;
+			document.getElementById(`cancel-booking-confirm-${btn.dataset.id}`).hidden = false;
+		});
+	});
+
+	container.querySelectorAll(".back-cancel-booking-btn").forEach(btn => {
+		btn.addEventListener("click", () => {
+			document.getElementById(`cancel-booking-confirm-${btn.dataset.id}`).hidden = true;
+			btn.closest(".membership-card").querySelector(".cancel-booking-anchor").hidden = false;
+		});
+	});
+
+	container.querySelectorAll(".confirm-cancel-booking-btn").forEach(btn => {
+		btn.addEventListener("click", () => cancelBooking(btn.dataset.id));
+	});
+}
+
+// SETS status TO cancelled AND REMOVES THE CARD; RLS ONLY ALLOWS THIS WHILE start_at IS STILL IN THE FUTURE
+async function cancelBooking(id) {
+	const card = document.querySelector(`#view-bookings .membership-card[data-id="${id}"]`);
+	const btn = card.querySelector(".confirm-cancel-booking-btn");
+	btn.disabled = true;
+	btn.textContent = "A cancelar...";
+
+	// .select() SO A ROW SILENTLY FILTERED OUT BY RLS (0 ROWS UPDATED) IS TREATED AS A FAILURE TOO
+	const { data, error } = await db.from("bookings").update({ status: "cancelled" }).eq("id", id).select();
+	if (error || !data || data.length === 0) {
+		btn.disabled = false;
+		btn.innerHTML = '<img src="images/icon_death.svg" class="link-icon" alt="">Cancelar';
+		return;
+	}
+
+	card.remove();
+}
+
 // DELETE THE MEMBERSHIP ROW AND REMOVE ITS CARD FROM THE DOM
 async function revokeMembership(id) {
 	const card = document.querySelector(`#view-members .membership-card[data-id="${id}"]`);
@@ -384,6 +466,9 @@ function renderRulesView() {
 				</div>
 				<div class="court-rules-body">
 
+				<div id="owner-slot-picker-${group.id}"></div>
+				<div class="divider"></div>
+
 				<div class="court-rules-grid">
 					<div>
 						<p class="court-rules-label">Duração do slot</p>
@@ -416,6 +501,15 @@ function renderRulesView() {
 			</div>
 		`;
 	}).join("");
+
+	// OWNER SLOT PICKER PER GROUP — SAME COMPONENT AS THE PLAYER'S, READ-ONLY (NO TAPPING, NO ACTIONS)
+	ownedGroups.forEach(group => {
+		const openingHours = Object.values(ownerData.openingHoursByGroup[group.id] || {});
+		const bookings = ownerData.bookings
+			.filter(b => b.group_id === group.id)
+			.map(b => ({ ...b, player_name: ownerData.profiles[b.player_id]?.name || "Jogador desconhecido" }));
+		renderSlotPicker(document.getElementById(`owner-slot-picker-${group.id}`), group, openingHours, null, bookings, null, false, null, true);
+	});
 
 	container.querySelectorAll(".court-rules-card").forEach(card => {
 		card.querySelector(".court-rules-toggle").addEventListener("click", () => {

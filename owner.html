@@ -23,6 +23,7 @@
 	<main id="app">
 		<p class="form-sent" id="loading-msg">A carregar...</p>
 
+		<div id="view-bookings" class="owner-view" hidden></div>
 		<div id="view-pending" class="owner-view" hidden></div>
 		<div id="view-members" class="owner-view" hidden></div>
 		<div id="view-rules" class="owner-view" hidden></div>
@@ -30,7 +31,8 @@
 	</main>
 
 	<nav class="owner-nav" hidden>
-		<button class="owner-nav-btn active" data-view="pending"><img src="images/icon_user_exclamation.svg" alt=""></button>
+		<button class="owner-nav-btn active" data-view="bookings"><img src="images/icon_calendar_tennis.svg" alt=""></button>
+		<button class="owner-nav-btn" data-view="pending"><img src="images/icon_user_exclamation.svg" alt=""></button>
 		<button class="owner-nav-btn" data-view="members"><img src="images/icon_id.svg" alt=""></button>
 		<button class="owner-nav-btn" data-view="rules"><img src="images/icon_court.svg" alt=""></button>
 		<button class="owner-nav-btn" data-view="profile"><img src="images/icon_gear.svg" alt=""></button>
@@ -39,7 +41,7 @@
 	<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 	<script src="js/config.js"></script>
 	<script src="js/utils.js"></script>
-	<script src="js/owner.js"></script>
+	<script type="module" src="js/owner.js"></script>
 
 </body>
 

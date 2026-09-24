@@ -1050,6 +1050,19 @@ header {
 	margin-top: 15px;
 }
 
+.court-rules-body .day-strip {
+	margin: 0 -10px;
+	padding: 0 15px;
+}
+
+.court-rules-body .chart-legend {
+	margin: 10px 0;
+}
+
+.court-rules-body .slot-cell {
+	padding: 10px 5px;
+}
+
 .court-rules-grid {
 	display: grid;
 	grid-template-columns: 1fr 1fr;
@@ -1182,6 +1195,11 @@ header {
 	text-align: center;
 	font-size: 0.8em;
 	font-weight: 700;
+}
+
+.slot-cell-player {
+	display: block;
+	font-weight: 400;
 }
 
 .slot-past {
