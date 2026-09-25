@@ -137,7 +137,11 @@ export async function renderBookable(court) {
 			${flipLink}
 			<button id="login-btn"><img src="images/icon_login.svg" alt=""> Fazer login</button>
 		`;
-		document.getElementById("login-btn").addEventListener("click", () => { location.href = "login.html"; });
+		// REMEMBER THIS COURT SO profile.js CAN BRING THE PLAYER BACK HERE ONCE THE MAGIC LINK LOGS THEM IN
+		document.getElementById("login-btn").addEventListener("click", () => {
+			try { localStorage.setItem("returnTo", location.href); } catch {}
+			location.href = "login.html";
+		});
 		return;
 	}
 

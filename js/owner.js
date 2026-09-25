@@ -166,6 +166,11 @@ async function loadDashboard(user) {
 	document.querySelectorAll(".owner-nav-btn").forEach(btn => {
 		btn.addEventListener("click", () => showView(btn.dataset.view));
 	});
+	// PROFILE MOVED FROM THE NAV TO THE HEADER SKULL; NO NAV BUTTON IS ACTIVE WHILE IT'S OPEN
+	document.getElementById("header-profile").addEventListener("click", e => {
+		e.preventDefault();
+		showView("profile");
+	});
 }
 
 // RENDER THE LIST OF PENDING MEMBERSHIP REQUESTS WITH APPROVE / DENY ACTIONS

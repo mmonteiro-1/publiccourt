@@ -1,5 +1,17 @@
 const app = document.getElementById("app");
 
+// ONE-SHOT: THE PAGE A PLAYER STARTED LOGIN FROM (SET BY court-bookable.js). READ AND CLEARED TOGETHER SO
+// A LATER, UNRELATED VISIT TO THE PROFILE ISN'T BOUNCED TO AN OLD COURT
+function takeReturnTo() {
+	try {
+		const url = localStorage.getItem("returnTo");
+		localStorage.removeItem("returnTo");
+		return url;
+	} catch {
+		return null;
+	}
+}
+
 // ENTRY POINT: REDIRECTS OWNERS, ROUTES NEW USERS TO ONBOARDING, RETURNING USERS TO PROFILE
 async function loadProfile(user) {
 	// OWNERS NEVER LAND ON THE PLAYER PROFILE — SEND THEM TO THEIR DASHBOARD.
@@ -7,6 +19,7 @@ async function loadProfile(user) {
 	// SO WITHOUT THE FILTER ANY APPROVED MEMBER WOULD BE WRONGLY REDIRECTED TO owner.html.
 	const { data: ownedGroups } = await db.from("court_groups").select("id").eq("owner_id", user.id).limit(1);
 	if (ownedGroups && ownedGroups.length > 0) {
+		takeReturnTo();
 		location.href = "owner.html";
 		return;
 	}
@@ -18,8 +31,15 @@ async function loadProfile(user) {
 		.eq("id", user.id)
 		.maybeSingle();
 
+	// NEW PLAYERS ONBOARD FIRST; THE RETURN HAPPENS WHEN ONBOARDING FINISHES (SEE finish())
 	if (!profile) {
 		startOnboarding(user);
+		return;
+	}
+
+	const returnTo = takeReturnTo();
+	if (returnTo) {
+		location.href = returnTo;
 		return;
 	}
 
@@ -110,6 +130,12 @@ function startOnboarding(user) {
 			nextBtn.disabled = false;
 			nextBtn.textContent = 'Concluir';
 			app.insertAdjacentHTML('beforeend', `<p class="form-error">Erro ao guardar. Tenta outra vez.</p>`);
+			return;
+		}
+
+		const returnTo = takeReturnTo();
+		if (returnTo) {
+			location.href = returnTo;
 			return;
 		}
 

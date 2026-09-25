@@ -187,11 +187,22 @@ Supabase Auth is already included — magic link is a built-in provider, no extr
 **What we create:**
 - `profiles` table — extends `auth.users` with fields we own (name, and future registration fields)
 
+**Roles:** one email = one role. An account is either a **player** or an **owner**, never both (an owner who also plays is too rare to design for). Owner = owns at least one `court_groups` row.
+
 **Login flow:**
-1. Player submits email + name
-2. `supabase.auth.signInWithOtp({ email })` — magic link sent
-3. Player clicks link → Supabase handles the session
-4. Read `profiles` by `auth.uid()` → render "Olá, [name]"
+1. `login.html` — player submits email only (`signInWithOtp`, `emailRedirectTo: profile.html`). Already logged in → straight to `profile.html`
+2. Magic link lands on `profile.html`, which is also the post-login router (`js/profile.js`):
+   - **Owner** → `owner.html` (owners have no `profile.html`; their profile is a view inside the dashboard)
+   - **No `profiles` row** → 3-step onboarding (name required; phone, NIF optional), then continues below
+   - **Came from a court page** → back to that court (see "Return to court")
+   - **Otherwise** → the player profile ("Olá, [name]", email, Sair)
+3. `owner.html` bounces anyone who owns no group back to `profile.html`
+
+**Return to court:** "Fazer login" on a court page stores that page in `localStorage.returnTo`; `profile.js` reads and clears it once the session exists (after onboarding for new players). One-shot, and only works if the magic link is opened in the **same browser** that requested it — a link opened on another device lands on the profile instead.
+
+**Profile entry points:** skull icon (`icon_skull.svg`, placeholder) in the header — court list and court pages link to `profile.html` (logged-out visitors get sent on to login); in `owner.html` it opens the dashboard's own profile view (replaced the old gear tab in the nav).
+
+**Redirect URL allowlist:** Supabase only returns magic links to URLs listed in Authentication → URL Configuration → Redirect URLs. Local IPs are there; Vercel URLs (production + preview wildcard) must be too, or links sent from the deploy fall back to the Site URL (a local IP).
 
 ### Sessions
 
@@ -245,8 +256,19 @@ Sessions are kept alive indefinitely for active users. Supabase auto-refreshes t
   - [ ] Cancellation rules apply (free >48h before, full charge <48h)
 - [ ] Figure out the rescheduling/cancelling process for bad weather — who triggers it, whether players get offered a new slot or just a waiver, and how it ties to the forecast icons (starting point: edge case (c) under Open Questions)
 - [ ] Add success pig views after booking and after cancelling a booking
-- [ ] Get the player to see their own booking history
-  - [ ] Query `bookings` filtered by `player_id = auth.uid()`
+- [ ] Player profile page (`profile.html`)
+  - [x] Magic link returns the player to the court they started login from (`localStorage.returnTo`)
+  - [x] Header skull icon links to the profile (player) / opens the dashboard profile view (owner, replaces the gear nav tab)
+  - [ ] Add the Vercel production + preview URLs to Supabase's auth Redirect URLs
+  - [ ] Test the loop for a new user (onboarding → back to court) and a returning user (straight back to court)
+    - [x] Returning user lands back on the court
+    - [ ] New user stayed on the profile after onboarding — confirm whether login started from a court page and the link opened in the same browser
+  - [ ] Check what happens when a new user leaves mid-onboarding (e.g. via "Voltar"): no `profiles` row exists yet, so they're logged in but nameless — court pages fall back to "jogador", and booking/membership requests may go through without a name for the owner
+  - [ ] View and edit personal info (name, phone, NIF)
+  - [ ] "Teus jogos passados": booking history (`bookings` by `player_id = auth.uid()`) plus walk-in history
+    - [ ] Save the logged-in player's id on new walk-ins (new `walk_ins.player_id` column) — a player can be both booking and walk-in, so history follows the account; older walk-ins stay device-only
+  - [ ] Upcoming game alerts (billing alerts once billing exists)
+  - [ ] Replace the placeholder skull icon
 - [ ] Get the owner to see the player booking and modify it
   - [x] Owner queries `bookings` for courts in their `court_groups` (bookings tab, default view)
   - [x] Owner sees the exact same availability calendar as the player (read-only picker in each court-rules-card, player names on occupied slots)
