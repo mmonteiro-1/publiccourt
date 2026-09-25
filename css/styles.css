@@ -1052,7 +1052,7 @@ header {
 
 .court-rules-body .day-strip {
 	margin: 0 -10px;
-	padding: 0 15px;
+	padding: 0 10px;
 }
 
 .court-rules-body .chart-legend {
@@ -1060,7 +1060,23 @@ header {
 }
 
 .court-rules-body .slot-cell {
-	padding: 10px 5px;
+	background: var(--white)
+}
+
+.court-rules-body .legend-slot-free {
+	background: var(--white);
+}
+
+.court-rules-body .slot-cell.slot-occupied {
+	background: var(--orange)
+}
+
+.court-rules-body .slot-cell.slot-break {
+	background: repeating-linear-gradient(-45deg,
+				#ffffff6a 0px,
+				#ffffff6a 3px,
+				transparent 4px,
+				transparent 8px);
 }
 
 .court-rules-grid {
@@ -1183,18 +1199,30 @@ header {
 .slot-grid {
 	display: grid;
 	grid-template-columns: repeat(4, 1fr);
-	gap: 5px;
+	/* CANCELS THE CELLS' -2px OVERLAP MARGIN SO THE GRID'S OUTER EDGE STAYS ALIGNED WITH SIBLING ELEMENTS */
+	padding: 2px 0 0 2px;
 }
 
 .slot-cell {
+	height: 50px;
 	border: 2px solid var(--black);
+	/* PULLS EACH CELL OVER BY THE BORDER WIDTH SO SHARED EDGES OVERLAP INSTEAD OF STACKING */
+	margin: -2px 0 0 -2px;
 	background: var(--green);
 	color: var(--black);
-	border-radius: 10px;
-	padding: 15px 5px;
+	padding: 5px;
+	padding-top: 10px;
 	text-align: center;
 	font-size: 0.8em;
 	font-weight: 700;
+}
+
+.slot-cell:first-child {
+	border-top-left-radius: 10px;
+}
+
+.slot-cell:nth-child(4) {
+	border-top-right-radius: 10px;
 }
 
 .slot-cell-player {
@@ -1479,7 +1507,7 @@ header {
 
 .chart-legend {
 	display: flex;
-	gap: 20px;
+	gap: 10px;
 	font-size: 0.7em;
 	font-weight: 400;
 }

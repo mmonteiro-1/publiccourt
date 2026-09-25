@@ -200,7 +200,7 @@ export async function renderBookable(court) {
 				if (!error) location.reload();
 				return error;
 			};
-			renderSlotPicker(document.getElementById("slot-picker"), groupRules, openingHours, null, existingBookings, user.id, true, onCancel);
+			renderSlotPicker(document.getElementById("slot-picker"), groupRules, openingHours, null, existingBookings, user.id, true, onCancel, false, court);
 			return;
 		}
 
@@ -223,7 +223,7 @@ export async function renderBookable(court) {
 			return error;
 		};
 
-		renderSlotPicker(document.getElementById("slot-picker"), groupRules, openingHours, onConfirm, existingBookings, user.id);
+		renderSlotPicker(document.getElementById("slot-picker"), groupRules, openingHours, onConfirm, existingBookings, user.id, false, null, false, court);
 		return;
 	}
 

@@ -1,3 +1,5 @@
+import { fetchWeather, weatherIconHtml } from './weather.js';
+
 // DAY ABBREVIATIONS INDEXED BY JS getDay() (0 = SUNDAY)
 const DAY_NAMES = ['DOM', 'SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SAB'];
 
@@ -12,7 +14,7 @@ function getDays() {
 }
 
 // BUILDS THE HORIZONTAL STRIP OF DAY CELLS; CLOSED DAYS GET day-cell--closed (0.4 OPACITY, NO TAP)
-function buildDayStrip(days, selectedIndex, openingHours) {
+function buildDayStrip(days, selectedIndex, openingHours, weather) {
 	const cells = days.map((d, i) => {
 		// A day is closed if it has no entry in opening_hours OR if its closed flag is true
 		const dayHours = (openingHours || []).find(h => h.day_of_week === d.getDay());
@@ -22,7 +24,7 @@ function buildDayStrip(days, selectedIndex, openingHours) {
 			<div class="${cls}" data-index="${i}">
 				<span class="day-name">${DAY_NAMES[d.getDay()]}</span>
 				<span class="day-number">${d.getDate()}</span>
-				<img src="images/icon_cloudy.svg" class="day-weather" alt="">
+				${weatherIconHtml(weather, d)}
 			</div>
 		`;
 	});
@@ -145,8 +147,11 @@ function toISODateTime(day, mins) {
 // startLocked=true SKIPS INTERACTION ENTIRELY (USED WHEN PLAYER ALREADY HAS A BOOKING ON THIS COURT).
 // onCancel() IS CALLED WHEN THE PLAYER CONFIRMS CANCELLING THEIR BOOKING; SHOULD RETURN AN ERROR OR null.
 // readOnly=true IS THE OWNER VIEW: NO TAPPING, NO ACTION BUTTONS, PLAYER NAMES SHOWN ON OCCUPIED SLOTS.
-export function renderSlotPicker(container, groupRules, openingHours, onConfirm, existingBookings, userId, startLocked = false, onCancel = null, readOnly = false) {
+// coords { lat, lng } LOADS THE DAILY WEATHER ICONS INTO THE DAY STRIP; OMIT IT AND THE STRIP SHOWS NONE.
+export function renderSlotPicker(container, groupRules, openingHours, onConfirm, existingBookings, userId, startLocked = false, onCancel = null, readOnly = false, coords = null) {
 	const days = getDays();
+	// null UNTIL THE FORECAST ARRIVES; THE PICKER RENDERS IMMEDIATELY WITHOUT WAITING FOR IT
+	let weather = null;
 	let selectedIndex = 0;
 	// SELECTION STATE IN MINUTES-SINCE-MIDNIGHT, MATCHING data-mins ON EACH SLOT CELL
 	let selectionStart = null;
@@ -313,7 +318,10 @@ export function renderSlotPicker(container, groupRules, openingHours, onConfirm,
 
 	// FULL RE-RENDER: USED ON INIT AND WHENEVER THE SELECTED DAY CHANGES
 	function render() {
-		container.innerHTML = buildDayStrip(days, selectedIndex, openingHours) + buildSlotGrid(days[selectedIndex], selectedIndex, groupRules, openingHours, selectionStart, selectionEnd, localBookings, userId, locked, readOnly);
+		// innerHTML RECREATES THE DAY STRIP, WHICH WOULD SNAP ITS HORIZONTAL SCROLL BACK TO THE START
+		const stripScroll = container.querySelector('.day-strip')?.scrollLeft ?? 0;
+		container.innerHTML = buildDayStrip(days, selectedIndex, openingHours, weather) + buildSlotGrid(days[selectedIndex], selectedIndex, groupRules, openingHours, selectionStart, selectionEnd, localBookings, userId, locked, readOnly);
+		container.querySelector('.day-strip').scrollLeft = stripScroll;
 
 		container.querySelectorAll('.day-cell:not(.day-cell--closed)').forEach(cell => {
 			cell.addEventListener('click', () => {
@@ -333,4 +341,15 @@ export function renderSlotPicker(container, groupRules, openingHours, onConfirm,
 	}
 
 	render();
+
+	// PATCHES ICONS INTO THE EXISTING DAY CELLS INSTEAD OF RE-RENDERING, SO AN IN-PROGRESS SELECTION SURVIVES
+	if (coords?.lat != null && coords?.lng != null) {
+		fetchWeather(coords.lat, coords.lng).then(result => {
+			if (!result) return;
+			weather = result;
+			container.querySelectorAll('.day-cell').forEach(cell => {
+				cell.insertAdjacentHTML('beforeend', weatherIconHtml(weather, days[parseInt(cell.dataset.index)]));
+			});
+		});
+	}
 }

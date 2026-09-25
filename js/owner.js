@@ -51,6 +51,10 @@ async function loadDashboard(user) {
 
 	const groupIds = ownedGroups.map(g => g.id);
 
+	// FROM MIDNIGHT SO THE SLOT PICKER STILL SHOWS TODAY'S IN-PROGRESS AND PAST GAMES, LIKE THE PLAYER'S
+	const todayStart = new Date();
+	todayStart.setHours(0, 0, 0, 0);
+
 	const [
 		{ data: pending },
 		{ data: approved },
@@ -67,7 +71,7 @@ async function loadDashboard(user) {
 			.eq("status", "approved")
 			.in("group_id", groupIds),
 		db.from("courts")
-			.select("id, name, group_id")
+			.select("id, name, group_id, lat, lng")
 			.in("group_id", groupIds)
 			.eq("active", true),
 		db.from("court_opening_hours")
@@ -77,7 +81,7 @@ async function loadDashboard(user) {
 			.select("id, player_id, group_id, court_id, start_at, end_at")
 			.in("group_id", groupIds)
 			.eq("status", "confirmed")
-			.gt("start_at", new Date().toISOString())
+			.gte("start_at", todayStart.toISOString())
 			.order("start_at"),
 	]);
 
@@ -105,8 +109,12 @@ async function loadDashboard(user) {
 	});
 
 	// INDEX NEXT BOOKING PER PLAYER — BOOKINGS ARE ORDERED BY start_at SO FIRST MATCH IS EARLIEST
+	// LIST VIEW AND "NEXT GAME" ONLY CARE ABOUT GAMES NOT YET STARTED; RLS ALSO BLOCKS CANCELLING STARTED ONES
+	const now = new Date();
+	const notStartedBookings = (upcomingBookings || []).filter(b => new Date(b.start_at) > now);
+
 	const nextBookingByPlayer = {};
-	(upcomingBookings || []).forEach(b => {
+	notStartedBookings.forEach(b => {
 		if (!nextBookingByPlayer[b.player_id]) nextBookingByPlayer[b.player_id] = b;
 	});
 
@@ -116,7 +124,8 @@ async function loadDashboard(user) {
 		pending: pending || [],
 		approved: approved || [],
 		courts: courts || [],
-		bookings: upcomingBookings || [],
+		bookings: notStartedBookings,
+		todayBookings: upcomingBookings || [],
 		profiles,
 		courtsByGroup,
 		courtsById,
@@ -505,10 +514,12 @@ function renderRulesView() {
 	// OWNER SLOT PICKER PER GROUP — SAME COMPONENT AS THE PLAYER'S, READ-ONLY (NO TAPPING, NO ACTIONS)
 	ownedGroups.forEach(group => {
 		const openingHours = Object.values(ownerData.openingHoursByGroup[group.id] || {});
-		const bookings = ownerData.bookings
+		const bookings = ownerData.todayBookings
 			.filter(b => b.group_id === group.id)
 			.map(b => ({ ...b, player_name: ownerData.profiles[b.player_id]?.name || "Jogador desconhecido" }));
-		renderSlotPicker(document.getElementById(`owner-slot-picker-${group.id}`), group, openingHours, null, bookings, null, false, null, true);
+		// COURTS IN A GROUP SHARE A SITE, SO THE FIRST ONE'S COORDINATES STAND IN FOR THE WHOLE GROUP'S FORECAST
+		const groupCourt = ownerData.courts.find(c => c.group_id === group.id);
+		renderSlotPicker(document.getElementById(`owner-slot-picker-${group.id}`), group, openingHours, null, bookings, null, false, null, true, groupCourt);
 	});
 
 	container.querySelectorAll(".court-rules-card").forEach(card => {

@@ -24,6 +24,7 @@ info.html
 js/utils.js           — shared helpers: setEmptyState, formatTime, minutesLeft, getDeviceId, cityHtml
 js/secondary-card.js  — secondary info card (rules, hours, city)
 js/slot-picker.js     — booking slot selection UI
+js/weather.js         — Open-Meteo daily forecast → one icon per day (rain/sunny/part_cloudy/cloudy), 3h localStorage cache
 js/config.js          — Supabase credentials + db client
 css/styles.css        — single global stylesheet
 images/               — SVG icons (icon_*.svg) + flags + pig mascot
