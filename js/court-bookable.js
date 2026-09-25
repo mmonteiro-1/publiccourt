@@ -5,6 +5,8 @@ const hi = name => `<b>Olá, ${name}.</b>`;
 const MSG_PENDING = "Espetáculo! Enviámos a solicitação para os administradores do campo. <br><br>Vamos avisar no email e aqui quando tivermos novidade.";
 const MSG_DENIED = "A tua solicitação foi recusada.";
 const MSG_MEMBER = "És membro deste campo.";
+// A FUNCTION BECAUSE IT EMBEDS THE LINKED NAMES OF THE GROUP'S OTHER COURTS
+const MSG_SIBLINGS = courtLinks => `Se não encontrares horário aqui, procura em ${courtLinks}.`;
 const MSG_NO_MEMBERSHIP = "Este campo é exclusivo para membros registados. Podes solicitar acesso agora.";
 const MSG_NOT_LOGGED = `Este campo opera sob o <b>sistema de reservas</b>. <br><br> Para fazeres reserva, o Campo Livre precisa repassar as tuas informações aos administradores do campo. Após aceite, já podes reservar e jogar.`;
 
@@ -205,8 +207,15 @@ export async function renderBookable(court) {
 			return;
 		}
 
+		// THE PICKER ONLY SHOWS THIS COURT, SO POINT OUT THE GROUP'S OTHER COURTS IN CASE A SLOT IS FREE THERE.
+		// REPLACES THE "ÉS MEMBRO" LINE; A COURT WITH NO SIBLINGS KEEPS THE PLAIN GREETING.
+		const siblingLinks = siblingCourts.map(c => `<a href="court?court=${c.id}">${c.name}</a>`);
+		const bookingGreeting = siblingLinks.length > 0
+			? `<p class="card-sub">${hi(playerName)} ${MSG_SIBLINGS(siblingLinks.length > 1 ? `${siblingLinks.slice(0, -1).join(", ")} ou ${siblingLinks.at(-1)}` : siblingLinks[0])}</p>`
+			: greeting;
+
 		app.innerHTML = `${header}
-			${greeting}
+			${bookingGreeting}
 			<div id="slot-picker"></div>
 		`;
 

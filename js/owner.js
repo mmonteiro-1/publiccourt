@@ -91,11 +91,10 @@ async function loadDashboard(user) {
 			.eq("status", "confirmed")
 			.gte("start_at", todayStart.toISOString())
 			.order("start_at"),
-		// PLAYER_ID ONLY — JUST ENOUGH TO COUNT EACH MEMBER'S BOOKINGS; CANCELLED ONES DON'T COUNT
+		// EVERY BOOKING EVER, CANCELLED INCLUDED — FEEDS THE PER-MEMBER COUNT AND THE GROUP STATS
 		db.from("bookings")
-			.select("player_id")
-			.in("group_id", groupIds)
-			.eq("status", "confirmed"),
+			.select("player_id, group_id, start_at, end_at, status")
+			.in("group_id", groupIds),
 	]);
 
 	// FETCH PLAYER PROFILES IN A SINGLE QUERY; SET DEDUPLICATES IDS ACROSS PENDING, APPROVED AND BOOKINGS
@@ -132,7 +131,7 @@ async function loadDashboard(user) {
 	});
 
 	const bookingCountByPlayer = {};
-	(allTimeBookings || []).forEach(b => {
+	(allTimeBookings || []).filter(b => b.status === "confirmed").forEach(b => {
 		bookingCountByPlayer[b.player_id] = (bookingCountByPlayer[b.player_id] || 0) + 1;
 	});
 
@@ -150,6 +149,7 @@ async function loadDashboard(user) {
 		openingHoursByGroup,
 		nextBookingByPlayer,
 		bookingCountByPlayer,
+		allTimeBookings: allTimeBookings || [],
 	};
 
 	document.getElementById("loading-msg").hidden = true;
@@ -191,7 +191,7 @@ function renderPendingView() {
 					<div class="membership-hole"></div>
 				</div>
 				<p class="membership-courts"><img src="images/icon_court.svg" class="link-icon" alt="">${courtNames}</p>
-				<div class="divider"></div>
+				<div class="divider ticket-divider"></div>
 				<div class="membership-data">
 					<p class="membership-date"><img src="images/icon_calendar_pen.svg" class="link-icon" alt="">${date}</p>
 					${phoneLine}
@@ -260,7 +260,7 @@ function renderMembersView() {
 					<p class="membership-date">Membro desde ${approvedDate}</p>
 					<a class="revoke-btn uppercase" style="color: var(--orange)" data-id="${m.id}" href="#">Revogar</a>
 				</div>
-				<div class="divider"></div>
+				<div class="divider ticket-divider"></div>
 				<div class="membership-data">
 					<p class="membership-courts"><img src="images/icon_court.svg" class="link-icon" alt="">${courtNames}</p>
 					<p class="membership-date">${expiresDate ? `<img src="images/icon_timer.svg" class="link-icon" alt=""> ${expiresDate}` : "Sem data de expiração"}</p>
@@ -318,7 +318,7 @@ function renderBookingsView() {
 					<div class="membership-hole"></div>
 				</div>
 				<p class="membership-courts"><img src="images/icon_court.svg" class="link-icon" alt="">${courtName}</p>
-				<div class="divider"></div>
+				<div class="divider ticket-divider"></div>
 				<div class="membership-date-row">
 					<p class="membership-date"><img src="images/icon_calendar_tennis.svg" class="link-icon" alt="">${bookingLabel(b)}</p>
 					<a class="cancel-booking-anchor uppercase" style="color: var(--orange)" data-id="${b.id}" href="#">Cancelar</a>
@@ -498,6 +498,46 @@ function renderProfileView() {
 	});
 }
 
+// THIS CALENDAR MONTH'S NUMBERS FOR THE WHOLE GROUP (ALL ITS COURTS), BY BOOKING START DATE
+function renderGroupStats(group) {
+	const now = new Date();
+	const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+	const nextMonthStart = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+	const inMonth = start => { const s = new Date(start); return s >= monthStart && s < nextMonthStart; };
+
+	const groupBookings = ownerData.allTimeBookings.filter(b => b.group_id === group.id);
+	const confirmed = groupBookings.filter(b => b.status === "confirmed");
+	const monthConfirmed = confirmed.filter(b => inMonth(b.start_at));
+	const monthPlayers = new Set(monthConfirmed.map(b => b.player_id));
+
+	// NEWCOMER = A PLAYER WHOSE FIRST-EVER CONFIRMED BOOKING IN THIS GROUP FALLS THIS MONTH
+	const firstStart = {};
+	confirmed.forEach(b => {
+		if (!firstStart[b.player_id] || new Date(b.start_at) < new Date(firstStart[b.player_id])) firstStart[b.player_id] = b.start_at;
+	});
+	const newcomers = [...monthPlayers].filter(p => inMonth(firstStart[p])).length;
+
+	// ESTIMATE ONLY: WHAT'S OWED FOR BOOKED SLOTS, NOT WHAT'S BEEN PAID — THERE'S NO PAYMENTS TABLE YET
+	const slot = group.slot_duration_minutes;
+	const revenue = group.price_per_slot_cents != null && slot
+		? `€${(monthConfirmed.reduce((sum, b) => sum + Math.round((new Date(b.end_at) - new Date(b.start_at)) / 60000 / slot) * group.price_per_slot_cents, 0) / 100).toFixed(2)}`
+		: "—";
+
+	const cancellations = groupBookings.filter(b => b.status === "cancelled" && inMonth(b.start_at)).length;
+
+	const items = [
+		{ value: monthConfirmed.length, label: "reservas" },
+		{ value: revenue, label: "receita" },
+		{ value: cancellations, label: "jogos cancel." },
+		{ value: newcomers, label: "novos memb." },
+	];
+	return `
+		<p class="court-rules-title">Este mês</p>
+		<div class="rules-grid">${items.map(i => `<div class="rules-item"><span class="rules-value">${i.value}</span><span class="rules-label">${i.label}</span></div>`).join("")}</div>
+		<div class="divider"></div>
+	`;
+}
+
 // RENDERS THE RULES FORM FOR EACH OWNED GROUP; SAVE BUTTON IS DISABLED UNTIL AN INPUT CHANGES
 function renderRulesView() {
 	const container = document.getElementById("view-rules");
@@ -515,6 +555,7 @@ function renderRulesView() {
 				</div>
 				<div class="court-rules-body">
 
+				${renderGroupStats(group)}
 				<div id="owner-slot-picker-${group.id}"></div>
 				<div class="divider"></div>
 
@@ -560,7 +601,8 @@ function renderRulesView() {
 		// COURTS IN A GROUP SHARE A SITE, SO THE FIRST ONE'S COORDINATES STAND IN FOR THE WHOLE GROUP'S FORECAST
 		const groupCourt = ownerData.courts.find(c => c.group_id === group.id);
 		const pickerEl = document.getElementById(`owner-slot-picker-${group.id}`);
-		renderSlotPicker(pickerEl, group, openingHours, null, bookings, null, false, null, true, groupCourt);
+		const courtCount = ownerData.courts.filter(c => c.group_id === group.id).length;
+		renderSlotPicker(pickerEl, group, openingHours, null, bookings, null, false, null, true, groupCourt, courtCount);
 		// DELEGATED ON THE CONTAINER — THE PICKER REBUILDS ITS CELLS ON EVERY DAY SWITCH
 		pickerEl.addEventListener("click", e => {
 			const cell = e.target.closest("[data-booking-id]");

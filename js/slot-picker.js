@@ -30,7 +30,13 @@ function buildDayStrip(days, selectedIndex, openingHours, weather) {
 }
 
 // BUILDS THE SLOT TIME GRID FOR A GIVEN DAY; ALSO APPENDS THE LEGEND BELOW THE GRID
-function buildSlotGrid(day, dayIndex, groupRules, openingHours, selectionStart, selectionEnd, existingBookings, userId, locked, readOnly, canCancel) {
+// FIRST NAME SHORTENED TO ITS INITIAL; SURNAME (LAST WORD) KEPT IN FULL, E.G. "Matheus Monteiro" -> "M. Monteiro"
+function shortName(fullName) {
+	const parts = fullName?.trim().split(/\s+/);
+	return parts?.length > 1 ? `${parts[0].charAt(0)}. ${parts[parts.length - 1]}` : parts?.[0];
+}
+
+function buildSlotGrid(day, dayIndex, groupRules, openingHours, selectionStart, selectionEnd, existingBookings, userId, locked, readOnly, canCancel, courtCount) {
 	const dow = day.getDay();
 	const dayHours = (openingHours || []).find(h => h.day_of_week === dow);
 
@@ -43,9 +49,8 @@ function buildSlotGrid(day, dayIndex, groupRules, openingHours, selectionStart, 
 		return `<p class="card-sub">Horário não configurado.</p>`;
 	}
 
-	// HELPERS: CONVERT "HH:MM" TIME STRINGS TO MINUTES, AND BACK TO A DISPLAY LABEL
+	// CONVERTS "HH:MM" TIME STRINGS TO MINUTES; toTime() (MODULE LEVEL) TURNS MINUTES BACK INTO "HH:MM"
 	const toMins = t => { const [h, m] = t.split(':').map(Number); return h * 60 + m; };
-	const toLabel = m => `${String(Math.floor(m / 60)).padStart(2, '0')}${String(m % 60).padStart(2, '0')}`;
 
 	const openMins = toMins(dayHours.open);
 	const closeMins = toMins(dayHours.close);
@@ -79,6 +84,7 @@ function buildSlotGrid(day, dayIndex, groupRules, openingHours, selectionStart, 
 		// A BOOKING OVERLAPS THIS SLOT IF ITS RANGE INTERSECTS [t, t+slotMin)
 		const overlapping = dayBookings.filter(b => b.startMins < t + slotMin && b.endMins > t);
 		const isMine = overlapping.some(b => b.playerId === userId);
+		// ANY BOOKING TURNS THE SLOT ORANGE; THE OWNER VIEW'S 1/2-STYLE COUNT SAYS HOW FULL IT IS
 		const isOccupied = !isMine && overlapping.length > 0;
 		// READ-ONLY (OWNER VIEW) IS NEVER TAPPABLE — NO SELECTION, SO NO WHITE "MINE" SLOTS EVER APPEAR
 		const isTappable = !readOnly && !isPast && !isBreak && !isOccupied && !isMine;
@@ -92,25 +98,24 @@ function buildSlotGrid(day, dayIndex, groupRules, openingHours, selectionStart, 
 			(isMine || isSelected) ? 'slot-mine' : '',
 			isTappable ? 'slot-cell--tappable' : '',
 		].filter(Boolean).join(' ');
-		// READ-ONLY SHOWS THE BOOKING PLAYER'S NAME BENEATH THE HOUR INSTEAD OF A WHITE/MINE DISTINCTION
-		// FIRST NAME SHORTENED TO ITS INITIAL; SURNAME (LAST WORD) KEPT IN FULL, E.G. "Matheus Monteiro" -> "M. Monteiro"
-		const nameParts = overlapping[0]?.playerName?.trim().split(/\s+/);
-		const shortName = nameParts?.length > 1 ? `${nameParts[0].charAt(0)}. ${nameParts[nameParts.length - 1]}` : nameParts?.[0];
-		const playerLabel = readOnly && shortName
-			? `<span class="slot-cell-player">${shortName}</span>`
+		// READ-ONLY: HOW MANY OF THE GROUP'S COURTS ARE TAKEN GOES NEXT TO THE HOUR, E.G. "18:30 (1/2)",
+		// WITH EVERY BOOKED PLAYER'S NAME BENEATH
+		const timeLabel = readOnly && overlapping.length > 0 ? `${toTime(t)} (${overlapping.length}/${courtCount})` : toTime(t);
+		const playerLabel = readOnly
+			? overlapping.map(b => shortName(b.playerName)).filter(Boolean).map(n => `<span class="slot-cell-player">${n}</span>`).join('')
 			: '';
 		// READ-ONLY TAGS OCCUPIED SLOTS WITH THEIR BOOKING SO THE OWNER CAN JUMP TO ITS CARD
 		const bookingAttr = readOnly && overlapping[0]?.bookingId ? ` data-booking-id="${overlapping[0].bookingId}"` : '';
-		cells.push(`<div class="${cls}" data-mins="${t}"${bookingAttr}>${toLabel(t)}${playerLabel}</div>`);
+		cells.push(`<div class="${cls}" data-mins="${t}"${bookingAttr}>${timeLabel}${playerLabel}</div>`);
 	}
 
-	// LEGEND KEYS: HATCHED = ALMOÇO, ORANGE = OCUPADO, GREEN = LIVRE, WHITE = TEU JOGO (NEVER SHOWN READ-ONLY)
+	// LEGEND KEYS: HATCHED = PAUSA, ORANGE = OCUPADO, GREEN = LIVRE, WHITE = TEU JOGO (NEVER SHOWN READ-ONLY)
 	const mineLegendItem = readOnly ? '' : `<span class="legend-item"><span class="legend-dot legend-slot-mine"></span>Teu jogo</span>`;
 	const legend = `
 		<div class="chart-legend slot-legend">
 			<span class="legend-item"><span class="legend-dot legend-slot-free"></span>Livre</span>
 			<span class="legend-item"><span class="legend-dot legend-slot-occupied"></span>Ocupado</span>
-			<span class="legend-item"><span class="legend-dot legend-slot-break"></span>Almoço</span>
+			<span class="legend-item"><span class="legend-dot legend-slot-break"></span>Pausa</span>
 			${mineLegendItem}
 		</div>`;
 
@@ -153,7 +158,8 @@ function toISODateTime(day, mins) {
 // onCancel() IS CALLED WHEN THE PLAYER CONFIRMS CANCELLING THEIR BOOKING; SHOULD RETURN AN ERROR OR null.
 // readOnly=true IS THE OWNER VIEW: NO TAPPING, NO ACTION BUTTONS, PLAYER NAMES SHOWN ON OCCUPIED SLOTS.
 // coords { lat, lng } LOADS THE DAILY WEATHER ICONS INTO THE DAY STRIP; OMIT IT AND THE STRIP SHOWS NONE.
-export function renderSlotPicker(container, groupRules, openingHours, onConfirm, existingBookings, userId, startLocked = false, onCancel = null, readOnly = false, coords = null) {
+// courtCount IS THE GROUP'S NUMBER OF ACTIVE COURTS; ONLY THE OWNER VIEW USES IT, FOR THE 1/2-STYLE COUNT.
+export function renderSlotPicker(container, groupRules, openingHours, onConfirm, existingBookings, userId, startLocked = false, onCancel = null, readOnly = false, coords = null, courtCount = 1) {
 	const days = getDays();
 	// null UNTIL THE FORECAST ARRIVES; THE PICKER RENDERS IMMEDIATELY WITHOUT WAITING FOR IT
 	let weather = null;
@@ -328,7 +334,7 @@ export function renderSlotPicker(container, groupRules, openingHours, onConfirm,
 	function render() {
 		// innerHTML RECREATES THE DAY STRIP, WHICH WOULD SNAP ITS HORIZONTAL SCROLL BACK TO THE START
 		const stripScroll = container.querySelector('.day-strip')?.scrollLeft ?? 0;
-		container.innerHTML = buildDayStrip(days, selectedIndex, openingHours, weather) + buildSlotGrid(days[selectedIndex], selectedIndex, groupRules, openingHours, selectionStart, selectionEnd, localBookings, userId, locked, readOnly, !!onCancel);
+		container.innerHTML = buildDayStrip(days, selectedIndex, openingHours, weather) + buildSlotGrid(days[selectedIndex], selectedIndex, groupRules, openingHours, selectionStart, selectionEnd, localBookings, userId, locked, readOnly, !!onCancel, courtCount);
 		container.querySelector('.day-strip').scrollLeft = stripScroll;
 
 		container.querySelectorAll('.day-cell:not(.day-cell--closed)').forEach(cell => {

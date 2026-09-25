@@ -591,6 +591,10 @@ header {
 	font-weight: 400;
 }
 
+.card-sub a {
+	color: var(--white);
+}
+
 .card-sub b {
 	color: var(--white);
 }
@@ -1001,6 +1005,42 @@ header {
 	margin: 10px 0;
 }
 
+/* TEAR-OUT TICKET LINE: THE DOTTED DIVIDER PLUS A FAUX NOTCH AT EACH END, DRAWN BY THE DIVIDER ITSELF.
+   GEOMETRY ASSUMES A 2px-BORDER, 10px-PADDING CARD (.membership-card): THE CARD'S OUTER EDGE SITS
+   12px BEYOND EACH END OF THE DIVIDER, SO EACH 20px CIRCLE IS CENTRED THERE AND HALF OF IT BITES INTO THE CARD. */
+.ticket-divider {
+	position: relative;
+}
+
+.ticket-divider::before,
+.ticket-divider::after {
+	content: '';
+	position: absolute;
+	/* -11px CENTRES THE CIRCLE ON THE 2px DOTTED LINE, WHICH SITS ABOVE THE DIVIDER'S PADDING EDGE */
+	top: -11px;
+	width: 20px;
+	height: 20px;
+	border: 2px solid var(--black);
+	border-radius: 50%;
+	/* PINK = THE PAGE BEHIND THE CARD, SO IT READS AS A BITE OUT OF IT */
+	background: var(--pink);
+}
+
+/* LEFT NOTCH: ONLY THE CARD-SIDE HALF SHOWS. INSET MIRRORS THE CARD SHADOW SHOWING THROUGH THE BITE */
+.ticket-divider::before {
+	left: -22px;
+	clip-path: inset(-5px -5px -5px 50%);
+}
+
+/* RIGHT NOTCH: THE CARD'S 4px SHADOW STICKS OUT PAST THE RIGHT EDGE AND WOULD BAR THE NOTCH OPENING.
+   THE PINK OUTER SHADOW REPAINTS THAT STRIP AS THE SHADOW'S OWN (4px-SHIFTED) NOTCH; THE POLYGON KEEPS
+   THE CARD-SIDE HALF PLUS ONLY THAT 4px STRIP, SO THE RING NEVER SHOWS OUTSIDE THE CARD. */
+.ticket-divider::after {
+	left: calc(100% + 2px);
+	box-shadow: inset 4px 4px 0 var(--black), 15px 0px 0 var(--pink);
+	clip-path: polygon(-5px -5px, 14px -5px, 14px 24px, 10px 24px, 10px 20px, -5px 20px);
+}
+
 .membership-card a {
 	font-size: .8em;
 }
@@ -1043,6 +1083,7 @@ header {
 
 /* PINK FILL = THE PAGE BEHIND THE CARD; THE INSET MIRRORS THE CARD'S OWN SHADOW SO IT READS AS A PUNCHED HOLE */
 .membership-hole {
+	display: none;
 	width: 25px;
 	height: 25px;
 	flex-shrink: 0;
@@ -1054,6 +1095,7 @@ header {
 
 .membership-player {
 	font-size: 1.5em;
+	line-height: 1;
 	font-weight: 700;
 	text-transform: uppercase;
 	white-space: nowrap;
@@ -1099,6 +1141,7 @@ header {
 	padding: 10px;
 	font-size: 0.8em;
 	font-weight: 400;
+	box-shadow: 4px 4px 0 var(--black);
 }
 
 .court-rules-toggle {
@@ -1139,8 +1182,23 @@ header {
 	margin: 10px 0;
 }
 
+/* GROUP STATS REUSE THE COURT PAGE'S rules-grid, WHOSE WHITE TEXT IS MEANT FOR THE GREEN CARD */
+.court-rules-body .rules-grid {
+	flex-wrap: wrap;
+	gap: 10px;
+	margin-top: 5px;
+}
+
+.court-rules-body .rules-value,
+.court-rules-body .rules-label {
+	color: var(--black);
+}
+
 .court-rules-body .slot-cell {
-	background: var(--white)
+	background: var(--white);
+	/* GROWS TO FIT THE 1/2 COUNT PLUS ONE NAME PER BOOKED COURT */
+	height: auto;
+	min-height: 40px;
 }
 
 .court-rules-body .legend-slot-free {
@@ -1148,7 +1206,8 @@ header {
 }
 
 .court-rules-body .slot-cell.slot-occupied {
-	background: var(--orange)
+	background: var(--orange);
+	color: var(--white);
 }
 
 .court-rules-body .slot-cell.slot-break {
@@ -1293,14 +1352,18 @@ header {
 }
 
 .slot-cell {
-	height: 50px;
+	height: 40px;
 	border: 2px solid var(--black);
 	/* PULLS EACH CELL OVER BY THE BORDER WIDTH SO SHARED EDGES OVERLAP INSTEAD OF STACKING */
 	margin: -2px 0 0 -2px;
 	background: var(--green);
 	color: var(--black);
 	padding: 5px;
-	padding-top: 10px;
+	/* COLUMN SO THE OWNER'S PLAYER NAME STACKS UNDER THE HOUR; BOTH CENTRED WHATEVER THE CELL HOLDS */
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
 	text-align: center;
 	font-size: 0.8em;
 	font-weight: 700;

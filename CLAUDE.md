@@ -48,6 +48,7 @@ Branch: `bookable-mvp` — building the court booking flow for courts that requi
 - **Dev server:** `npx http-server` on port 8080
 - **Screenshots:** Skip Puppeteer/screenshot verification for mechanical CSS edits. Use it only when the visual outcome is genuinely uncertain (new layout, new component, tricky CSS interaction)
 - **No over-engineering:** No abstractions beyond what the task needs. No error handling for impossible cases. No comments explaining what code does — only WHY when non-obvious
+- **Player-facing copy:** always put messages shown to players in `MSG_*` constants at the top of the file (see `court-bookable.js`), never inline in templates. When the text needs dynamic parts, make the constant a small function (e.g. `MSG_SIBLINGS = courtLinks => \`...\``)
 
 ### CSS Rules
 - No `line-height`
@@ -242,6 +243,7 @@ Sessions are kept alive indefinitely for active users. Supabase auto-refreshes t
 - [x] Get the player to cancel a booking
   - [x] Update `bookings` row status to `cancelled` (two-step Cancelar/Voltar confirm, mirrors owner's revoke flow)
   - [ ] Cancellation rules apply (free >48h before, full charge <48h)
+- [ ] Figure out the rescheduling/cancelling process for bad weather — who triggers it, whether players get offered a new slot or just a waiver, and how it ties to the forecast icons (starting point: edge case (c) under Open Questions)
 - [ ] Add success pig views after booking and after cancelling a booking
 - [ ] Get the player to see their own booking history
   - [ ] Query `bookings` filtered by `player_id = auth.uid()`
@@ -249,7 +251,13 @@ Sessions are kept alive indefinitely for active users. Supabase auto-refreshes t
   - [x] Owner queries `bookings` for courts in their `court_groups` (bookings tab, default view)
   - [x] Owner sees the exact same availability calendar as the player (read-only picker in each court-rules-card, player names on occupied slots)
   - [x] Owner can cancel a booking (Cancelar/Voltar confirm on the bookings card)
+  - [x] Owner picker shows the whole group: "HH:MM (1/2)" = courts taken / active courts, orange as soon as any court is booked, every booked player's short name beneath
+  - [x] Tapping a booked slot in the owner picker jumps to that booking's card (first booking only when several share the slot)
   - [ ] Owner can add a booking on behalf of a player, or edit one
+- [x] Player picker stays single-court; greeting points to the group's other courts ("Se não encontrares horário aqui, também podes reservar no …", `MSG_SIBLINGS`)
+- [x] Group stats for the owner, shown just above the slot picker in each court-rules-card (calculated in JS from the owner's bookings, whole group not per court)
+  - [x] This month: bookings, unique players, newcomers, estimated revenue, cancellations
+  - [ ] Move to a Postgres RPC if a group's booking history gets large enough to slow the dashboard
 - [ ] Polish pig mascot with Rive animations
   - [ ] Animate existing pig SVG in Rive editor (idle loop + reaction states)
   - [ ] Export `.riv` and integrate via `@rive-app/canvas` runtime
@@ -285,6 +293,9 @@ Sessions are kept alive indefinitely for active users. Supabase auto-refreshes t
 - [ ] Owner booking management — same slot grid with full control: view all, add on behalf of a player, edit, remove
 
 ### Design Decisions
+- **Single-court player picker, group-wide owner picker:** the same `renderSlotPicker` serves both.
+  - **Player** sees one court only — the court page they're on. A booking always belongs to one court, so a game can never need a court change mid-way (a group-wide player picker would need a "one court free for the whole range" check plus court auto-assignment — rejected as too complex). Other courts in the group are only mentioned in the greeting, with links; no availability check behind it.
+  - **Owner** sees the whole group in one grid (`readOnly`), because rules, membership, pricing and the one-booking limit are all per group. Each booked slot shows `HH:MM (taken/courtCount)` and all booked players; any booking makes it orange.
 - **Slot selection:** slot-based; cells show start times; end time = last slot + `slot_duration_minutes`
 - **Contiguous only:** auto-fill slots between first and second tap; tapping past a blocker is ignored
 - **Single slot:** valid; tap same slot twice = 1-slot booking
