@@ -1,11 +1,12 @@
 // FORECASTS BARELY CHANGE WITHIN A FEW HOURS, SO ONE FETCH PER COURT LOCATION IS REUSED FOR THIS LONG
 const CACHE_MS = 3 * 60 * 60 * 1000;
 
-// RAIN WINS OVER CLOUD COVER — IT'S THE ONLY CONDITION THAT ACTUALLY STOPS A GAME
-function toIcon(rainChance, cloudCover) {
+// RAIN WINS — IT'S THE ONLY CONDITION THAT ACTUALLY STOPS A GAME. OTHERWISE THE SHARE OF DAYLIGHT WITH REAL
+// SUNSHINE DECIDES: CLOUD COVER % READS THIN HIGH CLOUD AS 100% EVEN WHEN THE SUN SHINES THROUGH IT
+function toIcon(rainChance, sunshineShare) {
 	if (rainChance >= 50) return 'rain';
-	if (cloudCover < 25) return 'sunny';
-	if (cloudCover < 70) return 'part_cloudy';
+	if (sunshineShare >= 0.75) return 'sunny';
+	if (sunshineShare >= 0.4) return 'part_cloudy';
 	return 'cloudy';
 }
 
@@ -16,17 +17,18 @@ function dateKey(day) {
 
 // RETURNS { 'YYYY-MM-DD': 'rain' | 'sunny' | 'part_cloudy' | 'cloudy' } FOR THE NEXT 7 DAYS, OR null ON FAILURE
 export async function fetchWeather(lat, lng) {
-	const cacheKey = `weather:${lat},${lng}`;
+	// "v2" SO ICONS CACHED UNDER THE OLD CLOUD-COVER RULE ARE IGNORED INSTEAD OF LINGERING FOR 3h
+	const cacheKey = `weather-v2:${lat},${lng}`;
 	try {
 		const cached = JSON.parse(localStorage.getItem(cacheKey));
 		if (cached && Date.now() - cached.at < CACHE_MS) return cached.icons;
 	} catch {}
 
 	try {
-		const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&daily=precipitation_probability_max,cloud_cover_mean&forecast_days=7&timezone=Europe%2FLisbon`);
+		const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&daily=precipitation_probability_max,sunshine_duration,daylight_duration&forecast_days=7&timezone=Europe%2FLisbon`);
 		if (!res.ok) return null;
 		const { daily } = await res.json();
-		const icons = Object.fromEntries(daily.time.map((date, i) => [date, toIcon(daily.precipitation_probability_max[i], daily.cloud_cover_mean[i])]));
+		const icons = Object.fromEntries(daily.time.map((date, i) => [date, toIcon(daily.precipitation_probability_max[i], daily.sunshine_duration[i] / daily.daylight_duration[i])]));
 		try { localStorage.setItem(cacheKey, JSON.stringify({ at: Date.now(), icons })); } catch {}
 		return icons;
 	} catch {
