@@ -258,6 +258,13 @@ Sessions are kept alive indefinitely for active users. Supabase auto-refreshes t
 - [x] Group stats for the owner, shown just above the slot picker in each court-rules-card (calculated in JS from the owner's bookings, whole group not per court)
   - [x] This month: bookings, unique players, newcomers, estimated revenue, cancellations
   - [ ] Move to a Postgres RPC if a group's booking history gets large enough to slow the dashboard
+- [ ] Booking gaps (found after the booking back-and-forth)
+  - [ ] Enforce booking rules server-side — only JS checks opening hours, slot alignment, pause and min duration; verify the insert RLS actually requires an approved membership (later)
+  - [x] Expired membership (`expires_at` passed) blocks booking — player's info and membership row stay, only booking is impeded (`MSG_EXPIRED`; a game booked before expiry stays visible and cancellable)
+  - [x] Revoking a member cancels all their upcoming bookings (cancelled before the membership is deleted; games already underway are left alone)
+  - [ ] Flag existing bookings that no longer fit after the owner changes opening hours, pause or slot length (later)
+  - [ ] Notify the player when the owner cancels their booking; booking confirmation email (later — Resend sandbox still blocks player emails)
+  - [ ] Booking history view — past games for the owner (and eventually played / no-show / paid status)
 - [ ] Polish pig mascot with Rive animations
   - [ ] Animate existing pig SVG in Rive editor (idle loop + reaction states)
   - [ ] Export `.riv` and integrate via `@rive-app/canvas` runtime

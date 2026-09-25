@@ -93,12 +93,13 @@ async function loadDashboard(user) {
 			.order("start_at"),
 		// EVERY BOOKING EVER, CANCELLED INCLUDED — FEEDS THE PER-MEMBER COUNT AND THE GROUP STATS
 		db.from("bookings")
-			.select("player_id, group_id, start_at, end_at, status")
+			.select("id, player_id, group_id, court_id, start_at, end_at, status")
 			.in("group_id", groupIds),
 	]);
 
-	// FETCH PLAYER PROFILES IN A SINGLE QUERY; SET DEDUPLICATES IDS ACROSS PENDING, APPROVED AND BOOKINGS
-	const allPlayerIds = [...new Set([...(pending || []), ...(approved || []), ...(upcomingBookings || [])].map(m => m.player_id))];
+	// FETCH PLAYER PROFILES IN A SINGLE QUERY; SET DEDUPLICATES IDS ACROSS PENDING, APPROVED AND EVERY BOOKING
+	// (ALL-TIME TOO, SO THE PAST-BOOKINGS LIST HAS NAMES)
+	const allPlayerIds = [...new Set([...(pending || []), ...(approved || []), ...(allTimeBookings || [])].map(m => m.player_id))];
 	let profiles = {};
 	if (allPlayerIds.length > 0) {
 		const { data: profileData } = await db.from("profiles").select("id, name, phone, nif").in("id", allPlayerIds);
@@ -260,7 +261,7 @@ function renderMembersView() {
 					<p class="membership-date">Membro desde ${approvedDate}</p>
 					<a class="revoke-btn uppercase" style="color: var(--orange)" data-id="${m.id}" href="#">Revogar</a>
 				</div>
-				<div class="divider ticket-divider"></div>
+				<div class="divider"></div>
 				<div class="membership-data">
 					<p class="membership-courts"><img src="images/icon_court.svg" class="link-icon" alt="">${courtNames}</p>
 					<p class="membership-date">${expiresDate ? `<img src="images/icon_timer.svg" class="link-icon" alt=""> ${expiresDate}` : "Sem data de expiração"}</p>
@@ -268,7 +269,7 @@ function renderMembersView() {
 					<p class="membership-date"><img src="images/icon_history.svg" class="link-icon" alt="">${bookingCount} ${bookingCount === 1 ? "reserva" : "reservas"}</p>
 				</div>
 				<div class="revoke-confirm" id="revoke-confirm-${m.id}" hidden>
-					<p class="margin-top-10 margin-bottom-10">Esta ação não pode ser revertida. ${playerName} será comunicado por email.</p>
+					<p class="margin-top-10 margin-bottom-10">Esta ação não pode ser revertida. As reservas futuras de ${playerName} serão canceladas e ${playerName} será comunicado por email.</p>
 					<div class="membership-actions">
 						<button class="confirm-revoke-btn" data-id="${m.id}"><img src="images/icon_death.svg" class="link-icon margin-left-5" alt="">Revogar</button>
 						<button class="button-shallow cancel-revoke-btn" data-id="${m.id}">Cancelar</button>
@@ -298,38 +299,72 @@ function renderMembersView() {
 	});
 }
 
-// RENDER THE LIST OF UPCOMING BOOKINGS ACROSS ALL OWNED COURTS, SOONEST FIRST
+// WHICH LIST THE BOOKINGS TAB SHOWS; KEPT ACROSS RE-RENDERS (E.G. AFTER A CANCEL OR REVOKE)
+let bookingsMode = "upcoming";
+
+// RENDER THE BOOKINGS TAB: A TOGGLE BETWEEN UPCOMING (SOONEST FIRST) AND PAST (MOST RECENT FIRST) GAMES
+// ACROSS ALL OWNED GROUPS. PAST = CONFIRMED GAMES THAT HAVE STARTED, SO ONE UNDERWAY COUNTS AS PAST.
 function renderBookingsView() {
 	const container = document.getElementById("view-bookings");
-	const { bookings, profiles, courtsById } = ownerData;
+	const { profiles, courtsById } = ownerData;
+	const isPast = bookingsMode === "past";
+	const now = new Date();
+	const list = isPast
+		? ownerData.allTimeBookings
+			.filter(b => b.status === "confirmed" && new Date(b.start_at) <= now)
+			.sort((a, b) => new Date(b.start_at) - new Date(a.start_at))
+		: ownerData.bookings;
 
-	if (bookings.length === 0) {
-		setEmptyState(container, "Sem reservas<br>agendadas");
+	container.innerHTML = `
+		<div class="view-toggle">
+			<button class="view-toggle-btn${isPast ? "" : " active"}" data-mode="upcoming" aria-label="Próximas reservas"><img src="images/icon_calendar_tennis.svg" alt=""></button>
+			<button class="view-toggle-btn${isPast ? " active" : ""}" data-mode="past" aria-label="Reservas passadas"><img src="images/icon_history.svg" alt=""></button>
+		</div>
+		<div class="bookings-list"></div>
+	`;
+
+	container.querySelectorAll(".view-toggle-btn").forEach(btn => {
+		btn.addEventListener("click", () => {
+			if (btn.dataset.mode === bookingsMode) return;
+			bookingsMode = btn.dataset.mode;
+			renderBookingsView();
+			// RE-SYNCS THE LOGO PIG, WHICH HIDES WHEN THE VIEW SHOWS THE EMPTY-STATE PIG
+			showView("bookings");
+		});
+	});
+
+	const listEl = container.querySelector(".bookings-list");
+	if (list.length === 0) {
+		setEmptyState(listEl, isPast ? "Sem jogos<br>passados" : "Sem reservas<br>agendadas");
 		return;
 	}
 
-	container.innerHTML = bookings.map(b => {
-		const playerName = profiles[b.player_id]?.name || "Jogador desconhecido";
+	listEl.innerHTML = list.map(b => {
+		// RLS ONLY LETS OWNERS READ PROFILES OF CURRENT MEMBERS, SO A MISSING NAME MEANS THEY WERE REVOKED
+		const playerName = profiles[b.player_id]?.name || "Ex-membro";
 		const courtName = courtsById[b.court_id] || "Campo desconhecido";
+		// PAST GAMES CAN'T BE CANCELLED (RLS BLOCKS IT ONCE start_at HAS PASSED), SO THEY GET NO CANCEL FLOW
+		const cancelAnchor = isPast ? "" : `<a class="cancel-booking-anchor uppercase" style="color: var(--orange)" data-id="${b.id}" href="#">Cancelar</a>`;
+		const cancelConfirm = isPast ? "" : `
+			<div class="cancel-booking-confirm" id="cancel-booking-confirm-${b.id}" hidden>
+				<p class="margin-top-10 margin-bottom-10">Esta ação não pode ser revertida. ${playerName} será notificado.</p>
+				<div class="membership-actions">
+					<button class="confirm-cancel-booking-btn" data-id="${b.id}"><img src="images/icon_death.svg" class="link-icon" alt="">Cancelar</button>
+					<button class="button-shallow back-cancel-booking-btn" data-id="${b.id}">Voltar</button>
+				</div>
+			</div>`;
 		return `
 			<div class="membership-card" data-id="${b.id}">
 				<div class="membership-player-row">
 					<p class="membership-player">${playerName}</p>
-					<div class="membership-hole"></div>
 				</div>
 				<p class="membership-courts"><img src="images/icon_court.svg" class="link-icon" alt="">${courtName}</p>
 				<div class="divider ticket-divider"></div>
 				<div class="membership-date-row">
-					<p class="membership-date"><img src="images/icon_calendar_tennis.svg" class="link-icon" alt="">${bookingLabel(b)}</p>
-					<a class="cancel-booking-anchor uppercase" style="color: var(--orange)" data-id="${b.id}" href="#">Cancelar</a>
+					<p class="membership-date"><img src="images/${isPast ? "icon_history" : "icon_calendar_tennis"}.svg" class="link-icon" alt="">${bookingLabel(b)}</p>
+					${cancelAnchor}
 				</div>
-				<div class="cancel-booking-confirm" id="cancel-booking-confirm-${b.id}" hidden>
-					<p class="margin-top-10 margin-bottom-10">Esta ação não pode ser revertida. ${playerName} será notificado.</p>
-					<div class="membership-actions">
-						<button class="confirm-cancel-booking-btn" data-id="${b.id}"><img src="images/icon_death.svg" class="link-icon" alt="">Cancelar</button>
-						<button class="button-shallow back-cancel-booking-btn" data-id="${b.id}">Voltar</button>
-					</div>
-				</div>
+				${cancelConfirm}
 			</div>
 		`;
 	}).join("");
@@ -354,8 +389,13 @@ function renderBookingsView() {
 	});
 }
 
-// ONLY NOT-YET-STARTED BOOKINGS HAVE A CARD, SO A TAP ON AN IN-PROGRESS OR PAST SLOT STAYS PUT
+// ONLY NOT-YET-STARTED BOOKINGS HAVE AN UPCOMING CARD, SO A TAP ON AN IN-PROGRESS OR PAST SLOT STAYS PUT
 function showBookingCard(bookingId) {
+	// THE PICKER ONLY LINKS TO UPCOMING GAMES, SO SWITCH BACK IF THE OWNER LEFT THE TAB ON "PAST"
+	if (bookingsMode !== "upcoming" && ownerData.bookings.some(b => b.id === bookingId)) {
+		bookingsMode = "upcoming";
+		renderBookingsView();
+	}
 	const card = document.querySelector(`#view-bookings .membership-card[data-id="${bookingId}"]`);
 	if (!card) return;
 	showView("bookings");
@@ -388,6 +428,10 @@ async function cancelBooking(id) {
 		return;
 	}
 
+	// PATCH THE CACHE TOO — THE UPCOMING/PAST TOGGLE RE-RENDERS FROM IT AND WOULD BRING THE CARD BACK
+	ownerData.bookings = ownerData.bookings.filter(b => b.id !== id);
+	ownerData.todayBookings = ownerData.todayBookings.filter(b => b.id !== id);
+	ownerData.allTimeBookings.forEach(b => { if (b.id === id) b.status = "cancelled"; });
 	card.remove();
 }
 
@@ -397,9 +441,35 @@ async function revokeMembership(id) {
 	const btn = card.querySelector(".confirm-revoke-btn");
 	btn.disabled = true;
 	btn.textContent = "A revogar...";
+	const restoreBtn = () => {
+		btn.disabled = false;
+		btn.innerHTML = '<img src="images/icon_death.svg" class="link-icon margin-left-5" alt="">Revogar';
+	};
+
+	// CANCEL THEIR UPCOMING GAMES FIRST: IF THIS FAILS THE MEMBERSHIP IS STILL INTACT, NOT HALF-REVOKED.
+	// GAMES ALREADY UNDERWAY OR PLAYED STAY AS THEY ARE (RLS BLOCKS CANCELLING THOSE ANYWAY)
+	const membership = ownerData.approved.find(m => m.id === id);
+	const scope = membership.group_id ? { column: "group_id", value: membership.group_id } : { column: "court_id", value: membership.court_id };
+	const { data: cancelled, error: cancelError } = await db.from("bookings")
+		.update({ status: "cancelled" })
+		.eq("player_id", membership.player_id)
+		.eq(scope.column, scope.value)
+		.eq("status", "confirmed")
+		.gt("start_at", new Date().toISOString())
+		.select("id");
+	if (cancelError) { restoreBtn(); return; }
 
 	const { error } = await db.from("memberships").delete().eq("id", id);
-	if (error) { btn.disabled = false; btn.textContent = "Revogar"; return; }
+	if (error) { restoreBtn(); return; }
+
+	// PATCH THE CACHE SO THE BOOKINGS TAB, SLOT PICKERS AND STATS DROP THE CANCELLED GAMES WITHOUT A RELOAD
+	const cancelledIds = new Set((cancelled || []).map(b => b.id));
+	ownerData.approved = ownerData.approved.filter(m => m.id !== id);
+	ownerData.bookings = ownerData.bookings.filter(b => !cancelledIds.has(b.id));
+	ownerData.todayBookings = ownerData.todayBookings.filter(b => !cancelledIds.has(b.id));
+	ownerData.allTimeBookings.forEach(b => { if (cancelledIds.has(b.id)) b.status = "cancelled"; });
+	renderBookingsView();
+	renderRulesView();
 
 	card.remove();
 }

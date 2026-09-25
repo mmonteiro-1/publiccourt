@@ -1001,6 +1001,18 @@ header {
 	100% { transform: translate(0, 0); }
 }
 
+/* BOOKINGS TAB: THE UPCOMING/PAST TOGGLE WOULD OTHERWISE STRETCH TO THE VIEW'S FULL WIDTH */
+#view-bookings > .view-toggle {
+	align-self: flex-start;
+}
+
+/* SAME SPACING THE CARDS HAD AS DIRECT CHILDREN OF .owner-view */
+.bookings-list {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+}
+
 .membership-card .divider {
 	margin: 10px 0;
 }
@@ -1083,7 +1095,6 @@ header {
 
 /* PINK FILL = THE PAGE BEHIND THE CARD; THE INSET MIRRORS THE CARD'S OWN SHADOW SO IT READS AS A PUNCHED HOLE */
 .membership-hole {
-	display: none;
 	width: 25px;
 	height: 25px;
 	flex-shrink: 0;

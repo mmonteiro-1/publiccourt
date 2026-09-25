@@ -7,7 +7,8 @@ const MSG_DENIED = "A tua solicitação foi recusada.";
 const MSG_MEMBER = "És membro deste campo.";
 // A FUNCTION BECAUSE IT EMBEDS THE LINKED NAMES OF THE GROUP'S OTHER COURTS
 const MSG_SIBLINGS = courtLinks => `Se não encontrares horário aqui, procura em ${courtLinks}.`;
-const MSG_NO_MEMBERSHIP = "Este campo é exclusivo para membros registados. Podes solicitar acesso agora.";
+const MSG_EXPIRED = expiryDate => `O teu passe expirou a ${expiryDate}. Fala com os administradores do campo para o renovar.`;
+const MSG_NO_MEMBERSHIP ="Este campo é exclusivo para membros registados. Podes solicitar acesso agora.";
 const MSG_NOT_LOGGED = `Este campo opera sob o <b>sistema de reservas</b>. <br><br> Para fazeres reserva, o Campo Livre precisa repassar as tuas informações aos administradores do campo. Após aceite, já podes reservar e jogar.`;
 
 // ENTRY POINT: RENDERS THE FULL BOOKABLE COURT VIEW, BRANCHING ON AUTH AND MEMBERSHIP STATUS
@@ -146,8 +147,8 @@ export async function renderBookable(court) {
 
 	// MEMBERSHIP IS GROUP-SCOPED IF THE COURT BELONGS TO A GROUP, OTHERWISE COURT-SCOPED
 	const membershipQuery = court.group_id
-		? db.from("memberships").select("status, denied_reason").eq("player_id", user.id).eq("group_id", court.group_id)
-		: db.from("memberships").select("status, denied_reason").eq("player_id", user.id).eq("court_id", court.id);
+		? db.from("memberships").select("status, denied_reason, expires_at").eq("player_id", user.id).eq("group_id", court.group_id)
+		: db.from("memberships").select("status, denied_reason, expires_at").eq("player_id", user.id).eq("court_id", court.id);
 
 	const { data: membership } = await membershipQuery.maybeSingle();
 
@@ -204,6 +205,17 @@ export async function renderBookable(court) {
 			// RLS BLOCKS CANCELLING ONCE start_at HAS PASSED, SO A GAME IN PROGRESS GETS NO CANCEL BUTTON
 			const hasStarted = new Date(playerActiveBooking.start_at) <= new Date();
 			renderSlotPicker(document.getElementById("slot-picker"), groupRules, openingHours, null, existingBookings, user.id, true, hasStarted ? null : onCancel, false, court);
+			return;
+		}
+
+		// EXPIRED PASS: NO NEW BOOKINGS. CHECKED AFTER THE ACTIVE-BOOKING BRANCH SO A GAME BOOKED BEFORE
+		// EXPIRY STAYS VISIBLE AND CANCELLABLE; THE MEMBERSHIP ROW ITSELF IS LEFT UNTOUCHED
+		if (membership.expires_at && new Date(membership.expires_at) <= new Date()) {
+			const expiryDate = new Date(membership.expires_at).toLocaleDateString("pt-PT");
+			app.innerHTML = `${header}
+				<p class="card-sub margin-bottom-20">${hi(playerName)} ${MSG_EXPIRED(expiryDate)}</p>
+				${flipLink}
+			`;
 			return;
 		}
 
