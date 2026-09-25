@@ -926,10 +926,16 @@ header {
 	border-radius: 15px;
 	padding: 10px;
 	font-weight: 400;
+	background: var(--muted);
+	box-shadow: 4px 4px 0 var(--black);
 }
 
 .membership-card .divider {
 	margin: 10px 0;
+}
+
+.membership-card a {
+	font-size: .8em;
 }
 
 .membership-card .link-icon {
@@ -968,19 +974,26 @@ header {
 	margin-top: 15px;
 }
 
-.membership-player-row .link-icon{
+/* PINK FILL = THE PAGE BEHIND THE CARD; THE INSET MIRRORS THE CARD'S OWN SHADOW SO IT READS AS A PUNCHED HOLE */
+.membership-hole {
+	width: 25px;
 	height: 25px;
-	max-height: unset;
-	width: unset;
+	flex-shrink: 0;
+	border: 2px solid var(--black);
+	border-radius: 50%;
+	background: var(--pink);
+	box-shadow: inset 4px 4px 0 var(--black);
 }
 
 .membership-player {
-	display: flex;
-	align-items: center;
-	gap: 8px;
 	font-size: 1.5em;
 	font-weight: 700;
 	text-transform: uppercase;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	/* LETS IT SHRINK INSIDE .membership-player-row INSTEAD OF PUSHING THE HOLE OUT */
+	min-width: 0;
 }
 
 .icon-verified {

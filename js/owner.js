@@ -61,6 +61,7 @@ async function loadDashboard(user) {
 		{ data: courts },
 		{ data: openingHours },
 		{ data: upcomingBookings },
+		{ data: allTimeBookings },
 	] = await Promise.all([
 		db.from("memberships")
 			.select("id, player_id, group_id, court_id, created_at")
@@ -83,6 +84,11 @@ async function loadDashboard(user) {
 			.eq("status", "confirmed")
 			.gte("start_at", todayStart.toISOString())
 			.order("start_at"),
+		// PLAYER_ID ONLY — JUST ENOUGH TO COUNT EACH MEMBER'S BOOKINGS; CANCELLED ONES DON'T COUNT
+		db.from("bookings")
+			.select("player_id")
+			.in("group_id", groupIds)
+			.eq("status", "confirmed"),
 	]);
 
 	// FETCH PLAYER PROFILES IN A SINGLE QUERY; SET DEDUPLICATES IDS ACROSS PENDING, APPROVED AND BOOKINGS
@@ -118,6 +124,11 @@ async function loadDashboard(user) {
 		if (!nextBookingByPlayer[b.player_id]) nextBookingByPlayer[b.player_id] = b;
 	});
 
+	const bookingCountByPlayer = {};
+	(allTimeBookings || []).forEach(b => {
+		bookingCountByPlayer[b.player_id] = (bookingCountByPlayer[b.player_id] || 0) + 1;
+	});
+
 	ownerData = {
 		user,
 		ownedGroups,
@@ -131,6 +142,7 @@ async function loadDashboard(user) {
 		courtsById,
 		openingHoursByGroup,
 		nextBookingByPlayer,
+		bookingCountByPlayer,
 	};
 
 	document.getElementById("loading-msg").hidden = true;
@@ -167,7 +179,10 @@ function renderPendingView() {
 		const nifLine = profile?.nif ? `<p class="membership-courts"><img src="images/icon_id.svg" class="link-icon" alt="">NIF ${profile.nif}</p>` : "";
 		return `
 			<div class="membership-card" data-id="${m.id}">
-				<p class="membership-player">${playerName}</p>
+				<div class="membership-player-row">
+					<p class="membership-player">${playerName}</p>
+					<div class="membership-hole"></div>
+				</div>
 				<p class="membership-courts"><img src="images/icon_court.svg" class="link-icon" alt="">${courtNames}</p>
 				<div class="divider"></div>
 				<div class="membership-data">
@@ -226,6 +241,7 @@ function renderMembersView() {
 		const approvedDate = m.approved_at ? new Date(m.approved_at).toLocaleDateString("pt-PT") : "—";
 		const expiresDate = m.expires_at ? new Date(m.expires_at).toLocaleDateString("pt-PT") : null;
 		const nextBooking = nextBookingByPlayer[m.player_id];
+		const bookingCount = ownerData.bookingCountByPlayer[m.player_id] || 0;
 		const nextGameLabel = nextBooking
 			? new Date(nextBooking.start_at).toLocaleString("pt-PT", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })
 			: "Sem jogos agendados";
@@ -233,7 +249,7 @@ function renderMembersView() {
 			<div class="membership-card" data-id="${m.id}">
 				<div class="membership-player-row">
 					<p class="membership-player">${playerName}</p>
-					<img src="images/icon_verified.svg" class="link-icon" alt="">
+					<div class="membership-hole"></div>
 				</div>
 				<div class="membership-date-row">
 					<p class="membership-date">Membro desde ${approvedDate}</p>
@@ -244,6 +260,7 @@ function renderMembersView() {
 					<p class="membership-courts"><img src="images/icon_court.svg" class="link-icon" alt="">${courtNames}</p>
 					<p class="membership-date">${expiresDate ? `<img src="images/icon_timer.svg" class="link-icon" alt=""> ${expiresDate}` : "Sem data de expiração"}</p>
 					<p class="membership-date"><img src="images/icon_calendar_clock.svg" class="link-icon" alt="">${nextGameLabel}</p>
+					<p class="membership-date"><img src="images/icon_history.svg" class="link-icon" alt="">${bookingCount} ${bookingCount === 1 ? "reserva" : "reservas"}</p>
 				</div>
 				<div class="revoke-confirm" id="revoke-confirm-${m.id}" hidden>
 					<p class="margin-top-10 margin-bottom-10">Esta ação não pode ser revertida. ${playerName} será comunicado por email.</p>
@@ -295,7 +312,10 @@ function renderBookingsView() {
 		const dateLabel = s.toLocaleDateString("pt-PT", { weekday: "short", day: "numeric", month: "short" });
 		return `
 			<div class="membership-card" data-id="${b.id}">
-				<p class="membership-player">${playerName}</p>
+				<div class="membership-player-row">
+					<p class="membership-player">${playerName}</p>
+					<div class="membership-hole"></div>
+				</div>
 				<p class="membership-courts"><img src="images/icon_court.svg" class="link-icon" alt="">${courtName}</p>
 				<div class="divider"></div>
 				<div class="membership-date-row">

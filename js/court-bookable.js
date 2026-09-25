@@ -200,7 +200,9 @@ export async function renderBookable(court) {
 				if (!error) location.reload();
 				return error;
 			};
-			renderSlotPicker(document.getElementById("slot-picker"), groupRules, openingHours, null, existingBookings, user.id, true, onCancel, false, court);
+			// RLS BLOCKS CANCELLING ONCE start_at HAS PASSED, SO A GAME IN PROGRESS GETS NO CANCEL BUTTON
+			const hasStarted = new Date(playerActiveBooking.start_at) <= new Date();
+			renderSlotPicker(document.getElementById("slot-picker"), groupRules, openingHours, null, existingBookings, user.id, true, hasStarted ? null : onCancel, false, court);
 			return;
 		}
 

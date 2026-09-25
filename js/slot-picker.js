@@ -32,7 +32,7 @@ function buildDayStrip(days, selectedIndex, openingHours, weather) {
 }
 
 // BUILDS THE SLOT TIME GRID FOR A GIVEN DAY; ALSO APPENDS THE LEGEND BELOW THE GRID
-function buildSlotGrid(day, dayIndex, groupRules, openingHours, selectionStart, selectionEnd, existingBookings, userId, locked, readOnly) {
+function buildSlotGrid(day, dayIndex, groupRules, openingHours, selectionStart, selectionEnd, existingBookings, userId, locked, readOnly, canCancel) {
 	const dow = day.getDay();
 	const dayHours = (openingHours || []).find(h => h.day_of_week === dow);
 
@@ -120,6 +120,10 @@ function buildSlotGrid(day, dayIndex, groupRules, openingHours, selectionStart, 
 
 	// LOCKED (PLAYER ALREADY HAS A BOOKING HERE) SWAPS THE CONFIRM BUTTON FOR A SHALLOW CANCEL BUTTON.
 	// CANCEL-BOOKING-CONFIRM STARTS HIDDEN; SAME REVEAL/BACK PATTERN AS THE OWNER'S REVOKE-MEMBERSHIP FLOW.
+	// NO canCancel (E.G. THE GAME HAS ALREADY STARTED) MEANS A LOCKED PICKER SHOWS NO BUTTON AT ALL.
+	if (locked && !canCancel) {
+		return `${legend}<div class="slot-grid">${cells.join('')}</div>`;
+	}
 	const actionButton = locked
 		? `<button class="slot-confirm-btn button-shallow" id="cancel-booking-btn"><img src="images/icon_fall.svg" class="link-icon" alt="">Cancelar reserva</button>
 			<div class="membership-actions" id="cancel-booking-confirm" hidden>
@@ -320,7 +324,7 @@ export function renderSlotPicker(container, groupRules, openingHours, onConfirm,
 	function render() {
 		// innerHTML RECREATES THE DAY STRIP, WHICH WOULD SNAP ITS HORIZONTAL SCROLL BACK TO THE START
 		const stripScroll = container.querySelector('.day-strip')?.scrollLeft ?? 0;
-		container.innerHTML = buildDayStrip(days, selectedIndex, openingHours, weather) + buildSlotGrid(days[selectedIndex], selectedIndex, groupRules, openingHours, selectionStart, selectionEnd, localBookings, userId, locked, readOnly);
+		container.innerHTML = buildDayStrip(days, selectedIndex, openingHours, weather) + buildSlotGrid(days[selectedIndex], selectedIndex, groupRules, openingHours, selectionStart, selectionEnd, localBookings, userId, locked, readOnly, !!onCancel);
 		container.querySelector('.day-strip').scrollLeft = stripScroll;
 
 		container.querySelectorAll('.day-cell:not(.day-cell--closed)').forEach(cell => {
