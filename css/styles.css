@@ -772,6 +772,46 @@ header {
 	outline: none;
 }
 
+/* CUSTOM DROPDOWN BUILT BY js/custom-select.js — THE NATIVE <select> STAYS HIDDEN INSIDE .select */
+.select {
+	position: relative;
+}
+
+/* A <button>, SO IT UNDOES THE GLOBAL BUTTON LOOK TO MATCH .form-input EXACTLY */
+.select-trigger {
+	justify-content: flex-start;
+	box-shadow: none;
+	font-weight: 400;
+	background-image: url("../images/icon_triangle.svg");
+	background-repeat: no-repeat;
+	background-position: right 10px center;
+	background-size: 10px;
+	padding-right: 30px;
+}
+
+.select-list {
+	position: absolute;
+	top: calc(100% + 5px);
+	left: 0;
+	right: 0;
+	z-index: 10;
+	background: var(--white);
+	border: 2px solid var(--black);
+	border-radius: 10px;
+	overflow: hidden;
+}
+
+.select-option {
+	padding: 10px;
+	font-size: 1.2em;
+	font-weight: 400;
+}
+
+.select-option--active {
+	background: var(--black);
+	color: var(--white);
+}
+
 
 .form-error {
 	color: var(--orange);
@@ -930,6 +970,33 @@ header {
 	box-shadow: 4px 4px 0 var(--black);
 }
 
+/* SHORT SIDE-TO-SIDE SHAKE TO POINT OUT THE CARD REACHED FROM THE OWNER SLOT PICKER */
+.membership-card.wiggle {
+	/* WIGGLE WAITS 0.3s FOR THE SCROLL; THE FLASH RUNS LONGER THAN IT AND OUTLASTS IT ON PURPOSE */
+	animation: wiggle 450ms linear 0.3s, card-flash 1s ease-in-out;
+}
+
+/* ease-in-out APPLIES PER SEGMENT, SO BOTH THE FADE TO WHITE AND THE FADE BACK ARE SMOOTH */
+@keyframes card-flash {
+	0%, 100% { background: var(--muted); }
+	20%, 60% { background: var(--white); }
+}
+
+/* 2px BREAKS THE MULTIPLES-OF-5 RULE ON PURPOSE — 5px READ AS TOO BIG A SHAKE */
+@keyframes wiggle {
+	0%   { transform: translate(2px, 0); }
+	10%  { transform: translate(-2px, 0); }
+	20%  { transform: translate(2px, 0); }
+	30%  { transform: translate(-2px, 0); }
+	40%  { transform: translate(2px, 0); }
+	50%  { transform: translate(-2px, 0); }
+	60%  { transform: translate(2px, 0); }
+	70%  { transform: translate(-2px, 0); }
+	80%  { transform: translate(2px, 0); }
+	90%  { transform: translate(-2px, 0); }
+	100% { transform: translate(0, 0); }
+}
+
 .membership-card .divider {
 	margin: 10px 0;
 }
@@ -939,8 +1006,8 @@ header {
 }
 
 .membership-card .link-icon {
-	max-height: 15px;
-	width: 18px;
+	max-height: 13px;
+	width: 15px;
 	flex-shrink: 0;
 }
 
@@ -1131,6 +1198,15 @@ header {
 .membership-actions button {
 	flex: 1;
 	width: auto;
+}
+
+.membership-actions button:not(.button-shallow) {
+	background: var(--orange);
+	color: var(--white);
+}
+
+.membership-actions button:not(.button-shallow) img {
+	filter: invert(1);
 }
 
 .rule-time-row {

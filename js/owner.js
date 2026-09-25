@@ -4,8 +4,15 @@ const app = document.getElementById("app");
 // IN-MEMORY CACHE OF ALL OWNER DATA; POPULATED ONCE ON LOAD, PATCHED IN-PLACE AFTER SAVES
 let ownerData = null;
 
-// DAY NAMES INDEXED BY JS getDay() (0 = SUNDAY) — USED FOR OPENING HOURS ROWS
-const DAYS = ["DOM", "SEG", "TER", "QUA", "QUI", "SEX", "SAB"];
+
+// "SAB, 26/09, 10:30-12:00" — SHARED BY THE MEMBERS AND BOOKINGS CARDS SO BOTH READ THE SAME
+function bookingLabel(booking) {
+	const s = new Date(booking.start_at);
+	const e = new Date(booking.end_at);
+	const pad = n => String(n).padStart(2, "0");
+	const time = d => `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+	return `${WEEKDAYS[s.getDay()]}, ${pad(s.getDate())}/${pad(s.getMonth() + 1)}, ${time(s)}-${time(e)}`;
+}
 
 const MEMBERSHIP_DURATION_OPTIONS = [
 	{ label: "Sem validade", months: "" },
@@ -242,9 +249,7 @@ function renderMembersView() {
 		const expiresDate = m.expires_at ? new Date(m.expires_at).toLocaleDateString("pt-PT") : null;
 		const nextBooking = nextBookingByPlayer[m.player_id];
 		const bookingCount = ownerData.bookingCountByPlayer[m.player_id] || 0;
-		const nextGameLabel = nextBooking
-			? new Date(nextBooking.start_at).toLocaleString("pt-PT", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })
-			: "Sem jogos agendados";
+		const nextGameLabel = nextBooking ? bookingLabel(nextBooking) : "Sem jogos agendados";
 		return `
 			<div class="membership-card" data-id="${m.id}">
 				<div class="membership-player-row">
@@ -259,7 +264,7 @@ function renderMembersView() {
 				<div class="membership-data">
 					<p class="membership-courts"><img src="images/icon_court.svg" class="link-icon" alt="">${courtNames}</p>
 					<p class="membership-date">${expiresDate ? `<img src="images/icon_timer.svg" class="link-icon" alt=""> ${expiresDate}` : "Sem data de expiração"}</p>
-					<p class="membership-date"><img src="images/icon_calendar_clock.svg" class="link-icon" alt="">${nextGameLabel}</p>
+					<p class="membership-date"><img src="images/icon_calendar_tennis.svg" class="link-icon" alt="">${nextGameLabel}</p>
 					<p class="membership-date"><img src="images/icon_history.svg" class="link-icon" alt="">${bookingCount} ${bookingCount === 1 ? "reserva" : "reservas"}</p>
 				</div>
 				<div class="revoke-confirm" id="revoke-confirm-${m.id}" hidden>
@@ -306,10 +311,6 @@ function renderBookingsView() {
 	container.innerHTML = bookings.map(b => {
 		const playerName = profiles[b.player_id]?.name || "Jogador desconhecido";
 		const courtName = courtsById[b.court_id] || "Campo desconhecido";
-		const s = new Date(b.start_at);
-		const e = new Date(b.end_at);
-		const fmt = d => `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
-		const dateLabel = s.toLocaleDateString("pt-PT", { weekday: "short", day: "numeric", month: "short" });
 		return `
 			<div class="membership-card" data-id="${b.id}">
 				<div class="membership-player-row">
@@ -319,7 +320,7 @@ function renderBookingsView() {
 				<p class="membership-courts"><img src="images/icon_court.svg" class="link-icon" alt="">${courtName}</p>
 				<div class="divider"></div>
 				<div class="membership-date-row">
-					<p class="membership-date"><img src="images/icon_calendar_clock.svg" class="link-icon" alt="">${dateLabel}, ${fmt(s)}–${fmt(e)}</p>
+					<p class="membership-date"><img src="images/icon_calendar_tennis.svg" class="link-icon" alt="">${bookingLabel(b)}</p>
 					<a class="cancel-booking-anchor uppercase" style="color: var(--orange)" data-id="${b.id}" href="#">Cancelar</a>
 				</div>
 				<div class="cancel-booking-confirm" id="cancel-booking-confirm-${b.id}" hidden>
@@ -351,6 +352,25 @@ function renderBookingsView() {
 	container.querySelectorAll(".confirm-cancel-booking-btn").forEach(btn => {
 		btn.addEventListener("click", () => cancelBooking(btn.dataset.id));
 	});
+}
+
+// ONLY NOT-YET-STARTED BOOKINGS HAVE A CARD, SO A TAP ON AN IN-PROGRESS OR PAST SLOT STAYS PUT
+function showBookingCard(bookingId) {
+	const card = document.querySelector(`#view-bookings .membership-card[data-id="${bookingId}"]`);
+	if (!card) return;
+	showView("bookings");
+	card.scrollIntoView({ block: "start" });
+	card.classList.remove("wiggle");
+	// FORCES A REFLOW SO THE ANIMATION RESTARTS WHEN THE SAME CARD IS PICKED TWICE IN A ROW
+	void card.offsetWidth;
+	card.classList.add("wiggle");
+	// WAITS FOR THE FLASH SPECIFICALLY — THE WIGGLE ENDS SOONER AND WOULD CUT THE FLASH SHORT
+	const onEnd = e => {
+		if (e.animationName !== "card-flash") return;
+		card.classList.remove("wiggle");
+		card.removeEventListener("animationend", onEnd);
+	};
+	card.addEventListener("animationend", onEnd);
 }
 
 // SETS status TO cancelled AND REMOVES THE CARD; RLS ONLY ALLOWS THIS WHILE start_at IS STILL IN THE FUTURE
@@ -438,7 +458,7 @@ function renderPauseSection(groupId) {
 // RENDERS ONE ROW PER DAY WITH AN OPEN/CLOSED TOGGLE AND TIME INPUTS
 function renderOpeningHoursSection(groupId) {
 	const hours = ownerData.openingHoursByGroup[groupId] || {};
-	return DAYS.map((dayName, dayIndex) => {
+	return WEEKDAYS.map((dayName, dayIndex) => {
 		const h = hours[dayIndex] || {};
 		const isClosed = h.closed ?? false;
 		return `
@@ -539,7 +559,13 @@ function renderRulesView() {
 			.map(b => ({ ...b, player_name: ownerData.profiles[b.player_id]?.name || "Jogador desconhecido" }));
 		// COURTS IN A GROUP SHARE A SITE, SO THE FIRST ONE'S COORDINATES STAND IN FOR THE WHOLE GROUP'S FORECAST
 		const groupCourt = ownerData.courts.find(c => c.group_id === group.id);
-		renderSlotPicker(document.getElementById(`owner-slot-picker-${group.id}`), group, openingHours, null, bookings, null, false, null, true, groupCourt);
+		const pickerEl = document.getElementById(`owner-slot-picker-${group.id}`);
+		renderSlotPicker(pickerEl, group, openingHours, null, bookings, null, false, null, true, groupCourt);
+		// DELEGATED ON THE CONTAINER — THE PICKER REBUILDS ITS CELLS ON EVERY DAY SWITCH
+		pickerEl.addEventListener("click", e => {
+			const cell = e.target.closest("[data-booking-id]");
+			if (cell) showBookingCard(cell.dataset.bookingId);
+		});
 	});
 
 	container.querySelectorAll(".court-rules-card").forEach(card => {
@@ -573,6 +599,9 @@ function renderRulesView() {
 
 		saveBtn.addEventListener("click", () => saveRules(groupId, card, saveBtn));
 	});
+
+	// AFTER THE change LISTENERS ARE ON THE NATIVE SELECTS — THE CUSTOM LIST FIRES change ON THEM
+	enhanceSelects(container);
 }
 
 // SAVES COURT RULES AND OPENING HOURS IN PARALLEL; PATCHES ownerData IN MEMORY TO AVOID A RE-FETCH

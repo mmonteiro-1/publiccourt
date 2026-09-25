@@ -110,12 +110,11 @@ export async function renderBookable(court) {
 
 	const openingHoursHtml = (() => {
 		if (!openingHours.length) return "";
-		const dayNames = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"];
 		const fmt = t => t ? t.slice(0, 5) : "";
 		const rows = [...openingHours]
 			.sort((a, b) => a.day_of_week - b.day_of_week)
 			.map(h => {
-				const day = dayNames[h.day_of_week] ?? h.day_of_week;
+				const day = WEEKDAYS[h.day_of_week] ?? h.day_of_week;
 				const hours = h.closed
 					? "Fechado"
 					: h.pause_start

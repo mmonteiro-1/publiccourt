@@ -3,6 +3,9 @@ function setEmptyState(container, message) {
 	container.innerHTML = `<div class="empty"><img src="images/pig_sitting.svg" class="empty-pig" alt=""><p>${message}</p></div>`;
 }
 
+// WEEKDAY LABELS INDEXED BY JS getDay() AND court_opening_hours.day_of_week (BOTH 0 = SUNDAY)
+const WEEKDAYS = ["DOM", "SEG", "TER", "QUA", "QUI", "SEX", "SAB"];
+
 // FORMAT A TIMESTAMP AS HH:MM, SHARED BY EVERY PAGE
 function formatTime(ts) {
 	return new Date(ts).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });

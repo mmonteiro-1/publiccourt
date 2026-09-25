@@ -1,7 +1,5 @@
 import { fetchWeather, weatherIconHtml } from './weather.js';
 
-// DAY ABBREVIATIONS INDEXED BY JS getDay() (0 = SUNDAY)
-const DAY_NAMES = ['DOM', 'SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SAB'];
 
 // RETURNS AN ARRAY OF 7 DATE OBJECTS STARTING FROM TODAY
 function getDays() {
@@ -22,7 +20,7 @@ function buildDayStrip(days, selectedIndex, openingHours, weather) {
 		const cls = ['day-cell', i === selectedIndex ? 'day-cell--active' : '', isClosed ? 'day-cell--closed' : ''].filter(Boolean).join(' ');
 		return `
 			<div class="${cls}" data-index="${i}">
-				<span class="day-name">${DAY_NAMES[d.getDay()]}</span>
+				<span class="day-name">${WEEKDAYS[d.getDay()]}</span>
 				<span class="day-number">${d.getDate()}</span>
 				${weatherIconHtml(weather, d)}
 			</div>
@@ -69,6 +67,7 @@ function buildSlotGrid(day, dayIndex, groupRules, openingHours, selectionStart, 
 				endMins: e.getHours() * 60 + e.getMinutes(),
 				playerId: b.player_id,
 				playerName: b.player_name,
+				bookingId: b.id,
 			};
 		});
 
@@ -100,7 +99,9 @@ function buildSlotGrid(day, dayIndex, groupRules, openingHours, selectionStart, 
 		const playerLabel = readOnly && shortName
 			? `<span class="slot-cell-player">${shortName}</span>`
 			: '';
-		cells.push(`<div class="${cls}" data-mins="${t}">${toLabel(t)}${playerLabel}</div>`);
+		// READ-ONLY TAGS OCCUPIED SLOTS WITH THEIR BOOKING SO THE OWNER CAN JUMP TO ITS CARD
+		const bookingAttr = readOnly && overlapping[0]?.bookingId ? ` data-booking-id="${overlapping[0].bookingId}"` : '';
+		cells.push(`<div class="${cls}" data-mins="${t}"${bookingAttr}>${toLabel(t)}${playerLabel}</div>`);
 	}
 
 	// LEGEND KEYS: HATCHED = ALMOÇO, ORANGE = OCUPADO, GREEN = LIVRE, WHITE = TEU JOGO (NEVER SHOWN READ-ONLY)
@@ -156,7 +157,10 @@ export function renderSlotPicker(container, groupRules, openingHours, onConfirm,
 	const days = getDays();
 	// null UNTIL THE FORECAST ARRIVES; THE PICKER RENDERS IMMEDIATELY WITHOUT WAITING FOR IT
 	let weather = null;
-	let selectedIndex = 0;
+	// OPENS ON THE DAY OF THE PLAYER'S OWN BOOKING IF ONE FALLS IN THE 7-DAY WINDOW; OTHERWISE TODAY
+	const myBooking = userId && (existingBookings || []).find(b => b.player_id === userId);
+	const myBookingDay = myBooking ? days.findIndex(d => d.toDateString() === new Date(myBooking.start_at).toDateString()) : -1;
+	let selectedIndex = Math.max(myBookingDay, 0);
 	// SELECTION STATE IN MINUTES-SINCE-MIDNIGHT, MATCHING data-mins ON EACH SLOT CELL
 	let selectionStart = null;
 	let selectionEnd = null;
@@ -345,6 +349,13 @@ export function renderSlotPicker(container, groupRules, openingHours, onConfirm,
 	}
 
 	render();
+
+	// A BOOKED DAY LATER IN THE WEEK CAN START OFF-SCREEN IN THE STRIP; 15 = THE STRIP'S SIDE PADDING
+	if (selectedIndex > 0) {
+		const strip = container.querySelector('.day-strip');
+		const activeDay = container.querySelector('.day-cell--active');
+		strip.scrollLeft = activeDay.offsetLeft - strip.offsetLeft - 15;
+	}
 
 	// PATCHES ICONS INTO THE EXISTING DAY CELLS INSTEAD OF RE-RENDERING, SO AN IN-PROGRESS SELECTION SURVIVES
 	if (coords?.lat != null && coords?.lng != null) {

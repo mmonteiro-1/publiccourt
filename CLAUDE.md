@@ -246,8 +246,10 @@ Sessions are kept alive indefinitely for active users. Supabase auto-refreshes t
 - [ ] Get the player to see their own booking history
   - [ ] Query `bookings` filtered by `player_id = auth.uid()`
 - [ ] Get the owner to see the player booking and modify it
-  - [ ] Owner queries `bookings` for courts in their `court_groups`
-  - [ ] Owner sees the exact same availability calendar as the player
+  - [x] Owner queries `bookings` for courts in their `court_groups` (bookings tab, default view)
+  - [x] Owner sees the exact same availability calendar as the player (read-only picker in each court-rules-card, player names on occupied slots)
+  - [x] Owner can cancel a booking (Cancelar/Voltar confirm on the bookings card)
+  - [ ] Owner can add a booking on behalf of a player, or edit one
 - [ ] Polish pig mascot with Rive animations
   - [ ] Animate existing pig SVG in Rive editor (idle loop + reaction states)
   - [ ] Export `.riv` and integrate via `@rive-app/canvas` runtime
