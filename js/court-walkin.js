@@ -91,13 +91,13 @@ export function renderPreview(court, active) {
 		${descriptionLine}
 		<div class="divider"></div>
 		<p class="margin-bottom-20 card-sub">${bodyText}</p>
+		${flipLink}
 		${isOwner ? `
 		<div class="extend-row">
 			<button class="extend-btn" data-mins="15" ${localStorage.getItem("extended_" + active.id) ? "disabled" : ""}>+ 15MIN</button>
 			<button class="extend-btn" data-mins="30" ${localStorage.getItem("extended_" + active.id) ? "disabled" : ""}>+ 30MIN</button>
 			<button class="extend-btn" data-mins="60" ${localStorage.getItem("extended_" + active.id) ? "disabled" : ""}>+ 60MIN</button>
 		</div>` : ""}
-		${flipLink}
 		<button id="here-btn">${locationIcon} ${actionLabel}</button>
 		<button class="button-shallow margin-top-10" id="back-btn">Voltar</button>
 		${!isOwner ? `<p class="card-sub margin-top-10" style="font-size:0.75em">Por favor permite que este browser confirme a tua localização</p>` : ""}
@@ -177,12 +177,12 @@ function renderAvailable(court) {
 		${descriptionLine}
 		<div class="divider"></div>
 		<p class="margin-bottom-20 card-sub">Informa os outros jogadores quanto tempo pretendes usar o campo</p>
+		${flipLink}
 		<div class="duration-grid margin-bottom-10">
 			<button class="dur-btn selected" data-mins="45">45MIN</button>
 			<button class="dur-btn" data-mins="60">60MIN</button>
 			<button class="dur-btn" data-mins="90">90MIN</button>
 		</div>
-		${flipLink}
 		<button id="checkin-btn"><img src="images/icon_run.svg" class="link-icon" alt=""> Começar jogo</button>
 	`;
 
@@ -271,7 +271,7 @@ async function finishOwnGame(court, reservationId) {
 
 	app.innerHTML = `
 		<div class="info-hero">
-			<img src="images/pig_sitting.svg" class="info-pig" alt="">
+			<img src="images/pig_serving.svg" class="info-pig" alt="">
 		</div>
 		<p class="bom-jogo">OBRIGADO</p>
 		<p class="info-sub1 margin-top-10" style="font-size:1.5em">Por avisar que o campo ficou livre.</p>
@@ -314,10 +314,20 @@ async function checkIn(court) {
 
 	const endsAt = new Date(Date.now() + selectedDuration * 60 * 1000).toISOString();
 
+	// TIE THE WALK-IN TO THE ACCOUNT WHEN THERE IS ONE SO IT REACHES THE PLAYER'S HISTORY ON ANY DEVICE.
+	// VISITORS STAY ANONYMOUS — device_id IS THE ONLY HANDLE WE HAVE, AND WE HAVE NO NAME TO ASK FOR.
+	const { data: { session } } = await db.auth.getSession();
+	const user = session?.user;
+	const { data: profile } = user
+		? await db.from("profiles").select("name").eq("id", user.id).single()
+		: { data: null };
+
 	const { error } = await db.from("walk_ins").insert({
 		court_id: courtId,
 		ends_at: endsAt,
 		device_id: getDeviceId(),
+		player_id: user?.id ?? null,
+		player_name: profile?.name ?? null,
 	});
 
 	if (error) {

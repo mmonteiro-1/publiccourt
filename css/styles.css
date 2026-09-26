@@ -88,6 +88,7 @@ body {
 
 .margin-top-5 { margin-top: 5px; }
 .margin-top-10 { margin-top: 10px; }
+.margin-top-20 { margin-top: 20px; }
 
 .margin-bottom-10 { margin-bottom: 10px; }
 .margin-bottom-20 { margin-bottom: 20px; }
@@ -178,7 +179,9 @@ body {
 	display: none;
 }
 
-.page-court.success .logo-pig {
+/* ONE PIG ON SCREEN AT A TIME: THE LOGO PIG STEPS ASIDE WHENEVER ANOTHER PIG IS VISIBLE — A PIG APPEARANCE OR
+   A SUCCESS SCREEN PIG. APPEARANCES INSIDE A [hidden] VIEW OR PANE DON'T COUNT, SO SWITCHING TABS NEEDS NO JS */
+body:has(.pig-appearance:not([hidden] *), .info-pig) .logo-pig {
 	opacity: 0;
 }
 
@@ -251,6 +254,8 @@ header {
 .header-profile img {
 	height: 25px;
 	width: auto;
+	background: var(--white);
+	border-radius: 50%;
 }
 
 /* THE COURT LIST HAS NO BODY SIDE PADDING, SO THE ICON NEEDS ITS OWN INSET */
@@ -403,7 +408,8 @@ header {
 	display: none;
 }
 
-.empty {
+.empty,
+.pig-appearance {
 	position: absolute;
 	top: 50%;
 	left: 50%;
@@ -415,11 +421,12 @@ header {
 	flex-direction: column;
 	align-items: center;
 	gap: 10px;
+	padding: 0 40px;
 }
 
-.empty-pig {
-	height: 80px;
-	width: auto;
+.pig-appearance img {
+	max-height: 160px;
+	max-width: 160px;
 }
 
 
@@ -761,9 +768,17 @@ header {
 
 .page-login,
 .page-profile {
-	justify-content: center;
 	align-items: center;
-	padding: 40px;
+	padding: 20px;
+	padding-bottom: 90px;
+}
+
+.page-login {
+	justify-content: center;
+}
+
+.page-profile .card-sub {
+	color: var(--black);
 }
 
 .page-login header,
@@ -771,8 +786,17 @@ header {
 	margin-bottom: 0;
 }
 
-.page-login #app,
+.page-login #app {
+	margin-top: auto;
+	margin-bottom: auto;
+}
+
+/* TOP-ANCHORED, NOT CENTRED: THE PROFILE'S VIEWS DIFFER IN HEIGHT, AND CENTRING MADE THE PAGE JUMP ON EVERY SWITCH */
 .page-profile #app {
+	margin-top: 20px;
+}
+
+.page-profile.onboarding #app {
 	margin-top: auto;
 	margin-bottom: auto;
 }
@@ -794,6 +818,18 @@ header {
 	background: var(--muted-input);
 	color: var(--black);
 	outline: none;
+}
+
+/* NO +/- SPINNER ON NUMBER INPUTS (NIF, PRICE) — THEY'RE TYPED, NEVER STEPPED */
+input[type="number"] {
+	appearance: textfield;
+	-moz-appearance: textfield;
+}
+
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+	-webkit-appearance: none;
+	margin: 0;
 }
 
 /* CUSTOM DROPDOWN BUILT BY js/custom-select.js — THE NATIVE <select> STAYS HIDDEN INSIDE .select */
@@ -855,17 +891,37 @@ header {
 
 /* === PROFILE === */
 .profile-name {
-	font-size: 2em;
-	font-weight: 700;
-	text-align: center;
+	font-size: 1.5em;
 }
 
 .profile-email {
-	font-size: 0.8em;
 	font-weight: 400;
-	color: var(--gray);
-	text-align: center;
-	margin-bottom: 5px;
+}
+
+.page-profile .info-link img {
+	filter: invert(1);
+}
+
+/* THE PROFILE PAGE CENTRES ITS CONTENT; WITHOUT A WIDTH THE FORM WOULD SHRINK TO ITS INPUTS */
+.page-profile #app {
+	width: 100%;
+}
+
+/* #app IS A PLAIN BLOCK HERE, SO THE FLEX TOGGLE WOULD OTHERWISE STRETCH TO FULL WIDTH */
+.page-profile .view-toggle {
+	width: fit-content;
+}
+
+.profile-form {
+	display: flex;
+	flex-direction: column;
+	gap: 15px;
+	margin: 20px 0;
+}
+
+/* .card-sub'S DEFAULT MUTED WHITE IS MEANT FOR THE GREEN COURT CARD, NOT THE PINK PROFILE PAGE */
+.profile-form .card-sub {
+	color: var(--black);
 }
 
 /* === ONBOARDING === */

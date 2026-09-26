@@ -237,13 +237,10 @@ function renderGrid() {
 		? [sorted.find(c => c.id === myCourtId), ...sorted.filter(c => c.id !== myCourtId)].filter(Boolean)
 		: sorted;
 
-	const logoPig = document.querySelector(".logo-pig");
 	if (finalSorted.length) {
 		grid.innerHTML = finalSorted.map(court => renderCourtCard(court, latestActiveMap[court.id], court.id === myCourtId)).join("");
-		if (logoPig) logoPig.style.opacity = "";
 	} else {
-		setEmptyState(grid, "Removeste todos<br> os filtros, Zé.");
-		if (logoPig) logoPig.style.opacity = "0";
+		setPigAppearance(grid, "Removeste todos<br> os filtros, Zé.");
 	}
 
 }

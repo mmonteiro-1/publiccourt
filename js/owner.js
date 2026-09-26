@@ -4,15 +4,19 @@ const app = document.getElementById("app");
 // IN-MEMORY CACHE OF ALL OWNER DATA; POPULATED ONCE ON LOAD, PATCHED IN-PLACE AFTER SAVES
 let ownerData = null;
 
+// PIG APPEARANCES
+const MSG_NO_PENDING = "Sem solicitações pendentes";
+const MSG_NO_MEMBERS = "Nenhum membro ativo infelizmente.";
+const MSG_NO_UPCOMING = "Sem reservas agendadas";
+const MSG_NO_PAST = "Sem jogos passados";
 
-// "SAB, 26/09, 10:30-12:00" — SHARED BY THE MEMBERS AND BOOKINGS CARDS SO BOTH READ THE SAME
-function bookingLabel(booking) {
-	const s = new Date(booking.start_at);
-	const e = new Date(booking.end_at);
-	const pad = n => String(n).padStart(2, "0");
-	const time = d => `${pad(d.getHours())}:${pad(d.getMinutes())}`;
-	return `${WEEKDAYS[s.getDay()]}, ${pad(s.getDate())}/${pad(s.getMonth() + 1)}, ${time(s)}-${time(e)}`;
-}
+// MEMBERSHIP AND BOOKING CARDS
+const MSG_MEMBER_SINCE = date => `Membro desde ${date}`;
+const MSG_NO_EXPIRY = "Sem data de expiração";
+const MSG_NO_NEXT_GAME = "Sem jogos agendados";
+const MSG_DENY_REASON = "Motivo da recusa (opcional)";
+const MSG_REVOKE_WARNING = name => `Esta ação não pode ser revertida. As reservas futuras de ${name} serão canceladas e ${name} será comunicado por email.`;
+const MSG_CANCEL_WARNING = name => `Esta ação não pode ser revertida. ${name} será notificado.`;
 
 const MEMBERSHIP_DURATION_OPTIONS = [
 	{ label: "Sem validade", months: "" },
@@ -36,7 +40,6 @@ const MIN_GAME_DURATION_OPTIONS = [
 ];
 
 // SWITCH BETWEEN THE PENDING / MEMBERS / RULES TABS; HIDES ALL VIEWS THEN SHOWS THE ONE REQUESTED
-// SYNC LOGO PIG HERE — RENDER FUNCTIONS RUN IN PARALLEL SO THEIR HIDE/SHOW CALLS WOULD FIGHT EACH OTHER
 function showView(view) {
 	document.querySelectorAll(".owner-view").forEach(el => el.hidden = true);
 	const active = document.getElementById(`view-${view}`);
@@ -44,8 +47,6 @@ function showView(view) {
 	document.querySelectorAll(".owner-nav-btn").forEach(btn => {
 		btn.classList.toggle("active", btn.dataset.view === view);
 	});
-	const logoPig = document.querySelector(".logo-pig");
-	if (logoPig) logoPig.style.opacity = active.querySelector(".empty-pig") ? "0" : "";
 }
 
 // LOAD ALL OWNER DATA IN ONE BATCH; REDIRECTS TO PROFILE IF THE USER OWNS NO GROUPS
@@ -179,7 +180,7 @@ function renderPendingView() {
 	const { pending, profiles, courtsByGroup } = ownerData;
 
 	if (pending.length === 0) {
-		setEmptyState(container, "Sem solicitações<br>pendentes");
+		setPigAppearance(container, MSG_NO_PENDING);
 		return;
 	}
 
@@ -208,7 +209,7 @@ function renderPendingView() {
 					<button class="button-shallow deny-btn" data-id="${m.id}">Recusar</button>
 				</div>
 				<div class="deny-form" id="deny-form-${m.id}" hidden>
-					<input class="form-input" id="deny-reason-${m.id}" placeholder="Motivo da recusa (opcional)" type="text">
+					<input class="form-input" id="deny-reason-${m.id}" placeholder="${MSG_DENY_REASON}" type="text">
 					<button class="confirm-deny-btn" data-id="${m.id}">Confirmar recusa</button>
 				</div>
 			</div>
@@ -241,7 +242,7 @@ function renderMembersView() {
 	const { approved, profiles, courtsByGroup } = ownerData;
 
 	if (approved.length === 0) {
-		setEmptyState(container, "Nenhum membro ativo<br>infelizmente.");
+		setPigAppearance(container, MSG_NO_MEMBERS);
 		return;
 	}
 
@@ -255,7 +256,7 @@ function renderMembersView() {
 		const expiresDate = m.expires_at ? new Date(m.expires_at).toLocaleDateString("pt-PT") : null;
 		const nextBooking = nextBookingByPlayer[m.player_id];
 		const bookingCount = ownerData.bookingCountByPlayer[m.player_id] || 0;
-		const nextGameLabel = nextBooking ? bookingLabel(nextBooking) : "Sem jogos agendados";
+		const nextGameLabel = nextBooking ? gameLabel(nextBooking.start_at, nextBooking.end_at) : MSG_NO_NEXT_GAME;
 		return `
 			<div class="membership-card" data-id="${m.id}">
 				<div class="membership-player-row">
@@ -263,18 +264,18 @@ function renderMembersView() {
 					<div class="membership-hole"></div>
 				</div>
 				<div class="membership-date-row">
-					<p class="membership-date">Membro desde ${approvedDate}</p>
+					<p class="membership-date">${MSG_MEMBER_SINCE(approvedDate)}</p>
 					<a class="revoke-btn uppercase" style="color: var(--orange)" data-id="${m.id}" href="#">Revogar</a>
 				</div>
 				<div class="divider"></div>
 				<div class="membership-data">
 					<p class="membership-courts"><img src="images/icon_court.svg" class="link-icon" alt="">${courtNames}</p>
-					<p class="membership-date">${expiresDate ? `<img src="images/icon_timer.svg" class="link-icon" alt=""> ${expiresDate}` : "Sem data de expiração"}</p>
+					<p class="membership-date">${expiresDate ? `<img src="images/icon_timer.svg" class="link-icon" alt=""> ${expiresDate}` : MSG_NO_EXPIRY}</p>
 					<p class="membership-date"><img src="images/icon_calendar_tennis.svg" class="link-icon" alt="">${nextGameLabel}</p>
 					<p class="membership-date"><img src="images/icon_history.svg" class="link-icon" alt="">${bookingCount} ${bookingCount === 1 ? "reserva" : "reservas"}</p>
 				</div>
 				<div class="revoke-confirm" id="revoke-confirm-${m.id}" hidden>
-					<p class="margin-top-10 margin-bottom-10">Esta ação não pode ser revertida. As reservas futuras de ${playerName} serão canceladas e ${playerName} será comunicado por email.</p>
+					<p class="margin-top-10 margin-bottom-10">${MSG_REVOKE_WARNING(playerName)}</p>
 					<div class="membership-actions">
 						<button class="confirm-revoke-btn" data-id="${m.id}"><img src="images/icon_death.svg" class="link-icon margin-left-5" alt="">Revogar</button>
 						<button class="button-shallow cancel-revoke-btn" data-id="${m.id}">Cancelar</button>
@@ -333,14 +334,12 @@ function renderBookingsView() {
 			if (btn.dataset.mode === bookingsMode) return;
 			bookingsMode = btn.dataset.mode;
 			renderBookingsView();
-			// RE-SYNCS THE LOGO PIG, WHICH HIDES WHEN THE VIEW SHOWS THE EMPTY-STATE PIG
-			showView("bookings");
 		});
 	});
 
 	const listEl = container.querySelector(".bookings-list");
 	if (list.length === 0) {
-		setEmptyState(listEl, isPast ? "Sem jogos<br>passados" : "Sem reservas<br>agendadas");
+		setPigAppearance(listEl, isPast ? MSG_NO_PAST : MSG_NO_UPCOMING);
 		return;
 	}
 
@@ -352,7 +351,7 @@ function renderBookingsView() {
 		const cancelAnchor = isPast ? "" : `<a class="cancel-booking-anchor uppercase" style="color: var(--orange)" data-id="${b.id}" href="#">Cancelar</a>`;
 		const cancelConfirm = isPast ? "" : `
 			<div class="cancel-booking-confirm" id="cancel-booking-confirm-${b.id}" hidden>
-				<p class="margin-top-10 margin-bottom-10">Esta ação não pode ser revertida. ${playerName} será notificado.</p>
+				<p class="margin-top-10 margin-bottom-10">${MSG_CANCEL_WARNING(playerName)}</p>
 				<div class="membership-actions">
 					<button class="confirm-cancel-booking-btn" data-id="${b.id}"><img src="images/icon_death.svg" class="link-icon" alt="">Cancelar</button>
 					<button class="button-shallow back-cancel-booking-btn" data-id="${b.id}">Voltar</button>
@@ -366,7 +365,7 @@ function renderBookingsView() {
 				<p class="membership-courts"><img src="images/icon_court.svg" class="link-icon" alt="">${courtName}</p>
 				<div class="divider ticket-divider"></div>
 				<div class="membership-date-row">
-					<p class="membership-date"><img src="images/${isPast ? "icon_history" : "icon_calendar_tennis"}.svg" class="link-icon" alt="">${bookingLabel(b)}</p>
+					<p class="membership-date"><img src="images/${isPast ? "icon_history" : "icon_calendar_tennis"}.svg" class="link-icon" alt="">${gameLabel(b.start_at, b.end_at)}</p>
 					${cancelAnchor}
 				</div>
 				${cancelConfirm}

@@ -21,7 +21,7 @@ login.html / js/login.js
 profile.html / js/profile.js
 info.html
 
-js/utils.js           — shared helpers: setEmptyState, formatTime, minutesLeft, getDeviceId, cityHtml
+js/utils.js           — shared helpers: setPigAppearance, gameLabel, formatTime, minutesLeft, getDeviceId, cityHtml
 js/secondary-card.js  — secondary info card (rules, hours, city)
 js/slot-picker.js     — booking slot selection UI
 js/weather.js         — Open-Meteo daily forecast → one icon per day (rain/sunny/part_cloudy/cloudy), 3h localStorage cache
@@ -48,6 +48,7 @@ Branch: `bookable-mvp` — building the court booking flow for courts that requi
 - **Dev server:** `npx http-server` on port 8080
 - **Screenshots:** Skip Puppeteer/screenshot verification for mechanical CSS edits. Use it only when the visual outcome is genuinely uncertain (new layout, new component, tricky CSS interaction)
 - **No over-engineering:** No abstractions beyond what the task needs. No error handling for impossible cases. No comments explaining what code does — only WHY when non-obvious
+- **Supabase renames:** There is one database shared by every branch and by production. Renaming a table or column while working on a branch breaks `main` the moment it's applied — the deployed code still queries the old name. Never rename in place. Add the new name alongside the old, update every branch, then drop the old one once nothing references it. The same applies to dropping columns and tightening RLS
 - **Player-facing copy:** always put messages shown to players in `MSG_*` constants at the top of the file (see `court-bookable.js`), never inline in templates. When the text needs dynamic parts, make the constant a small function (e.g. `MSG_SIBLINGS = courtLinks => \`...\``)
 
 ### CSS Rules
@@ -85,15 +86,16 @@ Branch: `bookable-mvp` — building the court booking flow for courts that requi
 - `player_id` → `auth.users.id`
 - RLS: players read/insert/cancel own; approved members can read all bookings for their group's courts; cancel (UPDATE) only allowed when `start_at > now()`
 
-**walk_ins** — `id uuid, court_id int4, device_id uuid, player_name text, started_at timestamptz, ends_at timestamptz, manual_finished_at timestamptz`
+**walk_ins** — `id uuid, court_id int4, device_id uuid, player_id uuid, player_name text, started_at timestamptz, ends_at timestamptz, manual_finished_at timestamptz`
 - No auth — fully open RLS (SELECT/INSERT/UPDATE/DELETE all `true`)
 - Active when `manual_finished_at IS NULL AND ends_at > now()`
-- `player_name` is collected at walk-in time (not from profiles)
+- `player_name` is only set for logged-in players (taken from their profile). Visitors are anonymous — we have no name to ask for, so it stays `null`
+- `player_id` → `auth.users.id`, nullable. Set when a logged-in player starts a walk-in; anonymous walk-ins leave it `null` and are identified by `device_id` alone. On login the device's unclaimed walk-ins are adopted (`player_id = auth.uid()` where `device_id` matches and `player_id IS NULL`), so history survives the switch from visitor to account — per device only
 
 **profiles** — `id uuid, name text, phone text, nif text, created_at timestamptz`
 - `id` = `auth.users.id`; created on first onboarding
-- `phone` and `nif` collected but not yet used in the UI
-- RLS: players read/insert own; owners can read profiles of their approved members
+- `phone` and `nif` collected at onboarding, editable on the player profile, shown to owners on pending request cards
+- RLS: players read/insert/update own; owners can read profiles of their approved members
 
 ## Backend Services
 
@@ -130,7 +132,8 @@ Used exclusively inside edge functions. Not called from the frontend.
 
 - Single global CSS file (`css/styles.css`) — no scoped or component CSS
 - Each HTML page loads its own JS file + shared utils (`utils.js`, `config.js`, etc.)
-- Empty states use `setEmptyState(container, message)` from `utils.js` (pig mascot)
+- **Pig appearances:** whenever the pig shows up with a message (empty lists, but also informing the player), use `setPigAppearance(container, message)` from `utils.js`. Defaults to `pig_sitting`; pass a third argument for another image, e.g. `setPigAppearance(el, MSG_X, "pig_serving")`
+- **One pig at a time:** the header's logo pig hides whenever another pig is visible (a `.pig-appearance` or a success screen's `.info-pig`). It's a single CSS `:has()` rule; appearances inside a `[hidden]` view don't count, so pages need no JS to keep it in sync
 - Icons are inline SVGs loaded from `images/icon_*.svg` via `fetch` or `<img>` tags
 - `device_id` in `localStorage` identifies the device for walk-in ownership
 - Supabase anon key is intentionally public (RLS handles access control)
@@ -150,6 +153,40 @@ Not all owners need the same information from a player. Some just need a name, o
 The specific degrees aren't defined yet, but the two systems are independent — a court can be any combination of complexity and burocracia level.
 
 When a court's burocracia level requires document verification, documents are never uploaded to the platform. The player delivers them in person to the owner, who verifies them offline. Campo Livre only stores the outcome: a **Verificado** tag on the player's profile, set manually by the owner. The platform is a record of trust, not a document vault.
+
+### Activity stats — a reason to use Campo Livre beyond booking
+
+Future exploration, not planned yet. Walk-ins and bookings now give every player, visitor or logged in, a record of court, start time and duration. That's enough for personal activity stats: hours played per week or month, streaks, favourite courts, usual time of day. For a player who never books, this could be the main reason to open the app.
+
+- **Data quality:** walk-in duration is whatever the player chose (45/60/90) unless they tap "Terminar jogo atual", and a booking doesn't prove anyone showed up (no-shows). Stats measure declared time on court, not time played.
+- **Activity, never health (decided):** health data is a GDPR special category (Art. 9). It needs explicit consent, an impact assessment and stricter security, and EU courts read "concerning health" broadly, including indirect inferences. Minutes on court are ordinary personal data. What would tip it over: calories or other physiological estimates, heart rate, wearable or Apple Health / Google Fit integration, fitness scores, or anything implying a condition. Copy says "estatísticas de atividade", never "saúde". Anything beyond counting time on court needs a legal opinion first.
+- **Behind the login wall:** stats are for logged-in players only, while the plain game history stays open to visitors. This is for engagement: stats become a reason to create an account for players who'd never book. It's also for accuracy: a visitor's record covers one device and vanishes when storage is cleared, whereas account data follows the player across devices (older device walk-ins are claimed on login). Stats built on the account are ones worth trusting.
+
+**Metrics the current data supports** (court, start, duration, public/booked, court city):
+- **Volume:** hours per week, month and year, with the change against the previous period ("+2h que o mês passado"); game count; average game length; personal records (longest game, best week)
+- **Consistency:** weekly streak (weeks in a row with at least one game; daily streaks would punish normal tennis rhythms); active days per month; calendar heatmap
+- **Habits:** favourite court, weekday and time of day (manhã / tarde / noite); public vs booked split
+- **Exploration:** distinct courts played, and cities collected, where each new city unlocks its flag (`flag_*.svg` already exists). Playful, and it pushes players to try new courts, which helps the platform
+- **Suggested first set:** hours this month with the change against last month, weekly streak, favourite court, cities collected. One number or badge each, covering volume, consistency, habit and exploration
+- **Not available yet:** who you played with, match results, singles vs doubles. Needs new data, which the post-game card below could collect
+
+### Player progress — "duolingoization"
+
+Builds on activity stats. Short, interactive questions after each game collect the data we're missing, and answering becomes the engagement loop. Over time this builds up a sense of player progress.
+
+- **Moment:** there are no push notifications, so the card appears on the next app open after a game ends. The pig asks ("Como correu a partida de sábado?"). The pig is our Duo owl, which gives the Rive animation todo a real purpose.
+- **Questions:** one tap each, three at most, always skippable
+  - "Jogaste os 60 min?" confirms the real duration and fixes the declared-duration data-quality problem
+  - "Singulares ou pares?"
+  - "Ganhaste / perdeste / só treino?"
+  - Maybe a 1–5 "Como foi o jogo?". Never ask about fatigue, pain or injury, which drifts back into health data
+- **Progress layer:** points per game and per answered card, levels, the weekly streak, city flags as badges
+- **Rain freeze:** our take on Duolingo's streak freeze. We already fetch the forecast (`weather.js`), so a rainy week doesn't break the streak
+- **Risks:**
+  - Nagging: show the card once per game, then drop it. A card on every open trains people to stop opening the app
+  - Honesty: self-reported results are fine for personal progress, but they rule out leaderboards
+  - Tone: too much confetti feels childish. The pig's cheeky voice ("batotas", "porreiríssimo") should carry it, not badges everywhere
+- **Where to start:** only the post-game card (duration, singles/doubles, result) stored on the game row, with no points or levels. It pays off alone by making stats more accurate, and it shows whether players actually answer before a progression system is built on top. Since stats are behind the login wall, answering is also the natural moment to prompt visitors to make an account ("guarda o teu progresso")
 
 ## Open Questions
 
@@ -200,9 +237,15 @@ Supabase Auth is already included — magic link is a built-in provider, no extr
 
 **Return to court:** "Fazer login" on a court page stores that page in `localStorage.returnTo`; `profile.js` reads and clears it once the session exists (after onboarding for new players). One-shot, and only works if the magic link is opened in the **same browser** that requested it — a link opened on another device lands on the profile instead.
 
-**Profile entry points:** skull icon (`icon_skull.svg`, placeholder) in the header — court list and court pages link to `profile.html` (logged-out visitors get sent on to login); in `owner.html` it opens the dashboard's own profile view (replaced the old gear tab in the nav).
+**Profile entry points:** avatar icon (`icon_avatar.svg`) in the header — court list and court pages link to `profile.html`; in `owner.html` it opens the dashboard's own profile view (replaced the old gear tab in the nav).
+
+**Visitors on `profile.html`:** a logged-out visitor is no longer redirected to login. `showVisitor()` renders their walk-in history (matched on `device_id`) plus a "Fazer login" button, because someone who only plays walk-ins still has a history worth seeing and no reason to make an account. An explicit **Terminar sessão** still goes to `login.html` — that's a deliberate exit, not a browse.
 
 **Redirect URL allowlist:** Supabase only returns magic links to URLs listed in Authentication → URL Configuration → Redirect URLs. Local IPs are there; Vercel URLs (production + preview wildcard) must be too, or links sent from the deploy fall back to the Site URL (a local IP).
+
+**Testing a logged-in walk-in locally — the localhost/LAN-IP trap:** geolocation needs a secure context, so the walk-in check-in only works on `localhost`, never on `192.168.x.x` over HTTP. But magic links redirect to the LAN IP, which stores the session on *that* origin. Sessions and `device_id` are per-origin, so a check-in done on `localhost` sees no session (`player_id` stays null) and a different `device_id` (the "is this my game?" check fails, showing the visitor copy). Neither is a bug — it's two origins.
+
+To test properly, add `http://localhost:8080/profile.html` to the Redirect URLs and log in from `localhost:8080`, so login and check-in share one origin. Use the LAN IP only for testing on a real phone, where the walk-in's location step won't work anyway.
 
 ### Sessions
 
@@ -258,17 +301,23 @@ Sessions are kept alive indefinitely for active users. Supabase auto-refreshes t
 - [ ] Add success pig views after booking and after cancelling a booking
 - [ ] Player profile page (`profile.html`)
   - [x] Magic link returns the player to the court they started login from (`localStorage.returnTo`)
-  - [x] Header skull icon links to the profile (player) / opens the dashboard profile view (owner, replaces the gear nav tab)
+  - [x] Header avatar icon links to the profile (player) / opens the dashboard profile view (owner, replaces the gear nav tab)
   - [ ] Add the Vercel production + preview URLs to Supabase's auth Redirect URLs
   - [ ] Test the loop for a new user (onboarding → back to court) and a returning user (straight back to court)
     - [x] Returning user lands back on the court
     - [ ] New user stayed on the profile after onboarding — confirm whether login started from a court page and the link opened in the same browser
   - [ ] Check what happens when a new user leaves mid-onboarding (e.g. via "Voltar"): no `profiles` row exists yet, so they're logged in but nameless — court pages fall back to "jogador", and booking/membership requests may go through without a name for the owner
-  - [ ] View and edit personal info (name, phone, NIF)
-  - [ ] "Teus jogos passados": booking history (`bookings` by `player_id = auth.uid()`) plus walk-in history
-    - [ ] Save the logged-in player's id on new walk-ins (new `walk_ins.player_id` column) — a player can be both booking and walk-in, so history follows the account; older walk-ins stay device-only
+  - [x] View and edit personal info (name, phone, NIF) — email shown read-only; save disabled until something changes, name required
+    - [x] Confirm `profiles` has an UPDATE policy for the player's own row — saving works
+  - [x] "Teus jogos passados": booking history (`bookings` by `player_id = auth.uid()`) plus walk-in history
+    - [x] Add nullable `walk_ins.player_id` column
+    - [x] Write `player_id` (and `player_name` from the profile) on new walk-ins when a session exists
+    - [x] Claim the device's anonymous walk-ins on login (`device_id` match, `player_id IS NULL`) — runs on every `profile.html` load, no-op once nothing is unclaimed
+    - [x] History is shown to visitors too — no login required. Visitor query is by `device_id`, logged-in query is by `player_id`. Walk-ins from a device the player never logs in on stay anonymous
+    - [ ] Test: a walk-in started while logged in fills `player_id`
+    - [x] Tested: logging in claims the device's older anonymous walk-ins
   - [ ] Upcoming game alerts (billing alerts once billing exists)
-  - [ ] Replace the placeholder skull icon
+  - [x] Replace the placeholder skull icon (`icon_avatar.svg`)
 - [ ] Get the owner to see the player booking and modify it
   - [x] Owner queries `bookings` for courts in their `court_groups` (bookings tab, default view)
   - [x] Owner sees the exact same availability calendar as the player (read-only picker in each court-rules-card, player names on occupied slots)
@@ -290,7 +339,7 @@ Sessions are kept alive indefinitely for active users. Supabase auto-refreshes t
 - [ ] Polish pig mascot with Rive animations
   - [ ] Animate existing pig SVG in Rive editor (idle loop + reaction states)
   - [ ] Export `.riv` and integrate via `@rive-app/canvas` runtime
-  - [ ] Replace static pig in `setEmptyState` with animated Rive canvas
+  - [ ] Replace static pig in `setPigAppearance` with animated Rive canvas
 
 ## Booking Flow — Implementation Plan
 
