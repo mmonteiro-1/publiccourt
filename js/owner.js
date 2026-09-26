@@ -198,19 +198,19 @@ function renderPendingView() {
 					<div class="membership-hole"></div>
 				</div>
 				<p class="membership-courts"><img src="images/icon_court.svg" class="link-icon" alt="">${courtNames}</p>
-				<div class="divider ticket-divider"></div>
+				<div class="divider"></div>
 				<div class="membership-data">
 					<p class="membership-date"><img src="images/icon_calendar_pen.svg" class="link-icon" alt="">${date}</p>
 					${phoneLine}
 					${nifLine}
 				</div>
 				<div class="membership-actions">
-					<button class="approve-btn" data-id="${m.id}">Aprovar</button>
-					<button class="button-shallow deny-btn" data-id="${m.id}">Recusar</button>
+					<button class="approve-btn" data-id="${m.id}"><img src="images/icon_handshake.svg" class="link-icon" alt="">Aprovar</button>
+					<button class="button-shallow deny-btn" data-id="${m.id}"><img src="images/icon_military.svg" class="link-icon" alt="">Recusar</button>
 				</div>
 				<div class="deny-form" id="deny-form-${m.id}" hidden>
-					<input class="form-input" id="deny-reason-${m.id}" placeholder="${MSG_DENY_REASON}" type="text">
-					<button class="confirm-deny-btn" data-id="${m.id}">Confirmar recusa</button>
+					<input class="form-input margin-bottom-10" id="deny-reason-${m.id}" placeholder="${MSG_DENY_REASON}" type="text">
+					<button class="confirm-deny-btn" data-id="${m.id}"><img src="images/icon_military.svg" class="link-icon" alt="">Confirmar recusa</button>
 				</div>
 			</div>
 		`;
@@ -225,6 +225,8 @@ function renderPendingView() {
 		btn.addEventListener("click", () => {
 			document.getElementById(`deny-form-${btn.dataset.id}`).hidden = false;
 			btn.hidden = true;
+			// ONCE THE OWNER STARTS DENYING, APPROVE IS NO LONGER A CHOICE ON THIS CARD
+			btn.closest(".membership-card").querySelector(".approve-btn").hidden = true;
 		});
 	});
 
@@ -806,7 +808,7 @@ async function approveMembership(id) {
 		.update({ status: "approved", approved_at: approvedAt, expires_at: expiresAt })
 		.eq("id", id);
 
-	if (error) { btn.disabled = false; btn.textContent = "Aprovar"; return; }
+	if (error) { btn.disabled = false; btn.innerHTML = '<img src="images/icon_handshake.svg" class="link-icon" alt="">Aprovar'; return; }
 
 	// FIRE THE NOTIFICATION EDGE FUNCTION AFTER THE DB WRITE SUCCEEDS
 	await db.functions.invoke("notify-membership", { body: { membershipId: id } });
@@ -824,7 +826,7 @@ async function denyMembership(id, reason) {
 		.update({ status: "denied", denied_reason: reason || null })
 		.eq("id", id);
 
-	if (error) { btn.disabled = false; btn.textContent = "Confirmar recusa"; return; }
+	if (error) { btn.disabled = false; btn.innerHTML = '<img src="images/icon_military.svg" class="link-icon" alt="">Confirmar recusa'; return; }
 
 	await db.functions.invoke("notify-membership", { body: { membershipId: id } });
 	card.remove();

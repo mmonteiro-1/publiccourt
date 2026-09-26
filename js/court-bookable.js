@@ -8,7 +8,7 @@ const MSG_MEMBER = "És membro deste campo.";
 // A FUNCTION BECAUSE IT EMBEDS THE LINKED NAMES OF THE GROUP'S OTHER COURTS
 const MSG_SIBLINGS = courtLinks => `Se não encontrares horário aqui, procura em ${courtLinks}.`;
 const MSG_EXPIRED = expiryDate => `O teu passe expirou a ${expiryDate}. Fala com os administradores do campo para o renovar.`;
-const MSG_NO_MEMBERSHIP ="Este campo é exclusivo para membros registados. Podes solicitar acesso agora.";
+const MSG_NO_MEMBERSHIP = "Este campo é exclusivo para membros. Podes solicitar acesso aos administradores.";
 const MSG_NOT_LOGGED = `Este campo opera sob o <b>sistema de reservas</b>. <br><br> Para fazeres reserva, o Campo Livre precisa repassar as tuas informações aos administradores do campo. Após aceite, já podes reservar e jogar.`;
 
 // ENTRY POINT: RENDERS THE FULL BOOKABLE COURT VIEW, BRANCHING ON AUTH AND MEMBERSHIP STATUS
@@ -169,7 +169,7 @@ export async function renderBookable(court) {
 		app.innerHTML = `${header}
 			<p class="card-sub margin-bottom-20">${hi(playerName)} ${MSG_DENIED}${reason} Podes solicitar novamente.</p>
 			${flipLink}
-			<button id="reapply-btn">Solicitar novamente</button>
+			<button id="reapply-btn"><img src="images/icon_praying.svg" class="link-icon" alt="">Solicitar novamente</button>
 		`;
 		document.getElementById("reapply-btn").addEventListener("click", () => requestMembership(court, user, app, header, true));
 		return;
@@ -281,7 +281,12 @@ async function requestMembership(court, user, app, header, isReapply) {
 	const { error } = await db.from("memberships").insert(scope);
 
 	if (error) {
-		if (btn) { btn.disabled = false; btn.textContent = isReapply ? "Solicitar novamente" : "Solicitar membership"; }
+		if (btn) {
+			btn.disabled = false;
+			btn.innerHTML = isReapply
+				? '<img src="images/icon_praying.svg" class="link-icon" alt="">Solicitar novamente'
+				: '<img src="images/icon_asking.svg" class="link-icon" alt="">Solicitar acesso';
+		}
 		return;
 	}
 

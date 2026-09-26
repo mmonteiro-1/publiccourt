@@ -17,6 +17,13 @@ const MSG_KIND_BOOKING = "Jogo reservado";
 const MSG_VISITOR_INTRO = "Estes são os jogos começados neste dispositivo. Faz login para os guardares na tua conta e os veres em qualquer lado.";
 const MSG_VISITOR_LOGIN = "Fazer login";
 
+const MSG_VIEW_MEMBERSHIPS = "Os teus campos";
+const MSG_NO_MEMBERSHIPS = "Não és membro de nenhum campo, infelizmente. Bora mudar isso!";
+const MSG_MEMBER_SINCE = date => `Membro desde ${date}`;
+const MSG_NO_EXPIRY = "Sem data de expiração";
+const MSG_NO_NEXT_GAME = "Sem jogos agendados";
+const MSG_BOOKING_COUNT = n => `${n} ${n === 1 ? "reserva" : "reservas"}`;
+
 // ONE-SHOT: THE PAGE A PLAYER STARTED LOGIN FROM (SET BY court-bookable.js). READ AND CLEARED TOGETHER SO
 // A LATER, UNRELATED VISIT TO THE PROFILE ISN'T BOUNCED TO AN OLD COURT
 function takeReturnTo() {
@@ -231,6 +238,57 @@ async function loadHistory(container, user) {
 	}).join("");
 }
 
+// THE PLAYER'S APPROVED MEMBERSHIPS AS THE SAME CARD THE OWNER SEES IN THE MEMBERS TAB (owner.js renderMembersView),
+// WITH THE GROUP NAME WHERE THE OWNER SEES THE PLAYER'S. NO REVOKE LINK — THAT'S THE OWNER'S CALL, NOT THE PLAYER'S
+async function loadMemberships(container, user) {
+	const { data: memberships } = await db.from("memberships")
+		.select("group_id, approved_at, expires_at")
+		.eq("player_id", user.id)
+		.eq("status", "approved");
+	if (!memberships?.length) {
+		setPigAppearance(container, MSG_NO_MEMBERSHIPS, "pig_reaching");
+		return;
+	}
+
+	const groupIds = memberships.map(m => m.group_id);
+	const [{ data: groups }, { data: courts }, { data: bookings }] = await Promise.all([
+		db.from("court_groups").select("id, name").in("id", groupIds),
+		db.from("courts").select("group_id, name").in("group_id", groupIds).eq("active", true).order("group_position"),
+		// ORDERED BY start_at SO THE FIRST NOT-YET-STARTED MATCH PER GROUP IS THE NEXT GAME
+		db.from("bookings").select("group_id, start_at, end_at").eq("player_id", user.id).eq("status", "confirmed").in("group_id", groupIds).order("start_at"),
+	]);
+
+	const now = new Date();
+	container.innerHTML = [...memberships]
+		.sort((a, b) => new Date(b.approved_at) - new Date(a.approved_at))
+		.map(m => {
+			const groupName = (groups ?? []).find(g => g.id === m.group_id)?.name ?? MSG_COURT_UNKNOWN;
+			const courtNames = (courts ?? []).filter(c => c.group_id === m.group_id).map(c => c.name).join(", ");
+			const groupBookings = (bookings ?? []).filter(b => b.group_id === m.group_id);
+			const nextBooking = groupBookings.find(b => new Date(b.start_at) > now);
+			const approvedDate = m.approved_at ? new Date(m.approved_at).toLocaleDateString("pt-PT") : "—";
+			const expiresDate = m.expires_at ? new Date(m.expires_at).toLocaleDateString("pt-PT") : null;
+			return `
+			<div class="membership-card">
+				<div class="membership-player-row">
+					<p class="membership-player">${groupName}</p>
+					<div class="membership-hole"></div>
+				</div>
+				<div class="membership-date-row">
+					<p class="membership-date">${MSG_MEMBER_SINCE(approvedDate)}</p>
+				</div>
+				<div class="divider"></div>
+				<div class="membership-data">
+					<p class="membership-courts"><img src="images/icon_court.svg" class="link-icon" alt="">${courtNames}</p>
+					<p class="membership-date">${expiresDate ? `<img src="images/icon_timer.svg" class="link-icon" alt=""> ${expiresDate}` : MSG_NO_EXPIRY}</p>
+					<p class="membership-date"><img src="images/icon_calendar_tennis.svg" class="link-icon" alt="">${nextBooking ? gameLabel(nextBooking.start_at, nextBooking.end_at) : MSG_NO_NEXT_GAME}</p>
+					<p class="membership-date"><img src="images/icon_history.svg" class="link-icon" alt="">${MSG_BOOKING_COUNT(groupBookings.length)}</p>
+				</div>
+			</div>
+		`;
+		}).join("");
+}
+
 // VISITORS SEE THEIR DEVICE'S WALK-IN HISTORY INSTEAD OF BEING BOUNCED TO THE LOGIN PAGE — SOMEONE WHO
 // ONLY EVER PLAYS WALK-INS STILL HAS A HISTORY WORTH SHOWING, AND LOGGING IN CLAIMS IT (SEE claimDeviceWalkIns)
 function showVisitor() {
@@ -253,7 +311,7 @@ const PROFILE_FIELDS = [
 ];
 
 // RENDERS THE PLAYER PROFILE: GREETING AND EMAIL (READ-ONLY — IT'S THE LOGIN), THEN A TOGGLE BETWEEN
-// THE EDITABLE INFO + LOGOUT PANE AND THE PAST GAMES PANE
+// THREE PANES: PAST GAMES, MEMBERSHIPS, AND EDITABLE INFO + LOGOUT
 function showProfile(user, profile) {
 	document.body.classList.remove("onboarding");
 	app.innerHTML = `
@@ -261,6 +319,7 @@ function showProfile(user, profile) {
 		<p class="profile-email"></p>
 		<div class="view-toggle margin-top-20">
 			<button class="view-toggle-btn active" data-pane="history" aria-label="${MSG_HISTORY_TITLE}"><img src="images/icon_history.svg" alt=""></button>
+			<button class="view-toggle-btn" data-pane="memberships" aria-label="${MSG_VIEW_MEMBERSHIPS}"><img src="images/icon_id.svg" alt=""></button>
 			<button class="view-toggle-btn" data-pane="info" aria-label="${MSG_VIEW_INFO}"><img src="images/icon_avatar.svg" alt=""></button>
 		</div>
 		<div data-pane-body="info" hidden>
@@ -280,11 +339,15 @@ function showProfile(user, profile) {
 		<div data-pane-body="history">
 			<div class="bookings-list margin-top-20"></div>
 		</div>
+		<div data-pane-body="memberships" hidden>
+			<div class="bookings-list margin-top-20"></div>
+		</div>
 	`;
 
-	loadHistory(app.querySelector(".bookings-list"), user);
+	loadHistory(app.querySelector('[data-pane-body="history"] .bookings-list'), user);
+	loadMemberships(app.querySelector('[data-pane-body="memberships"] .bookings-list'), user);
 
-	// BOTH PANES ARE RENDERED ONCE AND ONLY HIDDEN, SO SWITCHING NEITHER LOSES UNSAVED EDITS NOR REFETCHES THE HISTORY
+	// PANES ARE RENDERED ONCE AND ONLY HIDDEN, SO SWITCHING NEITHER LOSES UNSAVED EDITS NOR REFETCHES ANY LIST
 	const toggleBtns = app.querySelectorAll(".view-toggle-btn");
 	toggleBtns.forEach(btn => btn.addEventListener("click", () => {
 		toggleBtns.forEach(b => b.classList.toggle("active", b === btn));

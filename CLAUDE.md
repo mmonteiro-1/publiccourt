@@ -188,6 +188,36 @@ Builds on activity stats. Short, interactive questions after each game collect t
   - Tone: too much confetti feels childish. The pig's cheeky voice ("batotas", "porreiríssimo") should carry it, not badges everywhere
 - **Where to start:** only the post-game card (duration, singles/doubles, result) stored on the game row, with no points or levels. It pays off alone by making stats more accurate, and it shows whether players actually answer before a progression system is built on top. Since stats are behind the login wall, answering is also the natural moment to prompt visitors to make an account ("guarda o teu progresso")
 
+### Court suggestions in the memberships view
+
+Future exploration, not planned yet. The player's memberships view is a natural place to suggest and advertise courts, with prices and promos. The player is already thinking about which courts they belong to, so "courts you could join" reads as help rather than an ad.
+
+- **The empty state becomes the pitch:** "Não és membro de nenhum campo… Bora mudar isso!" is already an invitation, so suggestions sit right under the pig. Players with memberships see them below their own cards.
+- **Walk-in history is the targeting signal:** we know where and when a player uses public courts ("Sábados de manhã em Aveiro. O campo X, a 2 km, tem slots ao sábado por €Y"). It's a direct funnel from free walk-ins to paid bookings, the thing owners care about.
+- **Prices exist, promos don't:** `court_groups.price_per_slot_cents` can go on the card today. Promos ("primeiro jogo grátis", discounts for new members) would be a new owner feature, and a candidate add-on under Degrees of Complexity.
+- **Possible revenue:** owners could pay for placement. Sponsored suggestions must be clearly labelled "patrocinado", both for trust and because EU consumer law requires ads to be identifiable. Keep sponsored and organic suggestions visibly separate.
+- **Limit the clutter:** one or two suggestions at most, always below the player's own cards, and never in the history view.
+
+### Player matchmaking
+
+Future exploration, not planned yet. Finding someone to play with is the main barrier in tennis, and Campo Livre already knows who plays where and when. Possibly the strongest reason of all to use the app.
+
+- **Signals we have:** courts, days, times, frequency, city. **Missing: skill level.** Start with a self-declared level (iniciante / intermédio / avançado); the player progress card's win/loss answers could refine it later.
+- **Flows, lightest to heaviest:**
+  - Open spot on a booking: "falta 1 para pares", and other members can join
+  - Live walk-in signal: "estou no campo, alguém quer jogar?", which fits the app's existing real-time status
+  - "Procuro parceiro" post for a court, day and time
+  - Suggestions: "jogadores com o teu nível que jogam aqui aos sábados"
+- **Fills a data gap:** "who you played with" is missing from activity stats and player progress, and matchmaking records it naturally.
+- **Account required:** anonymous players can't be matched, which is another reason to log in.
+- **Safety and privacy are the real cost:**
+  - A player's routine (where and when they play) is sensitive, so matchmaking is strictly opt-in.
+  - First names only. Never expose the phone number stored in `profiles`.
+  - Contact happens in the app.
+  - Needs blocking and reporting, which is a moderation burden. Minors complicate everything.
+- **Chicken and egg:** matching needs density. Start inside one court group's member base, where players already share a court and an owner who vouches for them. That solves density and trust together.
+- **First step:** an opt-in "falta 1" spot on a booking, visible only to that group's members. Least moderation, most existing trust.
+
 ## Open Questions
 
 ### Edge cases
@@ -316,6 +346,10 @@ Sessions are kept alive indefinitely for active users. Supabase auto-refreshes t
     - [x] History is shown to visitors too — no login required. Visitor query is by `device_id`, logged-in query is by `player_id`. Walk-ins from a device the player never logs in on stay anonymous
     - [ ] Test: a walk-in started while logged in fills `player_id`
     - [x] Tested: logging in claims the device's older anonymous walk-ins
+  - [x] Profile split into three toggle views: history (default), memberships (`icon_id`), personal info
+  - [x] Memberships view: the player's approved memberships, shown as the owner's member card with the group name in place of the player name and no revoke link
+    - [ ] Fix the player member card (details to discuss)
+    - [ ] Show pending requests there too, as a card marked "aguarda aprovação" (ties into the pending approval UX under Open Questions)
   - [ ] Upcoming game alerts (billing alerts once billing exists)
   - [x] Replace the placeholder skull icon (`icon_avatar.svg`)
 - [ ] Get the owner to see the player booking and modify it
@@ -336,6 +370,9 @@ Sessions are kept alive indefinitely for active users. Supabase auto-refreshes t
   - [ ] Flag existing bookings that no longer fit after the owner changes opening hours, pause or slot length (later)
   - [ ] Notify the player when the owner cancels their booking; booking confirmation email (later — Resend sandbox still blocks player emails)
   - [ ] Booking history view — past games for the owner (and eventually played / no-show / paid status)
+- [ ] Test what each page shows after an action (approve, deny, revoke, cancel, book…) — the page often just sits blank
+  - Likely cause: owner.js removes the acted-on card with `card.remove()`, so removing the last one leaves an empty list with no pig appearance. Approving also doesn't move the player into the members tab (or deny into anything) until a reload
+  - Fix options: re-render the view from the patched `ownerData` cache (keeps the pig appearance and cross-tab consistency), or just reload the page after the action
 - [ ] Polish pig mascot with Rive animations
   - [ ] Animate existing pig SVG in Rive editor (idle loop + reaction states)
   - [ ] Export `.riv` and integrate via `@rive-app/canvas` runtime

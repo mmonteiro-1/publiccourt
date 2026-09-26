@@ -258,8 +258,9 @@ header {
 	border-radius: 50%;
 }
 
-/* THE COURT LIST HAS NO BODY SIDE PADDING, SO THE ICON NEEDS ITS OWN INSET */
-.page-court-list .header-profile {
+/* THESE PAGES HAVE NO BODY SIDE PADDING, SO THE ICON NEEDS ITS OWN INSET */
+.page-court-list .header-profile,
+.page-owner .header-profile {
 	right: 20px;
 }
 
@@ -1133,7 +1134,7 @@ input[type="number"]::-webkit-outer-spin-button {
 	font-size: .8em;
 }
 
-.membership-card .link-icon {
+.membership-courts .link-icon, .membership-data .link-icon, .membership-date .link-icon {
 	max-height: 13px;
 	width: 15px;
 	flex-shrink: 0;
@@ -1346,12 +1347,15 @@ input[type="number"]::-webkit-outer-spin-button {
 	width: auto;
 }
 
-.membership-actions button:not(.button-shallow) {
+/* ORANGE MARKS THE DESTRUCTIVE CONFIRMS; APPROVING IS POSITIVE, SO IT KEEPS THE DEFAULT BUTTON LOOK */
+.membership-actions button:not(.button-shallow, .approve-btn),
+.confirm-deny-btn {
 	background: var(--orange);
 	color: var(--white);
 }
 
-.membership-actions button:not(.button-shallow) img {
+.membership-actions button:not(.button-shallow, .approve-btn) img,
+.confirm-deny-btn img {
 	filter: invert(1);
 }
 
