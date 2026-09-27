@@ -17,6 +17,14 @@ const MSG_KIND_BOOKING = "Jogo reservado";
 const MSG_VISITOR_INTRO = "Estes são os jogos começados neste dispositivo. Faz login para os guardares na tua conta e os veres em qualquer lado.";
 const MSG_VISITOR_LOGIN = "Fazer login";
 
+// "ATIVIDADE", NEVER "SAÚDE" — SEE "ACTIVITY, NEVER HEALTH" IN CLAUDE.md
+const MSG_VIEW_STATS = "Estatísticas de atividade";
+const MSG_STATS_EMPTY = "As tuas estatísticas de atividade aparecem aqui depois do primeiro jogo.";
+const MSG_STAT_VS_LAST_MONTH = diff => `${diff} que o mês passado`;
+const MSG_STAT_SAME_MONTH = "O mesmo que o mês passado";
+const MSG_STAT_STREAK = n => `${n} ${n === 1 ? "semana" : "semanas"}`;
+const MSG_STAT_STREAK_HINT = "Com pelo menos um jogo por semana";
+const MSG_STAT_FAVOURITE = n => `${n} ${n === 1 ? "jogo" : "jogos"} aqui`;
 const MSG_VIEW_MEMBERSHIPS = "Os teus campos";
 const MSG_NO_MEMBERSHIPS = "Não és membro de nenhum campo, infelizmente. Bora mudar isso!";
 const MSG_MEMBER_SINCE = date => `Membro desde ${date}`;
@@ -198,35 +206,36 @@ async function fetchHistory(user) {
 	]);
 
 	const now = Date.now();
-	return [
+	const games = [
 		// A WALK-IN STOPPED EARLY STILL CARRIES ITS ORIGINAL (FUTURE) ends_at, SO manual_finished_at WINS
 		...(walkInRows ?? []).map(w => ({ courtId: w.court_id, start: w.started_at, end: w.manual_finished_at ?? w.ends_at, kind: MSG_KIND_WALKIN })),
 		...(bookingRows ?? []).map(b => ({ courtId: b.court_id, start: b.start_at, end: b.end_at, kind: MSG_KIND_BOOKING })),
 	]
-		// A GAME OF 10 MIN OR LESS IS A MIS-TAP OR A WALK-IN ENDED RIGHT AWAY, NOT A GAME WORTH LISTING
-		.filter(game => new Date(game.end).getTime() < now && new Date(game.end) - new Date(game.start) > 10 * 60000)
+		.map(game => ({ ...game, mins: Math.round((new Date(game.end) - new Date(game.start)) / 60000) }))
+		// A GAME OF 10 MIN OR LESS IS A MIS-TAP OR A WALK-IN ENDED RIGHT AWAY — NOT LISTED, AND NOT COUNTED IN STATS
+		.filter(game => new Date(game.end).getTime() < now && game.mins > 10)
 		.sort((a, b) => new Date(b.start) - new Date(a.start));
-}
+	if (!games.length) return games;
 
-// COURT NAMES IN ONE QUERY INSTEAD OF AN EMBEDDED JOIN, WHICH WOULD NEED AN FK ON BOTH SOURCE TABLES
-async function fetchCourtNames(games) {
+	// COURTS IN ONE QUERY INSTEAD OF AN EMBEDDED JOIN, WHICH WOULD NEED AN FK ON BOTH SOURCE TABLES
 	const ids = [...new Set(games.map(game => game.courtId))];
-	const { data } = await db.from("courts").select("id, name").in("id", ids);
-	return Object.fromEntries((data ?? []).map(court => [court.id, court.name]));
+	const { data: courts } = await db.from("courts").select("id, name").in("id", ids);
+	const byId = Object.fromEntries((courts ?? []).map(court => [court.id, court]));
+	return games.map(game => ({ ...game, court: byId[game.courtId] ?? null }));
 }
 
-// TICKET CARDS REUSING THE OWNER DASHBOARD'S MARKUP, SO A GAME LOOKS THE SAME ON BOTH SIDES OF THE APP
-async function loadHistory(container, user) {
-	const games = await fetchHistory(user);
+// TICKET CARDS REUSING THE OWNER DASHBOARD'S MARKUP, SO A GAME LOOKS THE SAME ON BOTH SIDES OF THE APP.
+// TAKES THE fetchHistory PROMISE SO THE STATS VIEW CAN SHARE ONE FETCH
+async function loadHistory(container, gamesPromise) {
+	const games = await gamesPromise;
 	if (!games.length) {
 		setPigAppearance(container, MSG_HISTORY_EMPTY, "pig_serving");
 		return 0;
 	}
 
-	const courts = await fetchCourtNames(games);
 	container.innerHTML = games.map(game => {
-		const mins = Math.round((new Date(game.end) - new Date(game.start)) / 60000);
-		const title = MSG_GAME_TITLE(courts[game.courtId] ?? MSG_COURT_UNKNOWN);
+		const mins = game.mins;
+		const title = MSG_GAME_TITLE(game.court?.name ?? MSG_COURT_UNKNOWN);
 		// white-space: normal BECAUSE .membership-player TRUNCATES TO ONE LINE, AND COURT NAMES CAN BE LONG
 		return `
 		<div class="membership-card">
@@ -241,6 +250,79 @@ async function loadHistory(container, user) {
 	`;
 	}).join("");
 	return games.length;
+}
+
+// "6h30", "45min", "2h" — HOURS ARE THE HEADLINE UNIT, MINUTES ONLY WHEN THEY ADD SOMETHING
+function formatPlayTime(mins) {
+	const h = Math.floor(mins / 60);
+	const m = mins % 60;
+	if (!h) return `${m}min`;
+	return m ? `${h}h${String(m).padStart(2, "0")}` : `${h}h`;
+}
+
+// MONDAY 00:00 OF THE WEEK date FALLS IN, AS A TIMESTAMP — THE KEY FOR THE WEEKLY STREAK
+function weekStart(date) {
+	const d = new Date(date);
+	d.setHours(0, 0, 0, 0);
+	d.setDate(d.getDate() - ((d.getDay() + 6) % 7));
+	return d.getTime();
+}
+
+// WEEKS IN A ROW WITH AT LEAST ONE GAME, ENDING NOW. WEEKLY, NOT DAILY: DAILY STREAKS WOULD PUNISH NORMAL TENNIS
+// RHYTHMS. A CURRENT WEEK WITH NO GAME YET DOESN'T BREAK IT — THE PLAYER STILL HAS UNTIL SUNDAY
+function weeklyStreak(games) {
+	const weeks = new Set(games.map(game => weekStart(game.start)));
+	const cursor = new Date(weekStart(new Date()));
+	if (!weeks.has(cursor.getTime())) cursor.setDate(cursor.getDate() - 7);
+	let streak = 0;
+	while (weeks.has(cursor.getTime())) {
+		streak++;
+		cursor.setDate(cursor.getDate() - 7);
+	}
+	return streak;
+}
+
+// ACTIVITY STATS FROM THE SAME GAMES AS THE HISTORY (ALREADY WITHOUT THE ≤10 MIN ONES). DECLARED TIME ON COURT,
+// NOT TIME PLAYED: A WALK-IN LASTS WHAT THE PLAYER CHOSE UNLESS ENDED EARLY, AND A BOOKING DOESN'T PROVE A SHOW-UP
+async function loadStats(container, gamesPromise) {
+	const games = await gamesPromise;
+	if (!games.length) {
+		setPigAppearance(container, MSG_STATS_EMPTY, "pig_reaching");
+		return;
+	}
+
+	const now = new Date();
+	const thisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+	const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+	const minsBetween = (from, to) => games
+		.filter(game => new Date(game.start) >= from && new Date(game.start) < to)
+		.reduce((sum, game) => sum + game.mins, 0);
+	const minsThisMonth = minsBetween(thisMonth, now);
+	const diff = minsThisMonth - minsBetween(lastMonth, thisMonth);
+	const diffText = diff === 0 ? MSG_STAT_SAME_MONTH : MSG_STAT_VS_LAST_MONTH(`${diff > 0 ? "+" : "-"}${formatPlayTime(Math.abs(diff))}`);
+
+	const streak = weeklyStreak(games);
+
+	// MOST GAMES WINS; TIME ON COURT BREAKS A TIE
+	const perCourt = {};
+	games.filter(game => game.court).forEach(game => {
+		const c = perCourt[game.courtId] ??= { name: game.court.name, games: 0, mins: 0 };
+		c.games++;
+		c.mins += game.mins;
+	});
+	const favourite = Object.values(perCourt).sort((a, b) => b.games - a.games || b.mins - a.mins)[0];
+
+	const statCard = (label, value, detail) => `
+		<div class="membership-card">
+			<p class="membership-date">${label}</p>
+			<p class="membership-player" style="white-space: normal">${value}</p>
+			${detail ? `<div class="membership-date">${detail}</div>` : ""}
+		</div>
+	`;
+	container.innerHTML = [
+		statCard("Este mês", formatPlayTime(minsThisMonth), diffText),
+		statCard("Semanas seguidas", MSG_STAT_STREAK(streak), MSG_STAT_STREAK_HINT),
+		favourite ? statCard("Campo favorito", favourite.name, MSG_STAT_FAVOURITE(favourite.games)) : "",	].join("");
 }
 
 // THE PLAYER'S APPROVED MEMBERSHIPS AS THE SAME CARD THE OWNER SEES IN THE MEMBERS TAB (owner.js renderMembersView),
@@ -309,11 +391,12 @@ function showVisitor() {
 				${loginBtn}
 			</div>
 		</div>
+		<div data-pane-body="stats" hidden>${loginBtn}</div>
 		<div data-pane-body="memberships" hidden>${loginBtn}</div>
 		<div data-pane-body="info" hidden>${loginBtn}</div>
 	`;
 
-	loadHistory(app.querySelector(".bookings-list"), null).then(count => {
+	loadHistory(app.querySelector(".bookings-list"), fetchHistory(null)).then(count => {
 		document.getElementById("visitor-history-extra").hidden = !count;
 	});
 	wireViewToggle();
@@ -323,8 +406,9 @@ function showVisitor() {
 const VIEW_TOGGLE_HTML = `
 	<div class="view-toggle margin-top-20">
 		<button class="view-toggle-btn active" data-pane="history" aria-label="${MSG_HISTORY_TITLE}"><img src="images/icon_history.svg" alt=""></button>
+		<button class="view-toggle-btn" data-pane="stats" aria-label="${MSG_VIEW_STATS}"><img src="images/icon_chart.svg" alt=""></button>
 		<button class="view-toggle-btn" data-pane="memberships" aria-label="${MSG_VIEW_MEMBERSHIPS}"><img src="images/icon_id.svg" alt=""></button>
-		<button class="view-toggle-btn" data-pane="info" aria-label="${MSG_VIEW_INFO}"><img src="images/icon_avatar.svg" alt=""></button>
+		<button class="view-toggle-btn" data-pane="info" aria-label="${MSG_VIEW_INFO}"><img src="images/icon_gear.svg" alt=""></button>
 	</div>
 `;
 
@@ -345,7 +429,7 @@ const PROFILE_FIELDS = [
 ];
 
 // RENDERS THE PLAYER PROFILE: GREETING AND EMAIL (READ-ONLY — IT'S THE LOGIN), THEN A TOGGLE BETWEEN
-// THREE PANES: PAST GAMES, MEMBERSHIPS, AND EDITABLE INFO + LOGOUT
+// FOUR PANES: PAST GAMES, ACTIVITY STATS, MEMBERSHIPS, AND EDITABLE INFO + LOGOUT
 function showProfile(user, profile) {
 	document.body.classList.remove("onboarding");
 	app.innerHTML = `
@@ -369,12 +453,17 @@ function showProfile(user, profile) {
 		<div data-pane-body="history">
 			<div class="bookings-list margin-top-20"></div>
 		</div>
+		<div data-pane-body="stats" hidden>
+			<div class="bookings-list margin-top-20"></div>
+		</div>
 		<div data-pane-body="memberships" hidden>
 			<div class="bookings-list margin-top-20"></div>
 		</div>
 	`;
 
-	loadHistory(app.querySelector('[data-pane-body="history"] .bookings-list'), user);
+	const games = fetchHistory(user);
+	loadHistory(app.querySelector('[data-pane-body="history"] .bookings-list'), games);
+	loadStats(app.querySelector('[data-pane-body="stats"] .bookings-list'), games);
 	loadMemberships(app.querySelector('[data-pane-body="memberships"] .bookings-list'), user);
 
 	wireViewToggle();

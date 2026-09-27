@@ -256,6 +256,12 @@ Supabase Auth is already included — magic link is a built-in provider, no extr
 **What we create:**
 - `profiles` table — extends `auth.users` with fields we own (name, and future registration fields)
 
+**Audience terms** (use these consistently in code, comments and docs):
+- **Visitor** — not logged in. Identified only by `device_id`
+- **Player** — logged in, with a `profiles` row
+- **Member** — a player with an approved membership for a court group
+- **Owner** — owns at least one `court_groups` row (see Roles)
+
 **Roles:** one email = one role. An account is either a **player** or an **owner**, never both (an owner who also plays is too rare to design for). Owner = owns at least one `court_groups` row.
 
 **Login flow:**
@@ -350,7 +356,9 @@ Sessions are kept alive indefinitely for active users. Supabase auto-refreshes t
     - [x] History is shown to visitors too — no login required. Visitor query is by `device_id`, logged-in query is by `player_id`. Walk-ins from a device the player never logs in on stay anonymous
     - [ ] Test: a walk-in started while logged in fills `player_id`
     - [x] Tested: logging in claims the device's older anonymous walk-ins
-  - [x] Profile split into three toggle views: history (default), memberships (`icon_id`), personal info
+  - [x] Profile split into toggle views: history (default), stats (`icon_chart`), memberships (`icon_id`), personal info
+  - [x] Activity stats view (players only; visitors get the login button): hours this month vs last month, weekly streak, favourite court. Computed in JS from the same fetch as the history, so games of 10 min or less are excluded
+    - [ ] Visitor teaser: a stat computed from the device's walk-ins above the login button (e.g. "Jogaste 6h este mês")
   - [x] Memberships view: the player's approved memberships, shown as the owner's member card with the group name in place of the player name and no revoke link
     - [x] Fix the player member card — title falls back to the group's court names, courts line removed, expiry uses `icon_trash.svg`
     - [ ] Fill `court_groups.name` in Supabase — every row is `null` today, so cards show court names instead of a group name
