@@ -18,7 +18,7 @@ court.html / js/court-stage.js    — court detail + walk-in flow
                 js/court-bookable.js  — bookable court flow (active)
 owner.html / js/owner.js          — owner dashboard (members, rules, hours)
 login.html / js/login.js
-profile.html / js/profile.js
+profile.html / js/profile.js     — post-login router, onboarding, profile views (history, stats, memberships, info)
 info.html
 
 js/utils.js           — shared helpers: setPigAppearance, gameLabel, formatTime, minutesLeft, getDeviceId, cityHtml
@@ -33,7 +33,7 @@ images/               — SVG icons (icon_*.svg) + flags + pig mascot
 
 ## Current Work
 
-Branch: `bookable-mvp` — building the court booking flow for courts that require membership and slot reservations. Recent work: standardized copy on court-bookable, membership button with `icon_asking.svg`, owner rules view, empty state utilities.
+Branch: `bookable-mvp` — building the court booking flow for courts that require membership and slot reservations. Recent work: shared success screens (`success.js`), newcomer/returning login copy with post-login landing on the court list, visitor profile toggle, player activity stats with level titles and progress bars.
 
 ## Working Style
 
@@ -139,6 +139,7 @@ Used exclusively inside edge functions. Not called from the frontend.
 - Icons are inline SVGs loaded from `images/icon_*.svg` via `fetch` or `<img>` tags
 - `device_id` in `localStorage` identifies the device for walk-in ownership
 - Supabase anon key is intentionally public (RLS handles access control)
+- Double-tap zoom is off app-wide via `touch-action: manipulation` on `html` (pinch zoom still works)
 
 ## High Level Thoughts
 
@@ -158,7 +159,11 @@ When a court's burocracia level requires document verification, documents are ne
 
 ### Activity stats — a reason to use Campo Livre beyond booking
 
-Future exploration, not planned yet. Walk-ins and bookings now give every player, visitor or logged in, a record of court, start time and duration. That's enough for personal activity stats: hours played per week or month, streaks, favourite courts, usual time of day. For a player who never books, this could be the main reason to open the app.
+**First set implemented** (profile stats view, see Todo): hours in the last 30 days vs the 30 days before, weekly streak, favourite court. Cities collected was dropped. Rolling 30 days rather than the calendar month, so the total doesn't reset to zero on the 1st and knock the player down a level. Hours and streak carry a level title, stars and a segmented progress bar (`LEVELS_HOURS` / `LEVELS_STREAK` in `profile.js`). The rest below is still exploration.
+
+The chosen levels are listed under "Player progress" below, since they're the first piece of that progress layer.
+
+Walk-ins and bookings now give every player, visitor or logged in, a record of court, start time and duration. That's enough for personal activity stats: hours played per week or month, streaks, favourite courts, usual time of day. For a player who never books, this could be the main reason to open the app.
 
 - **Data quality:** walk-in duration is whatever the player chose (45/60/90) unless they tap "Terminar jogo atual", and a booking doesn't prove anyone showed up (no-shows). Stats measure declared time on court, not time played.
 - **Activity, never health (decided):** health data is a GDPR special category (Art. 9). It needs explicit consent, an impact assessment and stricter security, and EU courts read "concerning health" broadly, including indirect inferences. Minutes on court are ordinary personal data. What would tip it over: calories or other physiological estimates, heart rate, wearable or Apple Health / Google Fit integration, fitness scores, or anything implying a condition. Copy says "estatísticas de atividade", never "saúde". Anything beyond counting time on court needs a legal opinion first.
@@ -182,13 +187,35 @@ Builds on activity stats. Short, interactive questions after each game collect t
   - "Singulares ou pares?"
   - "Ganhaste / perdeste / só treino?"
   - Maybe a 1–5 "Como foi o jogo?". Never ask about fatigue, pain or injury, which drifts back into health data
-- **Progress layer:** points per game and per answered card, levels, the weekly streak, city flags as badges
+- **Progress layer:** points per game and per answered card, levels, the weekly streak, city flags as badges. Levels and the streak already exist on the stats view (see "Levels already implemented" below); points and badges don't
 - **Rain freeze:** our take on Duolingo's streak freeze. We already fetch the forecast (`weather.js`), so a rainy week doesn't break the streak
 - **Risks:**
   - Nagging: show the card once per game, then drop it. A card on every open trains people to stop opening the app
   - Honesty: self-reported results are fine for personal progress, but they rule out leaderboards
   - Tone: too much confetti feels childish. The pig's cheeky voice ("batotas", "porreiríssimo") should carry it, not badges everywhere
 - **Where to start:** only the post-game card (duration, singles/doubles, result) stored on the game row, with no points or levels. It pays off alone by making stats more accurate, and it shows whether players actually answer before a progression system is built on top. Since stats are behind the login wall, answering is also the natural moment to prompt visitors to make an account ("guarda o teu progresso")
+
+**Levels already implemented** (stats view, `LEVELS_HOURS` / `LEVELS_STREAK` in `profile.js`). Titles are ranks that grow with the number, so a low value never gets a mocking title. Each bar runs from 0 to its max in four equal segments, one per level, with the level title written inside. Each scale is defined as a step plus its titles (`levelScale(step, titles)`): every level spans the same step, so the segments are always equal. Hours step: 3h. Streak step: 2 weeks. Four stars next to the card title, filled up to the current level.
+
+| Hours in the last 30 days | Title |
+|---|---|
+| 0 – 2h59 | Raquete de gaveta |
+| 3h – 5h59 | Comprometido |
+| 6h – 8h59 | Cliente da casa |
+| 9h+ | Rato de campo |
+
+Bar max: 12h.
+
+| Weekly streak | Title |
+|---|---|
+| 0–1 weeks | Sem ritmo |
+| 2–3 weeks | A ganhar ritmo |
+| 4–5 weeks | Em pleno rali |
+| 6+ weeks | Força da natureza |
+
+Bar max: 8 weeks.
+
+Favourite court has no levels; its title is always "Segunda casa". The hour thresholds are a first guess, to be tuned once real monthly play is known.
 
 ### Court suggestions in the memberships view
 
@@ -278,7 +305,7 @@ Supabase Auth is already included — magic link is a built-in provider, no extr
 
 **Profile entry points:** avatar icon (`icon_avatar.svg`) in the header — court list and court pages link to `profile.html`; in `owner.html` it opens the dashboard's own profile view (replaced the old gear tab in the nav).
 
-**Visitors on `profile.html`:** a logged-out visitor is no longer redirected to login. `showVisitor()` renders the same three-view toggle as the logged-in profile: history shows their walk-ins (matched on `device_id`) plus a "Fazer login" button, and the memberships and personal info views hold only that button, because someone who only plays walk-ins still has a history worth seeing and no reason to make an account. An explicit **Terminar sessão** still goes to `login.html` — that's a deliberate exit, not a browse.
+**Visitors on `profile.html`:** a logged-out visitor is no longer redirected to login. `showVisitor()` renders the same four-view toggle as the logged-in profile: history shows their walk-ins (matched on `device_id`) plus a "Fazer login" button (with no games, only the pig shows), and the stats, memberships and personal info views hold only that button, because someone who only plays walk-ins still has a history worth seeing and no reason to make an account. An explicit **Terminar sessão** still goes to `login.html` — that's a deliberate exit, not a browse.
 
 **Redirect URL allowlist:** Supabase only returns magic links to URLs listed in Authentication → URL Configuration → Redirect URLs. Local IPs are there; Vercel URLs (production + preview wildcard) must be too, or links sent from the deploy fall back to the Site URL (a local IP).
 
@@ -299,6 +326,9 @@ Sessions are kept alive indefinitely for active users. Supabase auto-refreshes t
 
 - [x] Get the player to login and land on profile page
   - [x] Differentiate first login (sign up — player chooses a name) from returning login (sign in — just requests a magic link) — no `profiles` row routes to onboarding; `login.html` shows newcomer or returning copy based on a per-device `localStorage.hasLoggedIn` flag set by `profile.js`
+    - [x] Newcomers get `pig_reaching` ("Bora usar o Campo Livre a sério?"), the account pitch and a "login is optional for public courts" note; returning players get a single line
+    - [x] "Voltar" back link on `login.html`; a failed send keeps the form and restores the button
+  - [x] After a magic link, land on the court list (not the profile), unless login started from a court page or it's a first login (onboarding)
 - [x] Get the player to register to the owner (simple as possible)
   - [x] Create `memberships` table with `player_id`, `court_id` (nullable), `group_id` (nullable), `status`, `denied_reason`, `created_at`, `approved_at`
   - [x] Unique constraint per `(player_id, court_id)` and `(player_id, group_id)` to prevent duplicate requests
@@ -337,15 +367,17 @@ Sessions are kept alive indefinitely for active users. Supabase auto-refreshes t
   - [ ] Cancellation rules apply (free >48h before, full charge <48h)
 - [ ] Figure out the rescheduling/cancelling process for bad weather — who triggers it, whether players get offered a new slot or just a waiver, and how it ties to the forecast icons (starting point: edge case (c) under Open Questions)
 - [x] Add success pig views after booking and after cancelling a booking
-  - [x] After booking: "RESERVADO" via `showSuccess()` in `js/success.js`, then reload
-  - [x] After cancelling a booking: "CANCELADO", sad tone, no ball  - [x] Move the walk-in "BOM JOGO" and "OBRIGADO" screens in `court-walkin.js` onto `showSuccess()`
+  - [x] After booking: "Jogo reservado" (`SUCCESS.booked`), then reload
+  - [x] After cancelling a booking: "Jogo cancelado" (`SUCCESS.bookingCancelled`), sad tone, `pig_sitting`, no ball
+  - [x] Move the walk-in "Bom jogo" and "Obrigado" screens in `court-walkin.js` onto `showSuccess()` — all four screens now come from `SUCCESS` presets in `success.js`
+  - [ ] Success screen when an owner cancels a booking from the dashboard
 - [ ] Player profile page (`profile.html`)
   - [x] Magic link returns the player to the court they started login from (`localStorage.returnTo`)
   - [x] Header avatar icon links to the profile (player) / opens the dashboard profile view (owner, replaces the gear nav tab)
   - [ ] Add the Vercel production + preview URLs to Supabase's auth Redirect URLs
   - [ ] Test the loop for a new user (onboarding → back to court) and a returning user (straight back to court)
     - [x] Returning user lands back on the court
-    - [ ] New user stayed on the profile after onboarding — confirm whether login started from a court page and the link opened in the same browser
+    - [ ] New user after onboarding: back to the court if login started there, otherwise the court list (was: stayed on the profile — retest with the `justLoggedIn` change, same browser)
   - [ ] Check what happens when a new user leaves mid-onboarding (e.g. via "Voltar"): no `profiles` row exists yet, so they're logged in but nameless — court pages fall back to "jogador", and booking/membership requests may go through without a name for the owner
   - [x] View and edit personal info (name, phone, NIF) — email shown read-only; save disabled until something changes, name required
     - [x] Confirm `profiles` has an UPDATE policy for the player's own row — saving works
@@ -354,10 +386,17 @@ Sessions are kept alive indefinitely for active users. Supabase auto-refreshes t
     - [x] Write `player_id` (and `player_name` from the profile) on new walk-ins when a session exists
     - [x] Claim the device's anonymous walk-ins on login (`device_id` match, `player_id IS NULL`) — runs on every `profile.html` load, no-op once nothing is unclaimed
     - [x] History is shown to visitors too — no login required. Visitor query is by `device_id`, logged-in query is by `player_id`. Walk-ins from a device the player never logs in on stay anonymous
+    - [x] Games of 10 min or less are hidden (mis-taps, walk-ins ended right away) — only hidden, still in the database
     - [ ] Test: a walk-in started while logged in fills `player_id`
     - [x] Tested: logging in claims the device's older anonymous walk-ins
-  - [x] Profile split into toggle views: history (default), stats (`icon_chart`), memberships (`icon_id`), personal info
-  - [x] Activity stats view (players only; visitors get the login button): hours this month vs last month, weekly streak, favourite court. Computed in JS from the same fetch as the history, so games of 10 min or less are excluded
+  - [x] Profile split into toggle views: stats (`icon_chart`, first and the default for players and visitors — the visitor teaser will fill theirs), history, memberships (`icon_id`), personal info (`icon_gear`)
+  - [x] Activity stats view (players only; visitors get the login button): hours in the last 30 days vs the 30 days before, weekly streak, favourite court. Computed in JS from the same fetch as the history, so games of 10 min or less are excluded
+    - [x] Metric name above the level title: "Momentum" (hours; common in PT-PT sports talk — "Balanço" alone reads as "summary", "Forma" drifts towards health) and "Consistência" (streak). The level title is `.stat-level` (1em, 700) with the stars after it
+    - [x] Level titles instead of plain labels — hours: Raquete de gaveta / Comprometido (3h) / Cliente da casa (6h) / Rato de campo (9h); streak: Sem ritmo / A ganhar ritmo (2) / Em pleno rali (4) / Força da natureza (6); favourite: Segunda casa
+    - [x] Progress bars on hours and streak, 0 to max (12h / 8 weeks) in four equal segments with the level title inside each
+    - [x] Segment titles are white with `mix-blend-mode: difference`: black on the empty track, white over the fill
+    - [x] Stars next to the level title: one per level (four each), the current level and those below it filled `--yellow`, so the first level already shows one. Inline SVG (`STAR_SVG` in `profile.js`) so CSS can switch the fill
+    - [ ] Tune the level thresholds once real monthly play is known
     - [ ] Visitor teaser: a stat computed from the device's walk-ins above the login button (e.g. "Jogaste 6h este mês")
   - [x] Memberships view: the player's approved memberships, shown as the owner's member card with the group name in place of the player name and no revoke link
     - [x] Fix the player member card — title falls back to the group's court names, courts line removed, expiry uses `icon_trash.svg`
@@ -411,7 +450,7 @@ Sessions are kept alive indefinitely for active users. Supabase auto-refreshes t
 - [x] Slot states: past (muted) · occupied/orange · lunch/hatched · available/green · mine/white
 - [x] Selection logic — contiguous, auto-fill between taps, blocked by occupied/lunch/past
 - [x] Min game duration validation — "Reservar horário" disabled when selection < min duration
-- [x] "Reservar horário" → insert into `bookings`; reloads the page on success
+- [x] "Reservar horário" → insert into `bookings`; shows the "Jogo reservado" success screen, then reloads
 - [x] Lock picker after successful booking — no further slot picking; mine slot stays visible
 - [x] Selection summary during picking: "Teu jogo: HH:MM às HH:MM (X min)" (live, before confirm)
 

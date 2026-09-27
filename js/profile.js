@@ -20,10 +20,19 @@ const MSG_VISITOR_LOGIN = "Fazer login";
 // "ATIVIDADE", NEVER "SAÚDE" — SEE "ACTIVITY, NEVER HEALTH" IN CLAUDE.md
 const MSG_VIEW_STATS = "Estatísticas de atividade";
 const MSG_STATS_EMPTY = "As tuas estatísticas de atividade aparecem aqui depois do primeiro jogo.";
-const MSG_STAT_VS_LAST_MONTH = diff => `${diff} que o mês passado`;
-const MSG_STAT_SAME_MONTH = "O mesmo que o mês passado";
-const MSG_STAT_STREAK = n => `${n} ${n === 1 ? "semana" : "semanas"}`;
-const MSG_STAT_STREAK_HINT = "Com pelo menos um jogo por semana";
+const MSG_STAT_VS_PREVIOUS = diff => `${diff} que no período anterior`;const MSG_STAT_STREAK = n => `${n} ${n === 1 ? "semana" : "semanas seguidas"}`;
+const MSG_STAT_HOURS_VALUE = time => `${time} nos últimos 30 dias`;
+// TITLES ARE RANKS THAT GROW WITH THE NUMBER — A FIXED "RATO DE CAMPO" WOULD READ AS MOCKERY OVER 45min.
+// EVERY LEVEL SPANS THE SAME step (MINUTES IN THE LAST 30 DAYS / WEEKS IN A ROW), SO THE BAR SPLITS INTO EQUAL SEGMENTS.
+// LEVEL i STARTS AT i × step; THE BAR IS FULL AT titles.length × step
+const levelScale = (step, titles) => ({
+	max: titles.length * step,
+	levels: titles.map((title, i) => ({ from: i * step, title })),
+});
+const LEVELS_HOURS = levelScale(180, ["Raquete de gaveta", "Voltou da reforma", "Cliente da casa", "Só para pra comer"]);
+const LEVELS_STREAK = levelScale(2, ["Só quer postar", "Comprometido", "Joga até na chuva", "Força da natureza"]);
+const MSG_TITLE_FAVOURITE = "Segunda casa";
+const MSG_STAT_STREAK_HINT = "Com pelo menos um jogo";
 const MSG_STAT_FAVOURITE = n => `${n} ${n === 1 ? "jogo" : "jogos"} aqui`;
 const MSG_VIEW_MEMBERSHIPS = "Os teus campos";
 const MSG_NO_MEMBERSHIPS = "Não és membro de nenhum campo, infelizmente. Bora mudar isso!";
@@ -282,6 +291,30 @@ function weeklyStreak(games) {
 	return streak;
 }
 
+function levelIndex(scale, value) {
+	return scale.levels.findLastIndex(level => value >= level.from);
+}
+
+function levelTitle(scale, value) {
+	return scale.levels[levelIndex(scale, value)].title;
+}
+
+// INLINE, NOT AN <img>: CSS CAN'T REACH INTO AN <img> SVG, AND THE FIRST PATH'S FILL IS WHAT TURNS YELLOW ON ACHIEVEMENT
+const STAR_SVG = achieved => `<svg class="level-star${achieved ? " achieved" : ""}" viewBox="0 0 22 21" aria-hidden="true"><path d="M10.7459 0C11.0974 0 11.4216 0.199219 11.5818 0.511719L14.4529 6.14453L20.699 7.13672C21.0466 7.19141 21.3357 7.4375 21.4451 7.77344C21.5545 8.10938 21.4646 8.47656 21.2185 8.72656L16.7459 13.1992L17.7341 19.4453C17.7888 19.793 17.6443 20.1445 17.3591 20.3516C17.074 20.5586 16.6951 20.5898 16.3826 20.4297L10.7459 17.5625L5.10915 20.4297C4.79665 20.5898 4.41774 20.5586 4.13258 20.3516C3.84743 20.1445 3.7029 19.7969 3.75758 19.4453L4.74196 13.1992L0.27321 8.72656C0.0232101 8.47656 -0.0627274 8.10938 0.0466476 7.77344C0.156023 7.4375 0.441179 7.19141 0.792741 7.13672L7.03883 6.14453L9.91383 0.511719C10.074 0.199219 10.3982 0 10.7498 0H10.7459Z"/><path d="M10.7459 0C11.0974 0 11.4216 0.199219 11.5818 0.511719L14.4529 6.14453L20.699 7.13672C21.0466 7.19141 21.3357 7.4375 21.4451 7.77344C21.5545 8.10938 21.4646 8.47656 21.2185 8.72656L16.7459 13.1992L17.7341 19.4453C17.7888 19.793 17.6443 20.1445 17.3591 20.3516C17.074 20.5586 16.6951 20.5898 16.3826 20.4297L10.7459 17.5625L5.10915 20.4297C4.79665 20.5898 4.41774 20.5586 4.13259 20.3516C3.84743 20.1445 3.7029 19.7969 3.75758 19.4453L4.74196 13.1992L0.27321 8.72656C0.0232101 8.47656 -0.0627274 8.10938 0.0466476 7.77344C0.156023 7.4375 0.441179 7.19141 0.792741 7.13672L7.03884 6.14453L9.91383 0.511719C10.074 0.199219 10.3982 0 10.7498 0H10.7459ZM10.7459 3L8.48805 7.42188C8.35134 7.6875 8.09743 7.875 7.80055 7.92188L2.89821 8.70313L6.40602 12.2148C6.61696 12.4258 6.71462 12.7266 6.66774 13.0234L5.8943 17.9258L10.3201 15.6758C10.5857 15.5391 10.9021 15.5391 11.1716 15.6758L15.5974 17.9258L14.824 13.0234C14.7771 12.7266 14.8748 12.4258 15.0857 12.2148L18.5935 8.70313L13.6912 7.92188C13.3943 7.875 13.1404 7.6875 13.0037 7.42188L10.7459 3Z"/></svg>`;
+
+// ONE STAR PER LEVEL; THE CURRENT LEVEL AND EVERY ONE BELOW IT ARE FILLED, SO THE FIRST LEVEL ALREADY HAS ONE
+function levelStars(scale, value) {
+	const current = levelIndex(scale, value);
+	return scale.levels.map((_, i) => STAR_SVG(i <= current)).join("");
+}
+
+// FILL FROM 0 TO max OVER ONE EQUAL SEGMENT PER LEVEL, EACH LABELLED WITH ITS TITLE
+function levelBar(scale, value) {
+	const fill = Math.min(value / scale.max, 1) * 100;
+	const segments = scale.levels.map(level => `<span>${level.title}</span>`).join("");
+	return `<div class="level-bar margin-top-10"><div style="width: ${fill}%"></div>${segments}</div>`;
+}
+
 // ACTIVITY STATS FROM THE SAME GAMES AS THE HISTORY (ALREADY WITHOUT THE ≤10 MIN ONES). DECLARED TIME ON COURT,
 // NOT TIME PLAYED: A WALK-IN LASTS WHAT THE PLAYER CHOSE UNLESS ENDED EARLY, AND A BOOKING DOESN'T PROVE A SHOW-UP
 async function loadStats(container, gamesPromise) {
@@ -291,15 +324,18 @@ async function loadStats(container, gamesPromise) {
 		return;
 	}
 
+	// ROLLING 30 DAYS, NOT THE CALENDAR MONTH: A MONTH TOTAL RESETS TO ZERO ON THE 1ST AND DROPS THE PLAYER A LEVEL
 	const now = new Date();
-	const thisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-	const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+	const DAY = 24 * 60 * 60 * 1000;
+	const recentStart = new Date(now - 30 * DAY);
+	const previousStart = new Date(now - 60 * DAY);
 	const minsBetween = (from, to) => games
 		.filter(game => new Date(game.start) >= from && new Date(game.start) < to)
 		.reduce((sum, game) => sum + game.mins, 0);
-	const minsThisMonth = minsBetween(thisMonth, now);
-	const diff = minsThisMonth - minsBetween(lastMonth, thisMonth);
-	const diffText = diff === 0 ? MSG_STAT_SAME_MONTH : MSG_STAT_VS_LAST_MONTH(`${diff > 0 ? "+" : "-"}${formatPlayTime(Math.abs(diff))}`);
+	const minsRecent = minsBetween(recentStart, now);
+	const diff = minsRecent - minsBetween(previousStart, recentStart);
+	// NO LINE WHEN EQUAL — IN PRACTICE THAT'S ONLY 0 VS 0, WHERE A COMPARISON SAYS NOTHING
+	const diffText = diff === 0 ? "" : MSG_STAT_VS_PREVIOUS(`${diff > 0 ? "+" : "-"}${formatPlayTime(Math.abs(diff))}`);
 
 	const streak = weeklyStreak(games);
 
@@ -312,17 +348,21 @@ async function loadStats(container, gamesPromise) {
 	});
 	const favourite = Object.values(perCourt).sort((a, b) => b.games - a.games || b.mins - a.mins)[0];
 
-	const statCard = (label, value, detail) => `
+	// metric IS THE SMALL LINE ABOVE THE LEVEL TITLE; THE FAVOURITE COURT HAS NO LEVEL, ONLY THE METRIC. "Momentum" IS COMMON IN PT-PT SPORTS TALK;
+	// "Balanço" ALONE READS AS "SUMMARY" (FAZER O BALANÇO), AND "Forma" DRIFTS TOWARDS FITNESS/HEALTH
+	const statCard = (metric, title, value, detail, bar = "") => `
 		<div class="membership-card">
-			<p class="membership-date">${label}</p>
+			${metric ? `<p class="membership-date">${metric}:</p>` : ""}
+			${title ? `<p class="stat-level">${title}</p>` : ""}
 			<p class="membership-player" style="white-space: normal">${value}</p>
 			${detail ? `<div class="membership-date">${detail}</div>` : ""}
+			${bar}
 		</div>
 	`;
 	container.innerHTML = [
-		statCard("Este mês", formatPlayTime(minsThisMonth), diffText),
-		statCard("Semanas seguidas", MSG_STAT_STREAK(streak), MSG_STAT_STREAK_HINT),
-		favourite ? statCard("Campo favorito", favourite.name, MSG_STAT_FAVOURITE(favourite.games)) : "",	].join("");
+		statCard("Momentum",levelTitle(LEVELS_HOURS, minsRecent) + levelStars(LEVELS_HOURS, minsRecent), MSG_STAT_HOURS_VALUE(formatPlayTime(minsRecent)), diffText, levelBar(LEVELS_HOURS, minsRecent)),
+		statCard("Consistência", levelTitle(LEVELS_STREAK, streak) + levelStars(LEVELS_STREAK, streak), MSG_STAT_STREAK(streak), MSG_STAT_STREAK_HINT, levelBar(LEVELS_STREAK, streak)),
+		favourite ? statCard(MSG_TITLE_FAVOURITE, "", favourite.name, MSG_STAT_FAVOURITE(favourite.games)) : "",	].join("");
 }
 
 // THE PLAYER'S APPROVED MEMBERSHIPS AS THE SAME CARD THE OWNER SEES IN THE MEMBERS TAB (owner.js renderMembersView),
@@ -383,7 +423,7 @@ function showVisitor() {
 	const loginBtn = `<button data-action="login" class="margin-top-20"><img src="images/icon_login.svg" class="link-icon" alt="">${MSG_VISITOR_LOGIN}</button>`;
 	app.innerHTML = `
 		${VIEW_TOGGLE_HTML}
-		<div data-pane-body="history">
+		<div data-pane-body="history" hidden>
 			<div class="bookings-list margin-top-20 margin-bottom-20"></div>
 			<!-- HIDDEN UNTIL THE HISTORY LOADS: WITH NO GAMES THE PIG STANDS ALONE -->
 			<div id="visitor-history-extra" hidden>
@@ -391,7 +431,7 @@ function showVisitor() {
 				${loginBtn}
 			</div>
 		</div>
-		<div data-pane-body="stats" hidden>${loginBtn}</div>
+		<div data-pane-body="stats">${loginBtn}</div>
 		<div data-pane-body="memberships" hidden>${loginBtn}</div>
 		<div data-pane-body="info" hidden>${loginBtn}</div>
 	`;
@@ -403,10 +443,11 @@ function showVisitor() {
 	app.querySelectorAll('[data-action="login"]').forEach(btn => btn.addEventListener("click", () => { location.href = "login.html"; }));
 }
 
+// STATS IS THE DEFAULT PANE FOR PLAYERS AND VISITORS ALIKE (A VISITOR TEASER WILL FILL THEIRS LATER)
 const VIEW_TOGGLE_HTML = `
 	<div class="view-toggle margin-top-20">
-		<button class="view-toggle-btn active" data-pane="history" aria-label="${MSG_HISTORY_TITLE}"><img src="images/icon_history.svg" alt=""></button>
-		<button class="view-toggle-btn" data-pane="stats" aria-label="${MSG_VIEW_STATS}"><img src="images/icon_chart.svg" alt=""></button>
+		<button class="view-toggle-btn active" data-pane="stats" aria-label="${MSG_VIEW_STATS}"><img src="images/icon_chart.svg" alt=""></button>
+		<button class="view-toggle-btn" data-pane="history" aria-label="${MSG_HISTORY_TITLE}"><img src="images/icon_history.svg" alt=""></button>
 		<button class="view-toggle-btn" data-pane="memberships" aria-label="${MSG_VIEW_MEMBERSHIPS}"><img src="images/icon_id.svg" alt=""></button>
 		<button class="view-toggle-btn" data-pane="info" aria-label="${MSG_VIEW_INFO}"><img src="images/icon_gear.svg" alt=""></button>
 	</div>
@@ -450,10 +491,10 @@ function showProfile(user, profile) {
 				<button id="logout-btn" class="button-shallow">Terminar sessão</button>
 			</div>
 		</div>
-		<div data-pane-body="history">
+		<div data-pane-body="history" hidden>
 			<div class="bookings-list margin-top-20"></div>
 		</div>
-		<div data-pane-body="stats" hidden>
+		<div data-pane-body="stats">
 			<div class="bookings-list margin-top-20"></div>
 		</div>
 		<div data-pane-body="memberships" hidden>

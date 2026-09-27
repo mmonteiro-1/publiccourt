@@ -65,7 +65,9 @@ html:has(.page-court-list) {
 	--gray: #808080;
 	--muted-black: #0000004f;
 	--muted: #ffffff8f;
-	--muted-input: #ffffff5c
+	--muted-input: #ffffff5c;
+	--yellow: #ffc700;	
+	--blue: #0058ff;
 }
 
 body {
@@ -1206,6 +1208,77 @@ input[type="number"]::-webkit-outer-spin-button {
 	border-radius: 50%;
 	background: var(--pink);
 	box-shadow: inset 4px 4px 0 var(--black);
+}
+
+/* A STATS CARD'S LEVEL TITLE, STARS IN A ROW AFTER IT */
+.stat-level {
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: 5px;
+	font-size: 1em;
+	font-weight: 700;
+}
+
+/* LEVEL STARS NEXT TO A STAT'S TITLE: FIRST PATH IS THE FILL (EMPTY UNTIL REACHED), SECOND IS THE OUTLINE */
+.level-star {
+	height: 15px;
+	width: auto;
+	flex-shrink: 0;
+}
+
+.level-star path:first-child {
+	fill: transparent;
+}
+
+.level-star.achieved path:first-child {
+	fill: var(--yellow);
+}
+
+.level-star path:last-child {
+	fill: var(--black);
+}
+
+/* LEVEL PROGRESS ON THE STATS CARDS: THE DIV IS THE FILL (INLINE width, 0 TO THE SCALE'S max) SITTING BEHIND
+   ONE EQUAL span PER LEVEL WITH ITS TITLE. THE BAR'S HEIGHT FOLLOWS THE TEXT, WHICH MAY WRAP IN A NARROW SEGMENT */
+.level-bar {
+	position: relative;
+	display: flex;
+	border: 2px solid var(--black);
+	border-radius: 100px;
+	background: var(--white);
+	overflow: hidden;
+}
+
+.level-bar div {
+	position: absolute;
+	top: 0;
+	bottom: 0;
+	left: 0;
+	background: var(--blue);
+}
+
+.level-bar span {
+	position: relative;
+	flex: 1;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 2px;
+	text-align: center;
+	font-size: 0.4em;
+	font-weight: 700;
+	text-transform: uppercase;
+}
+
+.level-bar span + span::before {
+	content: '';
+	position: absolute;
+	top: 0;
+	bottom: 0;
+	left: 0;
+	width: 2px;
+	background: var(--black);
 }
 
 .membership-player {
