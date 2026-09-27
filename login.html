@@ -22,14 +22,22 @@
 
 	<main id="app">
 		<form id="login-form">
-			<p class="card-sub" style="color: var(--black); font-size: .8em;">O email introduzido abaixo é o teu método de login. Receberá um link de acesso que substitui a password para autenticação.</p>
+			<div id="login-pig"></div>
+			<p class="info-sub1" id="login-intro"></p>
+			<p class="info-sub2" id="login-note" hidden></p>
 			<input class="form-input" type="email" id="email-input" placeholder="Email" autocomplete="email" required>
 			<button type="submit"><img src="images/icon_mail.svg" alt="">Enviar link de acesso</button>
 		</form>
 	</main>
 
+	<a class="info-link" id="back-link" href="index.html">
+		<img src="images/icon_back.svg" class="link-icon" alt="">
+		Voltar
+	</a>
+
 	<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 	<script src="js/config.js"></script>
+	<script src="js/utils.js"></script>
 	<script src="js/login.js"></script>
 
 </body>

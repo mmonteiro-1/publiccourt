@@ -24,6 +24,7 @@ info.html
 js/utils.js           — shared helpers: setPigAppearance, gameLabel, formatTime, minutesLeft, getDeviceId, cityHtml
 js/secondary-card.js  — secondary info card (rules, hours, city)
 js/slot-picker.js     — booking slot selection UI
+js/success.js         — every success screen: copy, SUCCESS presets, showSuccess() renderer (countdown + reload)
 js/weather.js         — Open-Meteo daily forecast → one icon per day (rain/sunny/part_cloudy/cloudy), 3h localStorage cache
 js/config.js          — Supabase credentials + db client
 css/styles.css        — single global stylesheet
@@ -49,7 +50,7 @@ Branch: `bookable-mvp` — building the court booking flow for courts that requi
 - **Screenshots:** Skip Puppeteer/screenshot verification for mechanical CSS edits. Use it only when the visual outcome is genuinely uncertain (new layout, new component, tricky CSS interaction)
 - **No over-engineering:** No abstractions beyond what the task needs. No error handling for impossible cases. No comments explaining what code does — only WHY when non-obvious
 - **Supabase renames:** There is one database shared by every branch and by production. Renaming a table or column while working on a branch breaks `main` the moment it's applied — the deployed code still queries the old name. Never rename in place. Add the new name alongside the old, update every branch, then drop the old one once nothing references it. The same applies to dropping columns and tightening RLS
-- **Player-facing copy:** always put messages shown to players in `MSG_*` constants at the top of the file (see `court-bookable.js`), never inline in templates. When the text needs dynamic parts, make the constant a small function (e.g. `MSG_SIBLINGS = courtLinks => \`...\``)
+- **Player-facing copy:** always put messages shown to players in `MSG_*` constants at the top of the file (see `court-bookable.js`), never inline in templates. When the text needs dynamic parts, make the constant a small function (e.g. `MSG_SIBLINGS = courtLinks => \`...\``). This is for phrases only — short labels like button text ("Reservar horário", "Cancelar") stay inline
 
 ### CSS Rules
 - No `line-height`
@@ -133,6 +134,7 @@ Used exclusively inside edge functions. Not called from the frontend.
 - Single global CSS file (`css/styles.css`) — no scoped or component CSS
 - Each HTML page loads its own JS file + shared utils (`utils.js`, `config.js`, etc.)
 - **Pig appearances:** whenever the pig shows up with a message (empty lists, but also informing the player), use `setPigAppearance(container, message)` from `utils.js`. Defaults to `pig_sitting`; pass a third argument for another image, e.g. `setPigAppearance(el, MSG_X, "pig_serving")`
+- **Success screens:** everything about them lives in `js/success.js` — the `MSG_*` copy, and one preset per screen in `SUCCESS` (pig, `header` as `.info-heading`, `sub1`/`sub2` as `.info-sub1`/`.info-sub2`, `seconds` before the reload, `animation` `"ball"` or omitted). Other files only inject the dynamic parts: `showSuccess(SUCCESS.booked(gameLabel(start, end)))`. A new screen means a new preset there, never an inline one. This overrides the "copy at the top of its own file" rule
 - **One pig at a time:** the header's logo pig hides whenever another pig is visible (a `.pig-appearance` or a success screen's `.info-pig`). It's a single CSS `:has()` rule; appearances inside a `[hidden]` view don't count, so pages need no JS to keep it in sync
 - Icons are inline SVGs loaded from `images/icon_*.svg` via `fetch` or `<img>` tags
 - `device_id` in `localStorage` identifies the device for walk-in ownership
@@ -262,14 +264,15 @@ Supabase Auth is already included — magic link is a built-in provider, no extr
    - **Owner** → `owner.html` (owners have no `profile.html`; their profile is a view inside the dashboard)
    - **No `profiles` row** → 3-step onboarding (name required; phone, NIF optional), then continues below
    - **Came from a court page** → back to that court (see "Return to court")
-   - **Otherwise** → the player profile ("Olá, [name]", email, Sair)
+   - **Otherwise, landing from a magic link** → the court list. `login.js` sets a one-shot `localStorage.justLoggedIn` when the link is sent, so this doesn't fire when the profile is opened from the header avatar
+   - **Otherwise** (avatar visit, or a link opened in another browser) → the player profile
 3. `owner.html` bounces anyone who owns no group back to `profile.html`
 
 **Return to court:** "Fazer login" on a court page stores that page in `localStorage.returnTo`; `profile.js` reads and clears it once the session exists (after onboarding for new players). One-shot, and only works if the magic link is opened in the **same browser** that requested it — a link opened on another device lands on the profile instead.
 
 **Profile entry points:** avatar icon (`icon_avatar.svg`) in the header — court list and court pages link to `profile.html`; in `owner.html` it opens the dashboard's own profile view (replaced the old gear tab in the nav).
 
-**Visitors on `profile.html`:** a logged-out visitor is no longer redirected to login. `showVisitor()` renders their walk-in history (matched on `device_id`) plus a "Fazer login" button, because someone who only plays walk-ins still has a history worth seeing and no reason to make an account. An explicit **Terminar sessão** still goes to `login.html` — that's a deliberate exit, not a browse.
+**Visitors on `profile.html`:** a logged-out visitor is no longer redirected to login. `showVisitor()` renders the same three-view toggle as the logged-in profile: history shows their walk-ins (matched on `device_id`) plus a "Fazer login" button, and the memberships and personal info views hold only that button, because someone who only plays walk-ins still has a history worth seeing and no reason to make an account. An explicit **Terminar sessão** still goes to `login.html` — that's a deliberate exit, not a browse.
 
 **Redirect URL allowlist:** Supabase only returns magic links to URLs listed in Authentication → URL Configuration → Redirect URLs. Local IPs are there; Vercel URLs (production + preview wildcard) must be too, or links sent from the deploy fall back to the Site URL (a local IP).
 
@@ -289,7 +292,7 @@ Sessions are kept alive indefinitely for active users. Supabase auto-refreshes t
 ### Todo
 
 - [x] Get the player to login and land on profile page
-  - [ ] Differentiate first login (sign up — player chooses a name) from returning login (sign in — just requests a magic link)
+  - [x] Differentiate first login (sign up — player chooses a name) from returning login (sign in — just requests a magic link) — no `profiles` row routes to onboarding; `login.html` shows newcomer or returning copy based on a per-device `localStorage.hasLoggedIn` flag set by `profile.js`
 - [x] Get the player to register to the owner (simple as possible)
   - [x] Create `memberships` table with `player_id`, `court_id` (nullable), `group_id` (nullable), `status`, `denied_reason`, `created_at`, `approved_at`
   - [x] Unique constraint per `(player_id, court_id)` and `(player_id, group_id)` to prevent duplicate requests
@@ -319,8 +322,7 @@ Sessions are kept alive indefinitely for active users. Supabase auto-refreshes t
   - [ ] Max active bookings per player
   - [ ] Advance booking window (how many days ahead a player can book)
   - [ ] Cancellation deadline (hours before slot for free cancellation)
-- [ ] Get the owner to set court availability
-  - [ ] Needs a `slots` or `availability` table scoped to `court_groups.id` or `courts.id`
+- [x] Get the owner to set court availability — covered by opening hours, pauses and slot length (`court_opening_hours` + `court_groups`); no separate `slots` table needed
 - [x] Get the player to see the availability calendar and book a game
   - [x] `bookings` table: `id, group_id, player_id, court_id, start_at, end_at, status, created_at`
   - [x] Player must have an approved `memberships` row for the court's `group_id` to be allowed to book
@@ -328,7 +330,9 @@ Sessions are kept alive indefinitely for active users. Supabase auto-refreshes t
   - [x] Update `bookings` row status to `cancelled` (two-step Cancelar/Voltar confirm, mirrors owner's revoke flow)
   - [ ] Cancellation rules apply (free >48h before, full charge <48h)
 - [ ] Figure out the rescheduling/cancelling process for bad weather — who triggers it, whether players get offered a new slot or just a waiver, and how it ties to the forecast icons (starting point: edge case (c) under Open Questions)
-- [ ] Add success pig views after booking and after cancelling a booking
+- [x] Add success pig views after booking and after cancelling a booking
+  - [x] After booking: "RESERVADO" via `showSuccess()` in `js/success.js`, then reload
+  - [x] After cancelling a booking: "CANCELADO", sad tone, no ball  - [x] Move the walk-in "BOM JOGO" and "OBRIGADO" screens in `court-walkin.js` onto `showSuccess()`
 - [ ] Player profile page (`profile.html`)
   - [x] Magic link returns the player to the court they started login from (`localStorage.returnTo`)
   - [x] Header avatar icon links to the profile (player) / opens the dashboard profile view (owner, replaces the gear nav tab)
@@ -348,7 +352,8 @@ Sessions are kept alive indefinitely for active users. Supabase auto-refreshes t
     - [x] Tested: logging in claims the device's older anonymous walk-ins
   - [x] Profile split into three toggle views: history (default), memberships (`icon_id`), personal info
   - [x] Memberships view: the player's approved memberships, shown as the owner's member card with the group name in place of the player name and no revoke link
-    - [ ] Fix the player member card (details to discuss)
+    - [x] Fix the player member card — title falls back to the group's court names, courts line removed, expiry uses `icon_trash.svg`
+    - [ ] Fill `court_groups.name` in Supabase — every row is `null` today, so cards show court names instead of a group name
     - [ ] Show pending requests there too, as a card marked "aguarda aprovação" (ties into the pending approval UX under Open Questions)
   - [ ] Upcoming game alerts (billing alerts once billing exists)
   - [x] Replace the placeholder skull icon (`icon_avatar.svg`)
@@ -369,7 +374,8 @@ Sessions are kept alive indefinitely for active users. Supabase auto-refreshes t
   - [x] Revoking a member cancels all their upcoming bookings (cancelled before the membership is deleted; games already underway are left alone)
   - [ ] Flag existing bookings that no longer fit after the owner changes opening hours, pause or slot length (later)
   - [ ] Notify the player when the owner cancels their booking; booking confirmation email (later — Resend sandbox still blocks player emails)
-  - [ ] Booking history view — past games for the owner (and eventually played / no-show / paid status)
+  - [x] Booking history view — past games for the owner (upcoming/past toggle on the bookings tab)
+    - [ ] Played / no-show / paid status on past games
 - [ ] Test what each page shows after an action (approve, deny, revoke, cancel, book…) — the page often just sits blank
   - Likely cause: owner.js removes the acted-on card with `card.remove()`, so removing the last one leaves an empty list with no pig appearance. Approving also doesn't move the player into the members tab (or deny into anything) until a reload
   - Fix options: re-render the view from the patched `ownerData` cache (keeps the pig appearance and cross-tab consistency), or just reload the page after the action
@@ -396,8 +402,8 @@ Sessions are kept alive indefinitely for active users. Supabase auto-refreshes t
 - [x] Slot grid generator — from `open`/`close` + `slot_duration_minutes`, 4-column layout
 - [x] Slot states: past (muted) · occupied/orange · lunch/hatched · available/green · mine/white
 - [x] Selection logic — contiguous, auto-fill between taps, blocked by occupied/lunch/past
-- [x] Min game duration validation — "Confirmar reserva" disabled when selection < min duration
-- [x] "Confirmar reserva" → insert into `bookings`; reloads the page on success
+- [x] Min game duration validation — "Reservar horário" disabled when selection < min duration
+- [x] "Reservar horário" → insert into `bookings`; reloads the page on success
 - [x] Lock picker after successful booking — no further slot picking; mine slot stays visible
 - [x] Selection summary during picking: "Teu jogo: HH:MM às HH:MM (X min)" (live, before confirm)
 
@@ -405,7 +411,7 @@ Sessions are kept alive indefinitely for active users. Supabase auto-refreshes t
 - [x] Wire `renderSlotPicker` from slot-picker.js into court-bookable.js approved branch
 - [x] Load existing bookings for 7-day window — occupied slots visible to all group members
 - [x] One active booking per group (JS layer) — if player already has a future booking, picker is blocked and booking details are shown instead
-- [ ] Owner booking management — same slot grid with full control: view all, add on behalf of a player, edit, remove
+- Owner booking management is tracked under "Get the owner to see the player booking and modify it" in the Todo
 
 ### Design Decisions
 - **Single-court player picker, group-wide owner picker:** the same `renderSlotPicker` serves both.

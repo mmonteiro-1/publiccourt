@@ -263,40 +263,7 @@ async function finishOwnGame(court, reservationId) {
 		return;
 	}
 
-	document.body.classList.remove("inuse");
-	document.body.classList.add("success");
-	document.querySelector(".deck")?.classList.remove("flipped");
-	app.classList.remove("available", "inuse");
-	document.getElementById("court-footer").innerHTML = "";
-
-	app.innerHTML = `
-		<div class="info-hero">
-			<img src="images/pig_serving.svg" class="info-pig" alt="">
-		</div>
-		<p class="bom-jogo">OBRIGADO</p>
-		<p class="info-sub1 margin-top-10" style="font-size:1.5em">Por avisar que o campo ficou livre.</p>
-	`;
-	const bg = document.createElement("div");
-	bg.className = "success-bg";
-	document.body.appendChild(bg);
-
-	const countdownEl = document.createElement("div");
-	countdownEl.className = "bom-jogo-countdown";
-	let secs = 6;
-	countdownEl.textContent = secs;
-	document.body.appendChild(countdownEl);
-
-	const ticker = setInterval(() => {
-		secs--;
-		countdownEl.textContent = secs;
-	}, 1000);
-
-	// Reload instead of redirect so the page re-fetches live status after the finish.
-	// clearInterval first to avoid a tick firing after the page unloads.
-	setTimeout(() => {
-		clearInterval(ticker);
-		location.reload();
-	}, 7000);
+	showSuccess(SUCCESS.walkInFinished());
 }
 
 async function finishGame(reservationId) {
@@ -337,40 +304,7 @@ async function checkIn(court) {
 		return;
 	}
 
-	document.body.classList.remove("inuse");
-	document.body.classList.add("success");
-	document.querySelector(".deck")?.classList.remove("flipped");
-	app.classList.remove("available", "inuse");
-	document.getElementById("court-footer").innerHTML = "";
-
-	app.innerHTML = `
-		<div class="info-hero">
-			<img src="images/pig_sitting.svg" class="info-pig" alt="">
-		</div>
-		<p class="bom-jogo">BOM JOGO</p>
-		<p class="info-sub1 margin-top-10" style="font-size:1.5em">Obrigado por avisar os outros jogadores.</p>
-		<p class="info-sub1 margin-top-10" style="color: #ffffff8f; font-weight: 400">Se quiseres ser porreiríssimo, coloca também um timer de ${selectedDuration}min a contar.</p>
-	`;
-	const bg = document.createElement("div");
-	bg.className = "success-bg";
-	document.body.appendChild(bg);
-	playBallAnimation(app.querySelector(".info-pig"));
-
-	const countdownEl = document.createElement("div");
-	countdownEl.className = "bom-jogo-countdown";
-	let secs = 10;
-	countdownEl.textContent = secs;
-	document.body.appendChild(countdownEl);
-
-	const ticker = setInterval(() => {
-		secs--;
-		countdownEl.textContent = secs;
-	}, 1000);
-
-	setTimeout(() => {
-		clearInterval(ticker);
-		location.reload();
-	}, 11000);
+	showSuccess(SUCCESS.walkInStarted(selectedDuration));
 }
 
 async function verifyLocationAndProceed(court) {

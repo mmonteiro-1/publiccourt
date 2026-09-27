@@ -136,7 +136,7 @@ function buildSlotGrid(day, dayIndex, groupRules, openingHours, selectionStart, 
 				<button id="confirm-cancel-booking-btn"><img src="images/icon_skull.svg" class="link-icon" alt="">Cancelar</button>
 				<button class="button-shallow" id="back-cancel-booking-btn">Voltar</button>
 			</div>`
-		: `<button class="slot-confirm-btn" disabled><img src="images/icon_handshake.svg" class="link-icon" alt="">Confirmar reserva</button>`;
+		: `<button class="slot-confirm-btn" disabled><img src="images/icon_handshake.svg" class="link-icon" alt="">Reservar horário</button>`;
 	return `${legend}<div class="slot-grid">${cells.join('')}</div><div class="slot-summary-wrap" hidden><div class="slot-summary"></div><div class="slot-min-warning" hidden></div></div>${actionButton}`;
 }
 
@@ -291,7 +291,7 @@ export function renderSlotPicker(container, groupRules, openingHours, onConfirm,
 				confirmBtn.disabled = true;
 				confirmBtn.textContent = 'A reservar...';
 				const error = await onConfirm(startAt, endAt);
-				confirmBtn.innerHTML = '<img src="images/icon_handshake.svg" class="link-icon" alt="">Confirmar reserva';
+				confirmBtn.innerHTML = '<img src="images/icon_handshake.svg" class="link-icon" alt="">Reservar horário';
 				if (!error) {
 					lockPicker(startAt, endAt);
 				} else {

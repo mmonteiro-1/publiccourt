@@ -69,6 +69,8 @@ html:has(.page-court-list) {
 }
 
 body {
+	/* manipulation DROPS DOUBLE-TAP ZOOM (AND THE TAP DELAY) BUT KEEPS PINCH ZOOM FOR ACCESSIBILITY */
+	touch-action: manipulation;
 	font-family: 'Space Grotesk', monospace;
 	font-size: 16px;
 	background: var(--pink);
@@ -204,16 +206,24 @@ body:has(.pig-appearance:not([hidden] *), .info-pig) .logo-pig {
 	z-index: -1;
 }
 
-.page-court.success .bom-jogo,
+.page-court.success .info-heading,
 .page-court.success .info-sub1 {
 	color: var(--white);
 }
 
-.bom-jogo {
+/* info-heading IS 1.5em ON info.html; THE SUCCESS TITLE STAYS BIGGER THAN ITS 1.5em sub1 */
+.page-court.success .info-heading {
 	font-size: 2.5em;
-	font-weight: 700;
-	color: var(--black);
-	line-height: 1;
+}
+
+.page-court.success .info-sub1 {
+	font-size: 1.5em;
+}
+
+.page-court.success .info-sub2 {
+	font-size: 1.2em;
+	color: var(--muted);
+	font-weight: 400;
 }
 
 .bom-jogo-countdown {
@@ -685,6 +695,7 @@ header {
 	font-size: 1.5em;
 	font-weight: 700;
 	color: #000;
+	text-transform: uppercase;
 }
 
 .info-sub1 {
@@ -790,6 +801,22 @@ header {
 .page-login #app {
 	margin-top: auto;
 	margin-bottom: auto;
+	padding: 0 20px;
+	padding-top: 20px;
+}
+
+/* IN FLOW ABOVE THE FORM — THE DEFAULT ABSOLUTE CENTRING IS FOR EMPTY LISTS AND WOULD COVER THE INPUT */
+.page-login .pig-appearance {
+	position: static;
+	transform: none;
+	padding: 0;
+	text-align: start;
+}
+
+.page-login .pig-appearance p {
+	text-transform: uppercase;
+	text-align: start;
+	margin-top: 20px;
 }
 
 /* TOP-ANCHORED, NOT CENTRED: THE PROFILE'S VIEWS DIFFER IN HEIGHT, AND CENTRING MADE THE PAGE JUMP ON EVERY SWITCH */
@@ -899,7 +926,7 @@ input[type="number"]::-webkit-outer-spin-button {
 	font-weight: 400;
 }
 
-.page-profile .info-link img {
+.page-profile .info-link img, .page-login .info-link img {
 	filter: invert(1);
 }
 

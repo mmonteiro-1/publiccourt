@@ -272,7 +272,7 @@ function renderMembersView() {
 				<div class="divider"></div>
 				<div class="membership-data">
 					<p class="membership-courts"><img src="images/icon_court.svg" class="link-icon" alt="">${courtNames}</p>
-					<p class="membership-date">${expiresDate ? `<img src="images/icon_timer.svg" class="link-icon" alt=""> ${expiresDate}` : MSG_NO_EXPIRY}</p>
+					<p class="membership-date">${expiresDate ? `<img src="images/icon_trash.svg" class="link-icon" alt=""> ${expiresDate}` : MSG_NO_EXPIRY}</p>
 					<p class="membership-date"><img src="images/icon_calendar_tennis.svg" class="link-icon" alt="">${nextGameLabel}</p>
 					<p class="membership-date"><img src="images/icon_history.svg" class="link-icon" alt="">${bookingCount} ${bookingCount === 1 ? "reserva" : "reservas"}</p>
 				</div>

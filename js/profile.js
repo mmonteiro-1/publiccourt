@@ -24,16 +24,26 @@ const MSG_NO_EXPIRY = "Sem data de expiração";
 const MSG_NO_NEXT_GAME = "Sem jogos agendados";
 const MSG_BOOKING_COUNT = n => `${n} ${n === 1 ? "reserva" : "reservas"}`;
 
-// ONE-SHOT: THE PAGE A PLAYER STARTED LOGIN FROM (SET BY court-bookable.js). READ AND CLEARED TOGETHER SO
-// A LATER, UNRELATED VISIT TO THE PROFILE ISN'T BOUNCED TO AN OLD COURT
-function takeReturnTo() {
+// ONE-SHOT localStorage FLAGS, READ AND CLEARED TOGETHER SO A LATER, UNRELATED VISIT TO THE PROFILE ISN'T REDIRECTED
+function takeOnce(key) {
 	try {
-		const url = localStorage.getItem("returnTo");
-		localStorage.removeItem("returnTo");
-		return url;
+		const value = localStorage.getItem(key);
+		localStorage.removeItem(key);
+		return value;
 	} catch {
 		return null;
 	}
+}
+
+// AFTER A MAGIC LINK: BACK TO THE COURT LOGIN STARTED FROM (returnTo, SET BY court-bookable.js), ELSE THE COURT LIST.
+// justLoggedIn (SET BY login.js) TELLS A LOGIN LANDING APART FROM OPENING THE PROFILE VIA THE HEADER AVATAR.
+// A LINK OPENED IN ANOTHER BROWSER HAS NEITHER FLAG AND STAYS ON THE PROFILE
+function redirectAfterLogin() {
+	const returnTo = takeOnce("returnTo");
+	const justLoggedIn = takeOnce("justLoggedIn");
+	const target = returnTo || (justLoggedIn && "index.html");
+	if (target) location.href = target;
+	return Boolean(target);
 }
 
 // ADOPT THE WALK-INS THIS DEVICE STARTED WHILE LOGGED OUT, SO A VISITOR WHO LATER CREATES AN ACCOUNT
@@ -48,6 +58,8 @@ async function claimDeviceWalkIns(user) {
 
 // ENTRY POINT: REDIRECTS OWNERS, ROUTES NEW USERS TO ONBOARDING, RETURNING USERS TO PROFILE
 async function loadProfile(user) {
+	// LETS login.html GREET THIS DEVICE AS RETURNING NEXT TIME
+	try { localStorage.setItem("hasLoggedIn", "1"); } catch {}
 	await claimDeviceWalkIns(user);
 
 	// OWNERS NEVER LAND ON THE PLAYER PROFILE — SEND THEM TO THEIR DASHBOARD.
@@ -55,7 +67,8 @@ async function loadProfile(user) {
 	// SO WITHOUT THE FILTER ANY APPROVED MEMBER WOULD BE WRONGLY REDIRECTED TO owner.html.
 	const { data: ownedGroups } = await db.from("court_groups").select("id").eq("owner_id", user.id).limit(1);
 	if (ownedGroups && ownedGroups.length > 0) {
-		takeReturnTo();
+		takeOnce("returnTo");
+		takeOnce("justLoggedIn");
 		location.href = "owner.html";
 		return;
 	}
@@ -73,12 +86,7 @@ async function loadProfile(user) {
 		return;
 	}
 
-	const returnTo = takeReturnTo();
-	if (returnTo) {
-		location.href = returnTo;
-		return;
-	}
-
+	if (redirectAfterLogin()) return;
 	showProfile(user, profile);
 }
 
@@ -171,12 +179,7 @@ function startOnboarding(user) {
 			return;
 		}
 
-		const returnTo = takeReturnTo();
-		if (returnTo) {
-			location.href = returnTo;
-			return;
-		}
-
+		if (redirectAfterLogin()) return;
 		showProfile(user, { name: collected.name, phone: collected.phone, nif: collected.nif });
 	}
 
@@ -200,7 +203,8 @@ async function fetchHistory(user) {
 		...(walkInRows ?? []).map(w => ({ courtId: w.court_id, start: w.started_at, end: w.manual_finished_at ?? w.ends_at, kind: MSG_KIND_WALKIN })),
 		...(bookingRows ?? []).map(b => ({ courtId: b.court_id, start: b.start_at, end: b.end_at, kind: MSG_KIND_BOOKING })),
 	]
-		.filter(game => new Date(game.end).getTime() < now)
+		// A GAME OF 10 MIN OR LESS IS A MIS-TAP OR A WALK-IN ENDED RIGHT AWAY, NOT A GAME WORTH LISTING
+		.filter(game => new Date(game.end).getTime() < now && new Date(game.end) - new Date(game.start) > 10 * 60000)
 		.sort((a, b) => new Date(b.start) - new Date(a.start));
 }
 
@@ -216,7 +220,7 @@ async function loadHistory(container, user) {
 	const games = await fetchHistory(user);
 	if (!games.length) {
 		setPigAppearance(container, MSG_HISTORY_EMPTY, "pig_serving");
-		return;
+		return 0;
 	}
 
 	const courts = await fetchCourtNames(games);
@@ -236,6 +240,7 @@ async function loadHistory(container, user) {
 		</div>
 	`;
 	}).join("");
+	return games.length;
 }
 
 // THE PLAYER'S APPROVED MEMBERSHIPS AS THE SAME CARD THE OWNER SEES IN THE MEMBERS TAB (owner.js renderMembersView),
@@ -262,8 +267,9 @@ async function loadMemberships(container, user) {
 	container.innerHTML = [...memberships]
 		.sort((a, b) => new Date(b.approved_at) - new Date(a.approved_at))
 		.map(m => {
-			const groupName = (groups ?? []).find(g => g.id === m.group_id)?.name ?? MSG_COURT_UNKNOWN;
 			const courtNames = (courts ?? []).filter(c => c.group_id === m.group_id).map(c => c.name).join(", ");
+			// MOST GROUPS HAVE NO name IN THE DB, SO THEIR COURTS STAND IN FOR IT
+			const groupName = (groups ?? []).find(g => g.id === m.group_id)?.name || courtNames || MSG_COURT_UNKNOWN;
 			const groupBookings = (bookings ?? []).filter(b => b.group_id === m.group_id);
 			const nextBooking = groupBookings.find(b => new Date(b.start_at) > now);
 			const approvedDate = m.approved_at ? new Date(m.approved_at).toLocaleDateString("pt-PT") : "—";
@@ -279,8 +285,7 @@ async function loadMemberships(container, user) {
 				</div>
 				<div class="divider"></div>
 				<div class="membership-data">
-					<p class="membership-courts"><img src="images/icon_court.svg" class="link-icon" alt="">${courtNames}</p>
-					<p class="membership-date">${expiresDate ? `<img src="images/icon_timer.svg" class="link-icon" alt=""> ${expiresDate}` : MSG_NO_EXPIRY}</p>
+					<p class="membership-date">${expiresDate ? `<img src="images/icon_trash.svg" class="link-icon" alt=""> ${expiresDate}` : MSG_NO_EXPIRY}</p>
 					<p class="membership-date"><img src="images/icon_calendar_tennis.svg" class="link-icon" alt="">${nextBooking ? gameLabel(nextBooking.start_at, nextBooking.end_at) : MSG_NO_NEXT_GAME}</p>
 					<p class="membership-date"><img src="images/icon_history.svg" class="link-icon" alt="">${MSG_BOOKING_COUNT(groupBookings.length)}</p>
 				</div>
@@ -291,16 +296,45 @@ async function loadMemberships(container, user) {
 
 // VISITORS SEE THEIR DEVICE'S WALK-IN HISTORY INSTEAD OF BEING BOUNCED TO THE LOGIN PAGE — SOMEONE WHO
 // ONLY EVER PLAYS WALK-INS STILL HAS A HISTORY WORTH SHOWING, AND LOGGING IN CLAIMS IT (SEE claimDeviceWalkIns)
+// SAME TOGGLE AS THE LOGGED-IN PROFILE SO VISITORS SEE WHAT AN ACCOUNT ADDS; THE PANES THEY CAN'T USE HOLD THE LOGIN BUTTON
 function showVisitor() {
+	const loginBtn = `<button data-action="login" class="margin-top-20"><img src="images/icon_login.svg" class="link-icon" alt="">${MSG_VISITOR_LOGIN}</button>`;
 	app.innerHTML = `
-		<p class="court-rules-label">${MSG_HISTORY_TITLE}</p>
-		<div class="bookings-list margin-bottom-20"></div>
-		<p class="card-sub margin-bottom-10" style="font-size: .7em">${MSG_VISITOR_INTRO}</p>
-		<button id="login-btn"><img src="images/icon_login.svg" class="link-icon" alt="">${MSG_VISITOR_LOGIN}</button>
+		${VIEW_TOGGLE_HTML}
+		<div data-pane-body="history">
+			<div class="bookings-list margin-top-20 margin-bottom-20"></div>
+			<!-- HIDDEN UNTIL THE HISTORY LOADS: WITH NO GAMES THE PIG STANDS ALONE -->
+			<div id="visitor-history-extra" hidden>
+				<p class="card-sub" style="font-size: .7em">${MSG_VISITOR_INTRO}</p>
+				${loginBtn}
+			</div>
+		</div>
+		<div data-pane-body="memberships" hidden>${loginBtn}</div>
+		<div data-pane-body="info" hidden>${loginBtn}</div>
 	`;
 
-	loadHistory(app.querySelector(".bookings-list"), null);
-	document.getElementById("login-btn").addEventListener("click", () => { location.href = "login.html"; });
+	loadHistory(app.querySelector(".bookings-list"), null).then(count => {
+		document.getElementById("visitor-history-extra").hidden = !count;
+	});
+	wireViewToggle();
+	app.querySelectorAll('[data-action="login"]').forEach(btn => btn.addEventListener("click", () => { location.href = "login.html"; }));
+}
+
+const VIEW_TOGGLE_HTML = `
+	<div class="view-toggle margin-top-20">
+		<button class="view-toggle-btn active" data-pane="history" aria-label="${MSG_HISTORY_TITLE}"><img src="images/icon_history.svg" alt=""></button>
+		<button class="view-toggle-btn" data-pane="memberships" aria-label="${MSG_VIEW_MEMBERSHIPS}"><img src="images/icon_id.svg" alt=""></button>
+		<button class="view-toggle-btn" data-pane="info" aria-label="${MSG_VIEW_INFO}"><img src="images/icon_avatar.svg" alt=""></button>
+	</div>
+`;
+
+// PANES ARE RENDERED ONCE AND ONLY HIDDEN, SO SWITCHING NEITHER LOSES UNSAVED EDITS NOR REFETCHES ANY LIST
+function wireViewToggle() {
+	const toggleBtns = app.querySelectorAll(".view-toggle-btn");
+	toggleBtns.forEach(btn => btn.addEventListener("click", () => {
+		toggleBtns.forEach(b => b.classList.toggle("active", b === btn));
+		app.querySelectorAll("[data-pane-body]").forEach(pane => { pane.hidden = pane.dataset.paneBody !== btn.dataset.pane; });
+	}));
 }
 
 // PERSONAL INFO FIELDS SHOWN AND EDITED ON THE PROFILE; ONLY name IS REQUIRED
@@ -317,11 +351,7 @@ function showProfile(user, profile) {
 	app.innerHTML = `
 		<p class="profile-name"></p>
 		<p class="profile-email"></p>
-		<div class="view-toggle margin-top-20">
-			<button class="view-toggle-btn active" data-pane="history" aria-label="${MSG_HISTORY_TITLE}"><img src="images/icon_history.svg" alt=""></button>
-			<button class="view-toggle-btn" data-pane="memberships" aria-label="${MSG_VIEW_MEMBERSHIPS}"><img src="images/icon_id.svg" alt=""></button>
-			<button class="view-toggle-btn" data-pane="info" aria-label="${MSG_VIEW_INFO}"><img src="images/icon_avatar.svg" alt=""></button>
-		</div>
+		${VIEW_TOGGLE_HTML}
 		<div data-pane-body="info" hidden>
 			<div class="profile-form">
 				${PROFILE_FIELDS.map(f => `
@@ -347,12 +377,7 @@ function showProfile(user, profile) {
 	loadHistory(app.querySelector('[data-pane-body="history"] .bookings-list'), user);
 	loadMemberships(app.querySelector('[data-pane-body="memberships"] .bookings-list'), user);
 
-	// PANES ARE RENDERED ONCE AND ONLY HIDDEN, SO SWITCHING NEITHER LOSES UNSAVED EDITS NOR REFETCHES ANY LIST
-	const toggleBtns = app.querySelectorAll(".view-toggle-btn");
-	toggleBtns.forEach(btn => btn.addEventListener("click", () => {
-		toggleBtns.forEach(b => b.classList.toggle("active", b === btn));
-		app.querySelectorAll("[data-pane-body]").forEach(pane => { pane.hidden = pane.dataset.paneBody !== btn.dataset.pane; });
-	}));
+	wireViewToggle();
 
 	// VALUES GO IN THROUGH THE DOM, NOT THE TEMPLATE, SO A QUOTE OR < IN A NAME CAN'T BREAK THE MARKUP
 	const greeting = app.querySelector(".profile-name");

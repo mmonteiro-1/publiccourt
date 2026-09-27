@@ -203,7 +203,7 @@ export async function renderBookable(court) {
 			// SETS status TO cancelled; RLS ONLY ALLOWS THIS WHILE start_at IS STILL IN THE FUTURE
 			const onCancel = async () => {
 				const { error } = await db.from("bookings").update({ status: "cancelled" }).eq("id", playerActiveBooking.id);
-				if (!error) location.reload();
+				if (!error) showSuccess(SUCCESS.bookingCancelled(gameLabel(playerActiveBooking.start_at, playerActiveBooking.end_at)));
 				return error;
 			};
 			// RLS BLOCKS CANCELLING ONCE start_at HAS PASSED, SO A GAME IN PROGRESS GETS NO CANCEL BUTTON
@@ -235,8 +235,8 @@ export async function renderBookable(court) {
 			<div id="slot-picker"></div>
 		`;
 
-		// INSERT INTO bookings ON CONFIRM; RELOADS ON SUCCESS SO THE PAGE PICKS UP THE LOCKED STATE.
-		// RETURNS error SO THE SLOT PICKER CAN HANDLE RETRY ON FAILURE.
+		// INSERT INTO bookings ON CONFIRM; THE SUCCESS VIEW RELOADS WHEN ITS COUNTDOWN ENDS, SO THE PAGE PICKS UP
+		// THE LOCKED STATE. RETURNS error SO THE SLOT PICKER CAN HANDLE RETRY ON FAILURE.
 		const onConfirm = async (startAt, endAt) => {
 			const { error } = await db.from("bookings").insert({
 				group_id: court.group_id,
@@ -245,7 +245,7 @@ export async function renderBookable(court) {
 				start_at: startAt,
 				end_at: endAt,
 			});
-			if (!error) location.reload();
+			if (!error) showSuccess(SUCCESS.booked(gameLabel(startAt, endAt)));
 			return error;
 		};
 
