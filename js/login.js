@@ -1,9 +1,9 @@
 const app = document.getElementById("app");
 const form = document.getElementById("login-form");
 
-const MSG_PIG_NEW = "Bora usar o Campo Livre a sério?";
-const MSG_INTRO_NEW = "Joga em campos privados, guarda o histórico, acompanha as tuas estatísticas e encontra parceiros de jogo.";
-const MSG_LOGIN_OPTIONAL = "O email introduzido abaixo será o teu método de login, e não é necessário se quiseres apenas jogar nos campos públicos.";
+const MSG_PIG_NEW = "Já não tás a brincar";
+const MSG_INTRO_NEW = "Joga em campos privados, acompanha o teu progresso, guarda o histórico e encontra parceiros de jogo.";
+const MSG_LOGIN_OPTIONAL = "O email introduzido abaixo será o teu método de login, e não é necessário se quiseres apenas jogar nos campos abertos.";
 const MSG_INTRO_RETURNING = "Bom tê-lo de volta";
 const MSG_SENDING = "A enviar...";
 const MSG_SEND_ERROR = "Algo correu mal. Tenta outra vez.";

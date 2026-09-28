@@ -819,6 +819,7 @@ header {
 	text-transform: uppercase;
 	text-align: start;
 	margin-top: 20px;
+	width: 100%;
 }
 
 /* TOP-ANCHORED, NOT CENTRED: THE PROFILE'S VIEWS DIFFER IN HEIGHT, AND CENTRING MADE THE PAGE JUMP ON EVERY SWITCH */
@@ -1170,11 +1171,30 @@ input[type="number"]::-webkit-outer-spin-button {
 }
 
 .membership-courts,
-.membership-date {
+.membership-date,
+.skill-title {
 	display: flex;
 	align-items: center;
 	gap: 5px;
 	font-size: 0.8em;
+	text-transform: uppercase;
+}
+
+/* SCOPED WITH :has SO THE OTHER CARDS SHARING .membership-card (OWNER, BOOKINGS, MEMBERSHIPS) KEEP THEIR PADDING */
+.membership-card:has(.skill-title) {
+	position: relative;
+	overflow: hidden;
+	padding-top: 35px;
+}
+
+.skill-title {
+	position: absolute;
+	background: var(--white);
+	top: 0;
+	left: 0;
+	width: 100%;
+	padding: 5px 10px;
+	justify-content: center;
 }
 
 .membership-player-row {
@@ -1208,6 +1228,52 @@ input[type="number"]::-webkit-outer-spin-button {
 	border-radius: 50%;
 	background: var(--pink);
 	box-shadow: inset 4px 4px 0 var(--black);
+}
+
+/* LANYARD BADGE (PLAYER'S MEMBERSHIPS): A HOLE THAT'S A DIRECT CHILD OF THE CARD BECOMES A PILL SLOT, TOP CENTRE,
+   WITH A STRAP (THE SVG RIGHT AFTER IT) DIPPING INTO IT. SAME BORDER AND INSET SHADOW AS THE ROUND HOLE */
+.membership-card:has(> .membership-hole) {
+	position: relative;
+	padding-top: 50px;
+}
+
+.membership-card > .membership-hole {
+	position: absolute;
+	top: 15px;
+	left: 50%;
+	transform: translateX(-50%);
+	/* FIXED, NOT A %, SO IT NEVER SHRINKS NARROWER THAN THE ~75px STRAP + FOLD THAT DIP INTO IT */
+	width: 120px;
+	height: 25px;
+	border-radius: 100px;
+}
+
+/* 65px WIDE SO THE FOLD'S TOP LINES UP WITH THE SLOT'S TOP EDGE. top: -12px = THE 2px CARD BORDER + THE 10px THE STRAP
+   RISES ABOVE THE CARD, AS IF IT COMES FROM THE PLAYER'S NECK. left IS OFFSET SO THE STRAP SITS SLIGHTLY LEFT OF CENTRE */
+.membership-card > .membership-hole + svg {
+	position: absolute;
+	top: -12px;
+	left: calc(50% - 25px);
+	width: 65px;
+	height: auto;
+	overflow: visible;
+}
+
+/* non-scaling-stroke KEEPS THE BORDER AT A TRUE 2px, SAME AS THE CARD'S, WHATEVER THE SVG'S SCALE */
+.membership-hole + svg path {
+	stroke: var(--black);
+	stroke-width: 2px;
+	stroke-linejoin: round;
+	vector-effect: non-scaling-stroke;
+}
+
+/* ONLY THE STRAP — THE FOLD CARRIES ITS OWN fill ATTRIBUTE, WHICH A CSS fill WOULD OVERRIDE */
+.membership-hole + svg path:first-child {
+	fill: var(--yellow);
+}
+
+.membership-hole + svg path:last-child {
+	transform: translate(4px, 6px);
 }
 
 /* A STATS CARD'S LEVEL TITLE, STARS IN A ROW AFTER IT */
@@ -1248,13 +1314,16 @@ input[type="number"]::-webkit-outer-spin-button {
 	border-radius: 100px;
 	background: var(--white);
 	overflow: hidden;
+	margin-top: 10px;
 }
 
+/* min-width KEEPS A SLIVER OF FILL VISIBLE AT 0%, SO AN EMPTY BAR STILL READS AS A BAR TO FILL */
 .level-bar div {
 	position: absolute;
 	top: 0;
 	bottom: 0;
 	left: 0;
+	min-width: 20px;
 	background: var(--blue);
 }
 
@@ -1269,6 +1338,15 @@ input[type="number"]::-webkit-outer-spin-button {
 	font-size: 0.4em;
 	font-weight: 700;
 	text-transform: uppercase;
+}
+
+/* XP BAR: SAME TRACK AS THE SKILL BARS, BUT ONE SEGMENT WITH THE PLAYER'S XP INSIDE AND A YELLOW FILL */
+.xp-bar div {
+	background: var(--yellow);
+}
+
+.xp-bar span {
+	font-size: 1em;
 }
 
 .level-bar span + span::before {

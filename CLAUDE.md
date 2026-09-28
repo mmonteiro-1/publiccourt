@@ -159,7 +159,7 @@ When a court's burocracia level requires document verification, documents are ne
 
 ### Activity stats — a reason to use Campo Livre beyond booking
 
-**First set implemented** (profile stats view, see Todo): hours in the last 30 days vs the 30 days before, weekly streak, favourite court. Cities collected was dropped. Rolling 30 days rather than the calendar month, so the total doesn't reset to zero on the 1st and knock the player down a level. Hours and streak carry a level title, stars and a segmented progress bar (`LEVELS_HOURS` / `LEVELS_STREAK` in `profile.js`). The rest below is still exploration.
+**First set implemented** (profile progress view, see Todo): games in the last 6 months (replaced hours in the last 30 days; the comparison with the previous period was dropped), weekly streak, distinct courts played ("Movimento", replaced the favourite court card). Cities collected was dropped. A rolling window rather than a calendar period, so the total doesn't reset to zero on a fixed date and knock the player down a level. All three carry a level title, stars and a segmented progress bar (`LEVELS_GAMES` / `LEVELS_STREAK` / `LEVELS_MOVEMENT` in `profile.js`). The rest below is still exploration.
 
 The chosen levels are listed under "Player progress" below, since they're the first piece of that progress layer.
 
@@ -187,7 +187,7 @@ Builds on activity stats. Short, interactive questions after each game collect t
   - "Singulares ou pares?"
   - "Ganhaste / perdeste / só treino?"
   - Maybe a 1–5 "Como foi o jogo?". Never ask about fatigue, pain or injury, which drifts back into health data
-- **Progress layer:** points per game and per answered card, levels, the weekly streak, city flags as badges. Levels and the streak already exist on the stats view (see "Levels already implemented" below); points and badges don't
+- **Progress layer:** points per game and per answered card, levels, the weekly streak, city flags as badges. Skill levels, the streak and XP already exist on the progress view (see "Levels already implemented" and "XP" below); points for answered cards and badges don't
 - **Rain freeze:** our take on Duolingo's streak freeze. We already fetch the forecast (`weather.js`), so a rainy week doesn't break the streak
 - **Risks:**
   - Nagging: show the card once per game, then drop it. A card on every open trains people to stop opening the app
@@ -195,27 +195,62 @@ Builds on activity stats. Short, interactive questions after each game collect t
   - Tone: too much confetti feels childish. The pig's cheeky voice ("batotas", "porreiríssimo") should carry it, not badges everywhere
 - **Where to start:** only the post-game card (duration, singles/doubles, result) stored on the game row, with no points or levels. It pays off alone by making stats more accurate, and it shows whether players actually answer before a progression system is built on top. Since stats are behind the login wall, answering is also the natural moment to prompt visitors to make an account ("guarda o teu progresso")
 
-**Levels already implemented** (stats view, `LEVELS_HOURS` / `LEVELS_STREAK` in `profile.js`). Titles are ranks that grow with the number, so a low value never gets a mocking title. Each bar runs from 0 to its max in four equal segments, one per level, with the level title written inside. Each scale is defined as a step plus its titles (`levelScale(step, titles)`): every level spans the same step, so the segments are always equal. Hours step: 3h. Streak step: 2 weeks. Four stars next to the card title, filled up to the current level.
+**Levels already implemented** (progress view, `LEVELS_GAMES` / `LEVELS_STREAK` / `LEVELS_MOVEMENT` in `profile.js`). Titles are ranks that grow with the number, so a low value never gets a mocking title. Each bar runs from 0 to its max in four equal segments, one per level, with the level title written inside. Each scale is defined as a step plus its titles (`levelScale(step, titles)`): every level spans the same step, so the segments are always equal. Games step: 5. Streak step: 2 weeks. Four stars next to the card title, filled up to the current level.
 
-| Hours in the last 30 days | Title |
+| Games in the last 6 months ("Momentum") | Title |
 |---|---|
-| 0 – 2h59 | Raquete de gaveta |
-| 3h – 5h59 | Comprometido |
-| 6h – 8h59 | Cliente da casa |
-| 9h+ | Rato de campo |
+| 0–4 | Raquete de gaveta |
+| 5–9 | Voltou da reforma |
+| 10–14 | Cliente da casa |
+| 15+ | 24 sobre 7 |
 
-Bar max: 12h.
+Bar max: 20 games. Replaced hours in the last 30 days: a game count is more tangible, doesn't depend on the declared walk-in duration, and gives natural increments for XP. Trade-off: a 30-min hit weighs the same as a 2h match.
 
 | Weekly streak | Title |
 |---|---|
-| 0–1 weeks | Sem ritmo |
-| 2–3 weeks | A ganhar ritmo |
-| 4–5 weeks | Em pleno rali |
+| 0–1 weeks | Só quer postar |
+| 2–3 weeks | Comprometido |
+| 4–5 weeks | Joga até na chuva |
 | 6+ weeks | Força da natureza |
 
 Bar max: 8 weeks.
 
-Favourite court has no levels; its title is always "Segunda casa". The hour thresholds are a first guess, to be tuned once real monthly play is known.
+| Distinct courts played ("Movimento") | Title |
+|---|---|
+| 1 | Gato de apartamento |
+| 2 | Turista |
+| 3 | Presidente da junta |
+| 4+ | Sem morada fixa |
+
+Bar max: 4 courts. Unlike the other two, one court is already level 1, so the level is `courts - 1` while the bar uses `courts` — each reached level's segment is full rather than filling gradually. Counts walk-ins and bookings alike.
+
+The game thresholds are a first guess, to be tuned once real play is known.
+
+**XP** (`playerXp` / `xpCard` in `profile.js`), shown on a character card above the skill cards — same `.membership-card` as the skills, "Nível N" in the `.skill-title` banner, the pig for the current level as the player art (`XP_LEVEL_IMAGES`; width 90%, centred with 20px above and below, a plain image for now, not a pig appearance), then the XP bar. The idea is a Magic / Pokémon style character card. XP only ever grows, so it comes from lifetime events, never from the skills' rolling values (Momentum's 6-month count can drop). Every increment is +500 XP (`XP_PER_INCREMENT`):
+- each past game
+- each distinct court played
+- each week with a game right after another week with a game (a lone week is already paid by its games)
+
+Numbers are inflated ×10 on purpose (big numbers, big fun) with the level ends ×10 too, so difficulty is unchanged. Shown with PT-PT grouping ("26 500").
+
+Examples: once a week for 6 months on 2 courts ≈ 26 500 XP (level 8, the calibration target); twice a week on 3 courts ≈ 40 000 (level 10); once a month for a year on 1 court ≈ 6 500 (level 3).
+
+Levels 1–10, each needing 500 XP more than the last (level n spans 1 500 + 500n XP, `XP_LEVEL_ENDS`). A first try at the equivalent of 4 000 + 1 000n put the once-a-week player at level 5 — too hard. Reaching a level's max XP is a level-up (the max shown above the bar is where the next level starts), so 4 500 XP is level 3 at 0%:
+
+| Level | XP |
+|---|---|
+| 1 | 0–1 999 |
+| 2 | 2 000–4 499 |
+| 3 | 4 500–7 499 |
+| 4 | 7 500–10 999 |
+| 5 | 11 000–14 999 |
+| 6 | 15 000–19 499 |
+| 7 | 19 500–24 499 |
+| 8 | 24 500–29 999 |
+| 9 | 30 000–35 999 |
+| 10 | 36 000+ (bar full at 42 500) |
+
+Unlike the skill bars, the XP bar is relative: the fill only covers the current level. The player's total XP is written inside the bar; the level's max XP sits right-aligned just above it. Past 42 500 the player stays level 10 with a full bar. Reuses `.level-bar` with a single segment plus the `.xp-bar` modifier (yellow fill, 1em text).
 
 ### Court suggestions in the memberships view
 
@@ -389,14 +424,18 @@ Sessions are kept alive indefinitely for active users. Supabase auto-refreshes t
     - [x] Games of 10 min or less are hidden (mis-taps, walk-ins ended right away) — only hidden, still in the database
     - [ ] Test: a walk-in started while logged in fills `player_id`
     - [x] Tested: logging in claims the device's older anonymous walk-ins
-  - [x] Profile split into toggle views: stats (`icon_chart`, first and the default for players and visitors — the visitor teaser will fill theirs), history, memberships (`icon_id`), personal info (`icon_gear`)
-  - [x] Activity stats view (players only; visitors get the login button): hours in the last 30 days vs the 30 days before, weekly streak, favourite court. Computed in JS from the same fetch as the history, so games of 10 min or less are excluded
-    - [x] Metric name above the level title: "Momentum" (hours; common in PT-PT sports talk — "Balanço" alone reads as "summary", "Forma" drifts towards health) and "Consistência" (streak). The level title is `.stat-level` (1em, 700) with the stars after it
-    - [x] Level titles instead of plain labels — hours: Raquete de gaveta / Comprometido (3h) / Cliente da casa (6h) / Rato de campo (9h); streak: Sem ritmo / A ganhar ritmo (2) / Em pleno rali (4) / Força da natureza (6); favourite: Segunda casa
-    - [x] Progress bars on hours and streak, 0 to max (12h / 8 weeks) in four equal segments with the level title inside each
+  - [x] Profile split into toggle views: progress (`icon_medal`, first and the default for players and visitors — the visitor teaser will fill theirs), history, memberships (`icon_id`), personal info (`icon_gear`)
+  - [x] Progress view (players only; visitors get the login button), being turned into RPG-like mechanics: games in the last 6 months, weekly streak, distinct courts played. Computed in JS from the same fetch as the history, so games of 10 min or less are excluded
+    - [x] Metric name above the level title: "Momentum" (hours; common in PT-PT sports talk — "Balanço" alone reads as "summary", "Forma" drifts towards health), "Consistência" (streak) and "Movimento" (distinct courts). The metric name is `.skill-title`, a white banner across the top of the card; the level title is `.stat-level` (1em, 700) with the stars after it
+    - [x] Level titles instead of plain labels — see the tables under "Levels already implemented"
+    - [x] Movimento replaced the favourite court card ("Segunda casa")
+    - [x] Progress bars on all three skills, 0 to max (20 games / 8 weeks / 4 courts) in four equal segments with the level title inside each
     - [x] Segment titles are white with `mix-blend-mode: difference`: black on the empty track, white over the fill
     - [x] Stars next to the level title: one per level (four each), the current level and those below it filled `--yellow`, so the first level already shows one. Inline SVG (`STAR_SVG` in `profile.js`) so CSS can switch the fill
-    - [ ] Tune the level thresholds once real monthly play is known
+    - [x] XP bar above the skill cards: +500 XP per game / new court / streak week, levels 1–10 (see "XP")
+    - [x] Character card art linked to the XP level: `XP_LEVEL_IMAGES` in `profile.js`, one entry per level (index 0 = level 1). Placeholders for now: `pig_sitting` (1–3), `pig_reaching` (4–6), `pig_serving` (7–10)
+    - [ ] Draw progressively more "pro" pig images per level (gear, outfit, pose) and swap them into `XP_LEVEL_IMAGES`
+    - [ ] Tune the level thresholds (skills and XP) once real play is known
     - [ ] Visitor teaser: a stat computed from the device's walk-ins above the login button (e.g. "Jogaste 6h este mês")
   - [x] Memberships view: the player's approved memberships, shown as the owner's member card with the group name in place of the player name and no revoke link
     - [x] Fix the player member card — title falls back to the group's court names, courts line removed, expiry uses `icon_trash.svg`

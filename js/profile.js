@@ -18,22 +18,28 @@ const MSG_VISITOR_INTRO = "Estes são os jogos começados neste dispositivo. Faz
 const MSG_VISITOR_LOGIN = "Fazer login";
 
 // "ATIVIDADE", NEVER "SAÚDE" — SEE "ACTIVITY, NEVER HEALTH" IN CLAUDE.md
-const MSG_VIEW_STATS = "Estatísticas de atividade";
-const MSG_STATS_EMPTY = "As tuas estatísticas de atividade aparecem aqui depois do primeiro jogo.";
-const MSG_STAT_VS_PREVIOUS = diff => `${diff} que no período anterior`;const MSG_STAT_STREAK = n => `${n} ${n === 1 ? "semana" : "semanas seguidas"}`;
-const MSG_STAT_HOURS_VALUE = time => `${time} nos últimos 30 dias`;
-// TITLES ARE RANKS THAT GROW WITH THE NUMBER — A FIXED "RATO DE CAMPO" WOULD READ AS MOCKERY OVER 45min.
-// EVERY LEVEL SPANS THE SAME step (MINUTES IN THE LAST 30 DAYS / WEEKS IN A ROW), SO THE BAR SPLITS INTO EQUAL SEGMENTS.
+const MSG_VIEW_PROGRESS = "Progresso";
+const MSG_PROGRESS_EMPTY = "O teu progresso aparece aqui depois do primeiro jogo.";
+const MSG_STAT_STREAK = n => `${n} ${n === 1 ? "semana" : "semanas seguidas"}`;
+const MSG_STAT_GAMES_VALUE = n => `${n} ${n === 1 ? "jogo" : "jogos"}`;
+const MSG_STAT_GAMES_HINT = "Nos últimos 6 meses";
+// PT-PT GROUPING ("26 500") KEEPS THE INFLATED NUMBERS READABLE
+const MSG_XP = xp => `${xp.toLocaleString("pt-PT")} XP`;
+const MSG_XP_LEVEL = n => `Nível ${n}`;
+// TITLES ARE RANKS THAT GROW WITH THE NUMBER — A FIXED TOP TITLE WOULD READ AS MOCKERY OVER ONE GAME.
+// EVERY LEVEL SPANS THE SAME step (GAMES IN THE LAST 6 MONTHS / WEEKS IN A ROW), SO THE BAR SPLITS INTO EQUAL SEGMENTS.
 // LEVEL i STARTS AT i × step; THE BAR IS FULL AT titles.length × step
 const levelScale = (step, titles) => ({
 	max: titles.length * step,
 	levels: titles.map((title, i) => ({ from: i * step, title })),
 });
-const LEVELS_HOURS = levelScale(180, ["Raquete de gaveta", "Voltou da reforma", "Cliente da casa", "Só para pra comer"]);
+const LEVELS_GAMES = levelScale(5, ["Raquete de gaveta", "Voltou da reforma", "Cliente da casa", "24 sobre 7"]);
 const LEVELS_STREAK = levelScale(2, ["Só quer postar", "Comprometido", "Joga até na chuva", "Força da natureza"]);
-const MSG_TITLE_FAVOURITE = "Segunda casa";
+const LEVELS_MOVEMENT = levelScale(1, ["Gato de apartamento", "Turista", "Presidente da junta", "Sem morada fixa"]);
+const MSG_TITLE_MOVEMENT = "Movimento";
 const MSG_STAT_STREAK_HINT = "Com pelo menos um jogo";
-const MSG_STAT_FAVOURITE = n => `${n} ${n === 1 ? "jogo" : "jogos"} aqui`;
+const MSG_STAT_COURTS = n => `${n} ${n === 1 ? "campo" : "campos diferentes"}`;
+const MSG_STAT_COURTS_HINT = n => `Já ${n === 1 ? "recebeu" : "receberam"} os teus jogos`;
 const MSG_VIEW_MEMBERSHIPS = "Os teus campos";
 const MSG_NO_MEMBERSHIPS = "Não és membro de nenhum campo, infelizmente. Bora mudar isso!";
 const MSG_MEMBER_SINCE = date => `Membro desde ${date}`;
@@ -221,7 +227,7 @@ async function fetchHistory(user) {
 		...(bookingRows ?? []).map(b => ({ courtId: b.court_id, start: b.start_at, end: b.end_at, kind: MSG_KIND_BOOKING })),
 	]
 		.map(game => ({ ...game, mins: Math.round((new Date(game.end) - new Date(game.start)) / 60000) }))
-		// A GAME OF 10 MIN OR LESS IS A MIS-TAP OR A WALK-IN ENDED RIGHT AWAY — NOT LISTED, AND NOT COUNTED IN STATS
+		// A GAME OF 10 MIN OR LESS IS A MIS-TAP OR A WALK-IN ENDED RIGHT AWAY — NOT LISTED, AND NOT COUNTED IN PROGRESS
 		.filter(game => new Date(game.end).getTime() < now && game.mins > 10)
 		.sort((a, b) => new Date(b.start) - new Date(a.start));
 	if (!games.length) return games;
@@ -234,7 +240,7 @@ async function fetchHistory(user) {
 }
 
 // TICKET CARDS REUSING THE OWNER DASHBOARD'S MARKUP, SO A GAME LOOKS THE SAME ON BOTH SIDES OF THE APP.
-// TAKES THE fetchHistory PROMISE SO THE STATS VIEW CAN SHARE ONE FETCH
+// TAKES THE fetchHistory PROMISE SO THE PROGRESS VIEW CAN SHARE ONE FETCH
 async function loadHistory(container, gamesPromise) {
 	const games = await gamesPromise;
 	if (!games.length) {
@@ -259,14 +265,6 @@ async function loadHistory(container, gamesPromise) {
 	`;
 	}).join("");
 	return games.length;
-}
-
-// "6h30", "45min", "2h" — HOURS ARE THE HEADLINE UNIT, MINUTES ONLY WHEN THEY ADD SOMETHING
-function formatPlayTime(mins) {
-	const h = Math.floor(mins / 60);
-	const m = mins % 60;
-	if (!h) return `${m}min`;
-	return m ? `${h}h${String(m).padStart(2, "0")}` : `${h}h`;
 }
 
 // MONDAY 00:00 OF THE WEEK date FALLS IN, AS A TIMESTAMP — THE KEY FOR THE WEEKLY STREAK
@@ -308,62 +306,115 @@ function levelStars(scale, value) {
 	return scale.levels.map((_, i) => STAR_SVG(i <= current)).join("");
 }
 
+// XP ONLY EVER GROWS, SO IT COMES FROM LIFETIME EVENTS, NOT FROM THE SKILLS' ROLLING VALUES. +XP_PER_INCREMENT FOR EACH GAME,
+// EACH DISTINCT COURT, AND EACH WEEK THAT EXTENDS A STREAK (A WEEK WITH A GAME RIGHT AFTER ANOTHER ONE — A LONE WEEK IS ALREADY PAID BY ITS GAMES)
+// INFLATED ×10 ON PURPOSE — BIG NUMBERS FEEL MORE REWARDING; THE LEVEL ENDS ARE ×10 TOO, SO DIFFICULTY IS UNCHANGED
+const XP_PER_INCREMENT = 500;
+function playerXp(games) {
+	const past = games.filter(game => new Date(game.start) < new Date());
+	const courts = new Set(past.map(game => game.courtId)).size;
+	const weeks = new Set(past.map(game => weekStart(game.start)));
+	const streakWeeks = [...weeks].filter(week => {
+		const previous = new Date(week);
+		previous.setDate(previous.getDate() - 7);
+		return weeks.has(previous.getTime());
+	}).length;
+	return (past.length + courts + streakWeeks) * XP_PER_INCREMENT;
+}
+
+// LEVEL n NEEDS 1500 + 500n XP (2000, 2500 … 6500), SO EACH IS A BIT HARDER. REACHING AN END IS A LEVEL-UP: 0–1999 IS LEVEL 1, 2000–4499 LEVEL 2
+const XP_LEVEL_ENDS = [];
+for (let n = 1, total = 0; n <= 10; n++) XP_LEVEL_ENDS.push(total += 1500 + 500 * n);
+
+// RELATIVE, UNLIKE THE SKILL BARS: THE FILL ONLY COVERS THE CURRENT LEVEL. PAST THE LAST LEVEL IT STAYS FULL
+// CHARACTER ART PER XP LEVEL (INDEX 0 = LEVEL 1), GETTING MORE "PRO" AS THE PLAYER LEVELS UP.
+// PLACEHOLDERS FOR NOW — ONE ENTRY PER LEVEL SO EACH CAN GET ITS OWN IMAGE LATER WITHOUT TOUCHING THE LOGIC
+const XP_LEVEL_IMAGES = [
+	"pig_reaching", "pig_reaching", "pig_reaching",
+	"pig_sitting", "pig_sitting", "pig_sitting",
+	"pig_serving", "pig_serving", "pig_serving", "pig_serving",
+];
+
+// CHARACTER NAME + FLAVOUR TEXT PER XP LEVEL (INDEX 0 = LEVEL 1). ONLY ONE FOR TESTING — UNTIL EVERY LEVEL HAS ITS OWN,
+// A MISSING ENTRY FALLS BACK TO THE FIRST
+const XP_LEVEL_INFO = [
+	{ title: "Recruta", description: "Ainda a descobrir de que lado se segura a raquete." },
+];
+
+// A CHARACTER CARD (THINK MAGIC / POKÉMON): SAME CARD AS THE SKILLS, LEVEL IN THE BANNER, PLAYER ART, THEN THE XP BAR
+function xpCard(xp) {
+	const found = XP_LEVEL_ENDS.findIndex(end => xp < end);
+	const index = found === -1 ? XP_LEVEL_ENDS.length - 1 : found;
+	const from = index ? XP_LEVEL_ENDS[index - 1] : 0;
+	const to = XP_LEVEL_ENDS[index];
+	const fill = Math.min((xp - from) / (to - from), 1) * 100;
+	const info = XP_LEVEL_INFO[index] ?? XP_LEVEL_INFO[0];
+	return `
+		<div class="membership-card">
+			<p class="skill-title">${MSG_XP_LEVEL(index + 1)}</p>
+			<img src="images/${XP_LEVEL_IMAGES[index]}.svg" alt="" style="width: 90%; margin: 20px auto">
+			<p class="card-status" style="text-align: center; color: var(--black)">${info.title}</p>
+			<p class="membership-date">${info.description}</p>
+			<p class="stat-level" style="justify-content: flex-end">${MSG_XP(to)}</p>
+			<div class="level-bar xp-bar"><div style="width: ${fill}%"></div><span>${MSG_XP(xp)}</span></div>
+		</div>
+	`;
+}
+
 // FILL FROM 0 TO max OVER ONE EQUAL SEGMENT PER LEVEL, EACH LABELLED WITH ITS TITLE
 function levelBar(scale, value) {
 	const fill = Math.min(value / scale.max, 1) * 100;
 	const segments = scale.levels.map(level => `<span>${level.title}</span>`).join("");
-	return `<div class="level-bar margin-top-10"><div style="width: ${fill}%"></div>${segments}</div>`;
+	return `<div class="level-bar"><div style="width: ${fill}%"></div>${segments}</div>`;
 }
 
-// ACTIVITY STATS FROM THE SAME GAMES AS THE HISTORY (ALREADY WITHOUT THE ≤10 MIN ONES). DECLARED TIME ON COURT,
+// PROGRESS FROM THE SAME GAMES AS THE HISTORY (ALREADY WITHOUT THE ≤10 MIN ONES). DECLARED TIME ON COURT,
 // NOT TIME PLAYED: A WALK-IN LASTS WHAT THE PLAYER CHOSE UNLESS ENDED EARLY, AND A BOOKING DOESN'T PROVE A SHOW-UP
-async function loadStats(container, gamesPromise) {
+async function loadProgress(container, gamesPromise) {
 	const games = await gamesPromise;
 	if (!games.length) {
-		setPigAppearance(container, MSG_STATS_EMPTY, "pig_reaching");
+		setPigAppearance(container, MSG_PROGRESS_EMPTY, "pig_reaching");
 		return;
 	}
 
-	// ROLLING 30 DAYS, NOT THE CALENDAR MONTH: A MONTH TOTAL RESETS TO ZERO ON THE 1ST AND DROPS THE PLAYER A LEVEL
+	// GAMES, NOT MINUTES: A COUNT IS MORE TANGIBLE AND DOESN'T DEPEND ON THE WALK-IN DURATION THE PLAYER DECLARED.
+	// ROLLING 6 MONTHS, NOT A CALENDAR PERIOD, SO THE TOTAL NEVER RESETS TO ZERO ON A FIXED DATE AND DROPS THE PLAYER A LEVEL
 	const now = new Date();
-	const DAY = 24 * 60 * 60 * 1000;
-	const recentStart = new Date(now - 30 * DAY);
-	const previousStart = new Date(now - 60 * DAY);
-	const minsBetween = (from, to) => games
-		.filter(game => new Date(game.start) >= from && new Date(game.start) < to)
-		.reduce((sum, game) => sum + game.mins, 0);
-	const minsRecent = minsBetween(recentStart, now);
-	const diff = minsRecent - minsBetween(previousStart, recentStart);
-	// NO LINE WHEN EQUAL — IN PRACTICE THAT'S ONLY 0 VS 0, WHERE A COMPARISON SAYS NOTHING
-	const diffText = diff === 0 ? "" : MSG_STAT_VS_PREVIOUS(`${diff > 0 ? "+" : "-"}${formatPlayTime(Math.abs(diff))}`);
+	const recentStart = new Date(now);
+	recentStart.setMonth(recentStart.getMonth() - 6);
+	const gamesRecent = games.filter(game => new Date(game.start) >= recentStart && new Date(game.start) < now).length;
 
 	const streak = weeklyStreak(games);
 
-	// MOST GAMES WINS; TIME ON COURT BREAKS A TIE
-	const perCourt = {};
-	games.filter(game => game.court).forEach(game => {
-		const c = perCourt[game.courtId] ??= { name: game.court.name, games: 0, mins: 0 };
-		c.games++;
-		c.mins += game.mins;
-	});
-	const favourite = Object.values(perCourt).sort((a, b) => b.games - a.games || b.mins - a.mins)[0];
+	// ONE COURT IS ALREADY LEVEL 1, SO THE LEVEL IS courts - 1; THE BAR USES courts ITSELF SO EACH REACHED LEVEL'S SEGMENT IS FULL
+	const courts = new Set(games.map(game => game.courtId)).size;
 
-	// metric IS THE SMALL LINE ABOVE THE LEVEL TITLE; THE FAVOURITE COURT HAS NO LEVEL, ONLY THE METRIC. "Momentum" IS COMMON IN PT-PT SPORTS TALK;
-	// "Balanço" ALONE READS AS "SUMMARY" (FAZER O BALANÇO), AND "Forma" DRIFTS TOWARDS FITNESS/HEALTH
 	const statCard = (metric, title, value, detail, bar = "") => `
 		<div class="membership-card">
-			${metric ? `<p class="membership-date">${metric}:</p>` : ""}
+			${metric ? `<p class="skill-title">${metric}</p>` : ""}
 			${title ? `<p class="stat-level">${title}</p>` : ""}
-			<p class="membership-player" style="white-space: normal">${value}</p>
+			<p class="membership-player margin-top-5" style="white-space: normal">${value}</p>
 			${detail ? `<div class="membership-date">${detail}</div>` : ""}
 			${bar}
 		</div>
 	`;
 	container.innerHTML = [
-		statCard("Momentum",levelTitle(LEVELS_HOURS, minsRecent) + levelStars(LEVELS_HOURS, minsRecent), MSG_STAT_HOURS_VALUE(formatPlayTime(minsRecent)), diffText, levelBar(LEVELS_HOURS, minsRecent)),
+		xpCard(playerXp(games)),
+		statCard("Momentum", levelTitle(LEVELS_GAMES, gamesRecent) + levelStars(LEVELS_GAMES, gamesRecent), MSG_STAT_GAMES_VALUE(gamesRecent), MSG_STAT_GAMES_HINT, levelBar(LEVELS_GAMES, gamesRecent)),
 		statCard("Consistência", levelTitle(LEVELS_STREAK, streak) + levelStars(LEVELS_STREAK, streak), MSG_STAT_STREAK(streak), MSG_STAT_STREAK_HINT, levelBar(LEVELS_STREAK, streak)),
-		favourite ? statCard(MSG_TITLE_FAVOURITE, "", favourite.name, MSG_STAT_FAVOURITE(favourite.games)) : "",	].join("");
+		statCard(MSG_TITLE_MOVEMENT, levelTitle(LEVELS_MOVEMENT, courts - 1) + levelStars(LEVELS_MOVEMENT, courts - 1), MSG_STAT_COURTS(courts), MSG_STAT_COURTS_HINT(courts), levelBar(LEVELS_MOVEMENT, courts)),
+	].join("");
 }
+
+// LANYARD STRAP DIPPING INTO THE BADGE SLOT: THE FRONT STRAP, THEN THE FOLD (THE STRAP'S BACK, SEEN AS IT TURNS INTO
+// THE SLOT), SHIFTED 4px/4px IN CSS. ITS DARK YELLOW IS HARDCODED ON PURPOSE — THERE'S NO VARIABLE FOR IT.
+// INLINE, NOT AN <img>, SO CSS CAN FILL THE STRAP WITH THE COLOUR VARIABLES.
+// THE VIEWBOX STARTS AT y -26.5 (= 10px AT THE RENDERED 65px WIDTH) SO THE STRAP RISES 10px ABOVE THE CARD; ITS TOP
+// EDGE KEEPS THE SAME SLANT. THE STRAP IS WIDENED ~20px (53 UNITS) ON ITS LEFT ONLY, SO THE FOLD STILL MEETS THE RIGHT EDGE;
+// BOTH PUSH THE LEFT CORNER OUTSIDE THE VIEWBOX (x -62.5), HENCE overflow: visible IN CSS.
+// THE STRAP'S BOTTOM-LEFT CORNER AND THE FOLD'S TIP ARE ROUNDED ~5px (13 UNITS): EACH CURVE STARTS 13 UNITS BEFORE THE CORNER
+// ALONG ONE EDGE AND ENDS 13 AFTER IT. THE STRAP'S BOTTOM-RIGHT STAYS SHARP
+const BADGE_RIBBON_SVG = `<svg viewBox="0 -26.5 172 110.5" aria-hidden="true"><path d="M-62.5 -26.5H114.9L157 84H-9.8Q-23 84 -27.4 71.6Z"/><path d="M140 44H172L161.6 71.6Q157 84 151.8 71.9Z" fill="#b08900"/></svg>`;
 
 // THE PLAYER'S APPROVED MEMBERSHIPS AS THE SAME CARD THE OWNER SEES IN THE MEMBERS TAB (owner.js renderMembersView),
 // WITH THE GROUP NAME WHERE THE OWNER SEES THE PLAYER'S. NO REVOKE LINK — THAT'S THE OWNER'S CALL, NOT THE PLAYER'S
@@ -398,10 +449,9 @@ async function loadMemberships(container, user) {
 			const expiresDate = m.expires_at ? new Date(m.expires_at).toLocaleDateString("pt-PT") : null;
 			return `
 			<div class="membership-card">
-				<div class="membership-player-row">
-					<p class="membership-player">${groupName}</p>
-					<div class="membership-hole"></div>
-				</div>
+				<div class="membership-hole"></div>
+				${BADGE_RIBBON_SVG}
+				<p class="membership-player">${groupName}</p>
 				<div class="membership-date-row">
 					<p class="membership-date">${MSG_MEMBER_SINCE(approvedDate)}</p>
 				</div>
@@ -431,7 +481,7 @@ function showVisitor() {
 				${loginBtn}
 			</div>
 		</div>
-		<div data-pane-body="stats">${loginBtn}</div>
+		<div data-pane-body="progress">${loginBtn}</div>
 		<div data-pane-body="memberships" hidden>${loginBtn}</div>
 		<div data-pane-body="info" hidden>${loginBtn}</div>
 	`;
@@ -443,10 +493,10 @@ function showVisitor() {
 	app.querySelectorAll('[data-action="login"]').forEach(btn => btn.addEventListener("click", () => { location.href = "login.html"; }));
 }
 
-// STATS IS THE DEFAULT PANE FOR PLAYERS AND VISITORS ALIKE (A VISITOR TEASER WILL FILL THEIRS LATER)
+// PROGRESS IS THE DEFAULT PANE FOR PLAYERS AND VISITORS ALIKE (A VISITOR TEASER WILL FILL THEIRS LATER)
 const VIEW_TOGGLE_HTML = `
 	<div class="view-toggle margin-top-20">
-		<button class="view-toggle-btn active" data-pane="stats" aria-label="${MSG_VIEW_STATS}"><img src="images/icon_chart.svg" alt=""></button>
+		<button class="view-toggle-btn active" data-pane="progress" aria-label="${MSG_VIEW_PROGRESS}"><img src="images/icon_medal.svg" alt=""></button>
 		<button class="view-toggle-btn" data-pane="history" aria-label="${MSG_HISTORY_TITLE}"><img src="images/icon_history.svg" alt=""></button>
 		<button class="view-toggle-btn" data-pane="memberships" aria-label="${MSG_VIEW_MEMBERSHIPS}"><img src="images/icon_id.svg" alt=""></button>
 		<button class="view-toggle-btn" data-pane="info" aria-label="${MSG_VIEW_INFO}"><img src="images/icon_gear.svg" alt=""></button>
@@ -469,15 +519,15 @@ const PROFILE_FIELDS = [
 	{ field: "nif", label: "NIF", type: "number", autocomplete: "off" },
 ];
 
-// RENDERS THE PLAYER PROFILE: GREETING AND EMAIL (READ-ONLY — IT'S THE LOGIN), THEN A TOGGLE BETWEEN
-// FOUR PANES: PAST GAMES, ACTIVITY STATS, MEMBERSHIPS, AND EDITABLE INFO + LOGOUT
+// RENDERS THE PLAYER PROFILE: A TOGGLE BETWEEN FOUR PANES — PAST GAMES, PROGRESS, MEMBERSHIPS, AND INFO
+// (GREETING, EMAIL READ-ONLY SINCE IT'S THE LOGIN, EDITABLE FIELDS + LOGOUT)
 function showProfile(user, profile) {
 	document.body.classList.remove("onboarding");
 	app.innerHTML = `
-		<p class="profile-name"></p>
-		<p class="profile-email"></p>
 		${VIEW_TOGGLE_HTML}
 		<div data-pane-body="info" hidden>
+			<p class="profile-name margin-top-20"></p>
+			<p class="profile-email"></p>
 			<div class="profile-form">
 				${PROFILE_FIELDS.map(f => `
 					<div>
@@ -494,7 +544,7 @@ function showProfile(user, profile) {
 		<div data-pane-body="history" hidden>
 			<div class="bookings-list margin-top-20"></div>
 		</div>
-		<div data-pane-body="stats">
+		<div data-pane-body="progress">
 			<div class="bookings-list margin-top-20"></div>
 		</div>
 		<div data-pane-body="memberships" hidden>
@@ -504,7 +554,7 @@ function showProfile(user, profile) {
 
 	const games = fetchHistory(user);
 	loadHistory(app.querySelector('[data-pane-body="history"] .bookings-list'), games);
-	loadStats(app.querySelector('[data-pane-body="stats"] .bookings-list'), games);
+	loadProgress(app.querySelector('[data-pane-body="progress"] .bookings-list'), games);
 	loadMemberships(app.querySelector('[data-pane-body="memberships"] .bookings-list'), user);
 
 	wireViewToggle();
