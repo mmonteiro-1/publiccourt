@@ -1,6 +1,6 @@
-// TEAR-STRIP REVEAL: A FULL-SCREEN "PARCEL" ON TOP OF EVERYTHING. THE PLAYER DRAGS THE TEAR STRIP UP FROM THE BOTTOM; ONCE
-// TORN, THE STRIP FLIES OFF, THE BOX SPLITS ALONG THE TEAR AND SLIDES AWAY, AND THE OVERLAY REMOVES ITSELF — REVEALING THE
-// PAGE BEHIND IT. USAGE: showTearReveal() OR showTearReveal({ label: "…", onDone: () => … }).
+// TEAR-STRIP REVEAL: A FULL-SCREEN "PARCEL" ON TOP OF EVERYTHING, PACKED WITH STYROFOAM PEANUTS. THE PLAYER DRAGS THE TEAR
+// STRIP UP FROM THE BOTTOM; ONCE TORN, THE STRIP FLIES OFF, THE BOX VANISHES AS THE PACKING BURSTS OUT AT THE VIEWER OVER
+// THE PAGE BEHIND IT, AND ONCE THE PEANUTS HAVE FADED THE OVERLAY REMOVES ITSELF. USAGE: showTearReveal() OR showTearReveal({ label: "…", onDone: () => … }).
 // STYLES: THE "TEAR-STRIP REVEAL" BLOCK IN styles.css
 
 const MSG_TEAR_LABEL = "Recebeste encomenda. Tu sabes o que fazer.";
@@ -10,6 +10,7 @@ function showTearReveal({ label = MSG_TEAR_LABEL, onDone } = {}) {
 	overlay.className = "tear-reveal";
 	overlay.setAttribute("aria-hidden", "true");
 	overlay.innerHTML = `
+		<div class="tear-fill"></div>
 		<div class="tear-half tear-half-left"><div class="tear-box"></div><div class="tear-slot"></div></div>
 		<div class="tear-half tear-half-right"><div class="tear-box"></div><div class="tear-slot"></div></div>
 		<div class="tear-chain"></div>
@@ -40,8 +41,9 @@ function showTearReveal({ label = MSG_TEAR_LABEL, onDone } = {}) {
 	const MAX_TEAR = 0.85;
 	// RELEASED PAST THIS (OR DRAGGED TO THE END), THE STRIP AUTO-COMPLETES; BELOW IT, IT SNAPS BACK SEALED
 	const COMMIT_AT = 0.7;
-	// SPLIT_MS = THE HALVES' 700ms SLIDE + THE RIGHT HALF'S 500ms DELAY (styles.css)
-	const SETTLE_MS = 250, FINISH_MS = 400, FLY_MS = 600, SPLIT_MS = 1200;
+	// EACH PEANUT FLIES FOR UP TO FLIGHT_MS AFTER UP TO FLIGHT_DELAY_MS; THE OVERLAY GOES ONCE THE LAST ONE IS OFF-SCREEN
+	const SETTLE_MS = 250, FINISH_MS = 400, FLY_MS = 600;
+	const FLIGHT_MS = 1100, FLIGHT_DELAY_MS = 100;
 
 	const chain = overlay.querySelector(".tear-chain");
 	const tab = overlay.querySelector(".tear-tab");
@@ -98,6 +100,46 @@ function showTearReveal({ label = MSG_TEAR_LABEL, onDone } = {}) {
 		const right = left.map(([x, y]) => [STRIP_W - x, y]).reverse();
 		const points = [...left, ...right].map(([x, y]) => `${STRIP_X + x} ${STRIP_TOP + y}`);
 		return `${screen}M${points.join("L")}Z`;
+	}
+
+	// THE PACKING: A COLUMN THE STRIP'S SIZE BEHIND BOTH BOX HALVES, SO THE HOLE SHOWS PEANUTS INSTEAD OF THE PAGE. TWO PER ROW,
+	// JITTERED AND TURNED AT RANDOM SO THEY READ AS LOOSE FILL; THE COLUMN'S OWN BACKGROUND (THE BOX'S INSIDE) FILLS THE GAPS
+	const PEANUTS = 80, PEANUTS_PER_ROW = 2;
+	const fill = overlay.querySelector(".tear-fill");
+	Object.assign(fill.style, { left: `${STRIP_X}px`, top: `${STRIP_TOP}px`, width: `${STRIP_W}px`, height: `${STRIP_H}px` });
+	const rowH = STRIP_H / (PEANUTS / PEANUTS_PER_ROW);
+	// THE SAME LIST OF TRANSFORM FUNCTIONS AT REST AND IN FLIGHT, SO THE ANIMATION INTERPOLATES EACH ONE (FULL SPINS INCLUDED)
+	// INSTEAD OF FALLING BACK TO MATRIX INTERPOLATION
+	const peanutTransform = (dx, dy, dz, turn, flip) => `translate(-50%, -50%) translate3d(${dx}px, ${dy}px, ${dz}px) rotate(${turn}deg) rotateX(${flip}deg)`;
+	const peanuts = Array.from({ length: PEANUTS }, (_, i) => {
+		const peanut = document.createElement("div");
+		peanut.className = "tear-peanut";
+		const x = (i % PEANUTS_PER_ROW + 0.5) * STRIP_W / PEANUTS_PER_ROW + (Math.random() - 0.5) * 20;
+		const y = (Math.floor(i / PEANUTS_PER_ROW) + 0.5) * rowH + (Math.random() - 0.5) * 10;
+		const turn = Math.random() * 180;
+		Object.assign(peanut.style, { left: `${x}px`, top: `${y}px`, transform: peanutTransform(0, 0, 0, turn, 0) });
+		fill.appendChild(peanut);
+		return { peanut, x, y, turn };
+	});
+
+	// THE BURST: THE PACKING COMES TO THE FRONT AND EVERY PEANUT FLIES UP, OUT (AWAY FROM THE COLUMN'S MIDDLE) AND AT THE VIEWER:
+	// translateZ UNDER THE OVERLAY'S perspective MAKES IT GROW AS IT NEARS. Z STAYS WELL SHORT OF THE 500px perspective, OR A
+	// PEANUT WOULD PASS THE VIEWER AND FLIP. EACH LEAVES THROUGH ITS OWN SIDE OF THE SCREEN AT ROUGHLY ITS OWN HEIGHT (A SLIGHT
+	// UPWARD DRIFT), SO THE BURST COMES FROM ALL ALONG THE STRIP. dx RUNS FROM ITS SPOT PAST THE SCREEN'S EDGE BY MORE THAN ITS
+	// SIZE; THE perspective ONLY PUSHES IT FURTHER OUT, SINCE IT MAGNIFIES AWAY FROM THE SCREEN'S CENTRE
+	function burst() {
+		overlay.appendChild(fill);
+		overlay.classList.add("burst");
+		const rand = (min, max) => min + Math.random() * (max - min);
+		peanuts.forEach(({ peanut, x, y, turn }) => {
+			const screenX = STRIP_X + x;
+			const dx = x < STRIP_W / 2 ? -screenX - rand(100, 300) : SCREEN_W - screenX + rand(100, 300);
+			const end = peanutTransform(dx, -rand(0, 200), rand(150, 400), turn + rand(-360, 360), rand(-180, 180));
+			peanut.animate(
+				[{ transform: peanut.style.transform }, { transform: end }],
+				{ duration: rand(FLIGHT_MS * 2 / 3, FLIGHT_MS), delay: rand(0, FLIGHT_DELAY_MS), easing: "cubic-bezier(0.2, 0.5, 0.5, 1)", fill: "forwards" },
+			);
+		});
 	}
 
 	// THE LABEL TEARS WITH THE STRIP: EVERY FACE HOLDS A COPY LAID OUT ON THE WHOLE STRIP (SHIFTED UP BY THE SLICE'S OWN
@@ -182,7 +224,7 @@ function showTearReveal({ label = MSG_TEAR_LABEL, onDone } = {}) {
 
 	// THE SUCCESS TEAR: RUN THE TEAR LINE TO THE VERY TOP (progress 1 / MAX_TEAR = TEAR LINE AT 0), THEN THROW THE WHOLE STRIP
 	// OFF UP AND TO THE RIGHT, THE WAY IT CURLS (THE INLINE transform KEEPS THE CSS translateX(-50%) CENTRING). ONCE IT HAS
-	// FLOWN, .split SLIDES EACH BOX HALF OFF ITS SIDE, AND WHEN THEY'RE GONE THE OVERLAY IS REMOVED, LEAVING THE PAGE
+	// FLOWN THE PACKING BURSTS OUT AND THE BOX VANISHES WITH IT (.burst); ONCE THE LAST PEANUT HAS FADED THE OVERLAY IS REMOVED
 	function complete() {
 		completing = true;
 		dragging = false;
@@ -191,11 +233,11 @@ function showTearReveal({ label = MSG_TEAR_LABEL, onDone } = {}) {
 			chain.style.transform = "translateX(-50%) translate3d(100px, -110vh, 0) rotate(20deg)";
 			tab.remove();
 			setTimeout(() => {
-				overlay.classList.add("split");
+				burst();
 				setTimeout(() => {
 					overlay.remove();
 					onDone?.();
-				}, SPLIT_MS);
+				}, FLIGHT_DELAY_MS + FLIGHT_MS);
 			}, FLY_MS);
 		}, FINISH_MS);
 	}

@@ -192,7 +192,7 @@ Builds on activity stats. Short, interactive questions after each game collect t
 - **Rain freeze:** our take on Duolingo's streak freeze. We already fetch the forecast (`weather.js`), so a rainy week doesn't break the streak
 - **Risks:**
   - Nagging: show the card once per game, then drop it. A card on every open trains people to stop opening the app
-  - Honesty: self-reported results are fine for personal progress, but they rule out leaderboards
+  - Honesty: self-reported results are fine for personal progress, but they rule out ranking by results. Activity can still be ranked (see "Leaderboards and social comparison")
   - Tone: too much confetti feels childish. The pig's cheeky voice ("batotas", "porreiríssimo") should carry it, not badges everywhere
 - **Where to start:** only the post-game card (duration, singles/doubles, result) stored on the game row, with no points or levels. It pays off alone by making stats more accurate, and it shows whether players actually answer before a progression system is built on top. Since stats are behind the login wall, answering is also the natural moment to prompt visitors to make an account ("guarda o teu progresso")
 
@@ -252,6 +252,48 @@ Levels 1–10, each needing 500 XP more than the last (level n spans 1 500 + 500
 | 10 | 36 000+ (bar full at 42 500) |
 
 Unlike the skill bars, the XP bar is relative: the fill only covers the current level. The player's total XP is written inside the bar; the level's max XP sits right-aligned just above it. Past 42 500 the player stays level 10 with a full bar. Reuses `.level-bar` with a single segment plus the `.xp-bar` modifier (yellow fill, 1em text).
+
+### Leaderboards and social comparison
+
+Future exploration, not planned yet. XP and the skill levels give every player a number, and numbers can be ranked. Comparing yourself with others is the strongest motivator in Duolingo (its leagues) and Strava (segment rankings), and it could turn solo progress into a reason to come back every week.
+
+- **Rank activity, never results:** XP, games, streak and Movimento all come from recorded games, so they can be ranked. Self-reported wins and losses can't be (see "Honesty" under Player progress). The leaderboard measures who plays the most, not who plays the best, and the copy should say so.
+- **Cheating is the real risk:** a walk-in is only a declared game. Once a ranking is at stake, fake check-ins become tempting. Walk-ins already require the location step, and bookings are backed by the owner. Possible guards: cap the XP per day, don't count walk-ins that overlap, or count only walk-ins confirmed by the post-game card.
+- **Scopes, smallest first:**
+  - A court group's members: they already share a court, and the owner vouches for them (same reasoning as matchmaking's "chicken and egg")
+  - A court: everyone who played there, walk-ins included ("Rei do campo" for the top player)
+  - A city: this ties in with city flags and Movimento
+  - Friends: only once matchmaking exists, because it needs a "who you played with" link
+- **Weekly leagues beat all-time tables:** an all-time XP ranking can never be caught by a newcomer, which kills motivation. A weekly ranking that resets (XP earned this week) gives everyone a fresh start, and a rainy week can be frozen the same way as the rain freeze.
+- **Show the neighbourhood, not the whole table:** the player sees who's just above and just below them ("Estás em 7.º, a 500 XP do Rui"). Being told you're 43rd of 50 demotivates, whereas "1 jogo para passares o Rui" gives a concrete next step. The top three can still be shown for the aspiration.
+- **Tone:** the pig's cheeky voice teases instead of shaming ("O Rui passou-te. Vais deixar?"). Nobody at the bottom gets a mocking title, same rule as the level titles.
+- **Privacy:**
+  - Opt-in: a player is only ranked, and only sees the rankings, after choosing to join. Showing a player's name and activity to strangers is personal data in the open, and it needs consent.
+  - Only the first name (or a nickname) and the number are shown. Never the courts, days or times the player plays, which would expose their routine (same concern as matchmaking).
+  - Visitors aren't ranked. That's another reason to log in.
+- **Data access:** today every stat is computed in JS from the player's own rows, and RLS rightly blocks reading other players' games. A leaderboard needs a Postgres view or RPC that returns only aggregates (first name + weekly XP) for opted-in players, never the raw rows.
+- **Owner angle:** an owner could see the group's most active members and reward them (a free game, a "sócio do mês" badge). This is a candidate add-on under Degrees of Complexity.
+- **First step:** an opt-in weekly league inside one court group, with the neighbourhood view on the progress pane. Small, trusted, easy to moderate, and it shows whether players care before anything wider is built.
+
+#### Seasons and events — boosting the ranking
+
+Seasons and time-limited events give the ranking a rhythm: something new to chase every few weeks, and a reason for a lapsed player to come back.
+
+- **Season points, separate from XP:** XP only ever grows and drives the character level, so it stays untouched. A season has its own points, which start at zero and are ranked for that season only. A game earns both: the usual XP plus the season points, with any event bonus applied to the season points alone. The character level never inflates from a double-points weekend.
+- **Seasons follow the tennis year:** roughly quarterly (spring, summer, autumn, winter), so a season is long enough to climb and short enough to feel winnable. The winter season can weigh points by the rain, so a tough season isn't a dead one (ties in with the rain freeze).
+- **Event ideas:**
+  - Double points weekend: the simplest boost, and an easy way to test whether events move play at all
+  - Local calendar: Santos Populares in June, the Aveiro summer, school holidays. Portuguese moments suit the pig's voice
+  - Explorer week: bonus points for a court you've never played (feeds Movimento and pushes players to new courts)
+  - Off-peak bonus: extra points for booking empty weekday slots. This is the owner's angle, since it fills hours that would otherwise sit empty
+  - Owner events: an owner runs their own event for their group (a "torneio de verão", a points bonus on a new court). A candidate add-on under Degrees of Complexity
+- **End-of-season rewards:** a season title or badge that stays on the profile ("Campeão da primavera 2027"), or a special pig outfit for the season's top players (ties in with the per-level pig drawings). Cosmetic only, never booking perks, so the ranking can't turn into a paywall or a fight over slots.
+- **Announcing it:** there are no push notifications, so a new season or event shows up on the next app open. The tear-strip reveal (`tear-reveal.js`) fits the season's results: "the parcel" with the player's final rank and reward.
+- **Risks:**
+  - Bonuses make cheating pay more. An event bonus should only apply to games that are hard to fake (bookings, or walk-ins confirmed by the post-game card)
+  - Too many events at once: one at a time, so each still feels special
+  - Complexity: events are a multiplier on top of the season points, with a scope (all players, a city, a group, a court) and a date range. One small table (`events`: scope, starts_at, ends_at, multiplier, rule), not new logic per event
+- **First step:** after the weekly league, one season in one court group with a single double-points weekend. That's enough to see whether players notice and play more before building an event calendar.
 
 ### Court suggestions in the memberships view
 

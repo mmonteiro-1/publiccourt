@@ -846,6 +846,21 @@ input[type="number"]::-webkit-outer-spin-button {
 	margin: 0;
 }
 
+/* iOS SAFARI GIVES A NATIVE TIME INPUT ITS OWN MINIMUM WIDTH, SO width: 100% IS IGNORED AND IT OVERFLOWS ITS COLUMN.
+   WITHOUT THE NATIVE LOOK IT SIZES LIKE ANY OTHER .form-input (TAPPING STILL OPENS THE iOS TIME PICKER). ITS VALUE IS
+   CENTRED AND, WHEN EMPTY, ZERO-HEIGHT ON iOS — LEFT-ALIGN IT AND GIVE IT A LINE'S HEIGHT, SO AN UNSET PAUSE FIELD
+   STAYS AS TALL AS A FILLED ONE */
+input[type="time"] {
+	-webkit-appearance: none;
+	appearance: none;
+	min-width: 0;
+}
+
+input[type="time"]::-webkit-date-and-time-value {
+	text-align: left;
+	min-height: 20px;
+}
+
 /* CUSTOM DROPDOWN BUILT BY js/custom-select.js — THE NATIVE <select> STAYS HIDDEN INSIDE .select */
 .select {
 	position: relative;
@@ -1170,11 +1185,6 @@ input[type="number"]::-webkit-outer-spin-button {
 	80%  { transform: translate(2px, 0); }
 	90%  { transform: translate(-2px, 0); }
 	100% { transform: translate(0, 0); }
-}
-
-/* BOOKINGS TAB: THE UPCOMING/PAST TOGGLE WOULD OTHERWISE STRETCH TO THE VIEW'S FULL WIDTH */
-#view-bookings > .view-toggle {
-	align-self: flex-start;
 }
 
 /* SAME SPACING THE CARDS HAD AS DIRECT CHILDREN OF .owner-view */
@@ -1607,8 +1617,10 @@ input[type="number"]::-webkit-outer-spin-button {
 	margin-top: 5px;
 }
 
+/* min-width: 0 LETS A COLUMN SHRINK BELOW ITS INPUT'S NATURAL WIDTH, SO BOTH TIMES SPLIT THE ROW EVENLY */
 .rule-time-row>div {
 	flex: 1;
+	min-width: 0;
 }
 
 .opening-hours-header {
@@ -2107,14 +2119,11 @@ input[type="number"]::-webkit-outer-spin-button {
 	z-index: 1000;
 }
 
-/* THE PARCEL, AS TWO FULL-SCREEN HALVES CLIPPED AT THE TEAR (THE SCREEN'S CENTRE). EACH HALF HOLDS ITS OWN BOX AND SHADOW, SO
-   THE TORN SLOT SPLITS WITH THEM. ON .split EACH SLIDES OFF ITS OWN SIDE; THE RIGHT ONE STARTS A BEAT LATER.
-   700ms + 500ms = SPLIT_MS IN THE SCRIPT */
+/* THE PARCEL, AS TWO FULL-SCREEN HALVES CLIPPED AT THE TEAR (THE SCREEN'S CENTRE), EACH WITH ITS OWN BOX AND SHADOW — KEPT
+   FROM WHEN THE BOX SPLIT OPEN. THE BOX NOW JUST VANISHES THE MOMENT THE PEANUTS BURST, LEAVING THEM FLYING OVER THE PAGE */
 .tear-half {
 	position: absolute;
 	inset: 0;
-	/* A CLEAR BUT MODERATE EASE-IN (CUBIC): THE HALVES START SLOW, THEN SPEED OFF */
-	transition: transform 700ms cubic-bezier(0.32, 0, 0.67, 0);
 }
 
 .tear-half-left {
@@ -2123,15 +2132,10 @@ input[type="number"]::-webkit-outer-spin-button {
 
 .tear-half-right {
 	clip-path: inset(0 0 0 50%);
-	transition-delay: 500ms;
 }
 
-.tear-reveal.split .tear-half-left {
-	transform: translateX(-50%);
-}
-
-.tear-reveal.split .tear-half-right {
-	transform: translateX(50%);
+.tear-reveal.burst .tear-half {
+	display: none;
 }
 
 /* THE PINK BOX. JS CUTS THE TORN SLOT OUT OF IT (AN evenodd clip-path HOLE IN THE STRIP'S NOTCHED SHAPE, FROM THE TEAR LINE
@@ -2140,6 +2144,31 @@ input[type="number"]::-webkit-outer-spin-button {
 	position: absolute;
 	inset: 0;
 	background: var(--pink);
+}
+
+/* THE PACKING: A COLUMN BEHIND BOTH HALVES, THE STRIP'S SIZE (JS PLACES IT), SEEN THROUGH THE HOLE. ITS BACKGROUND IS THE
+   BOX'S INSIDE BETWEEN THE PEANUTS; ON .burst JS MOVES IT IN FRONT AND THE BACKGROUND GOES, LEAVING ONLY THE FLYING PEANUTS.
+   preserve-3d SO THE PEANUTS FLY IN THE OVERLAY'S perspective — NO opacity OR filter HERE, THEY WOULD FLATTEN IT */
+.tear-fill {
+	position: absolute;
+	background: var(--pink-dark);
+	transform-style: preserve-3d;
+	pointer-events: none;
+}
+
+.tear-reveal.burst .tear-fill {
+	background: none;
+}
+
+/* ONE STYROFOAM PEANUT: A WHITE PILL; THE INSET SHADE ALONG ITS BOTTOM GIVES IT SOME VOLUME */
+.tear-peanut {
+	position: absolute;
+	width: 105px;
+	height: 45px;
+	border: 2px solid var(--black);
+	border-radius: 100px;
+	background: var(--white);
+	box-shadow: inset 0 -15px 0 var(--muted-black);
 }
 
 /* AND NO PAGE SCROLL AT ALL WHILE THE REVEAL IS UP (WHEEL, KEYS, SCROLLBAR); LIFTS ITSELF WHEN THE OVERLAY IS REMOVED */

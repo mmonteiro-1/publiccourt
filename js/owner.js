@@ -18,6 +18,8 @@ const MSG_DENY_REASON = "Motivo da recusa (opcional)";
 const MSG_REVOKE_WARNING = name => `Esta ação não pode ser revertida. As reservas futuras de ${name} serão canceladas e ${name} será comunicado por email.`;
 const MSG_CANCEL_WARNING = name => `Esta ação não pode ser revertida. ${name} será notificado.`;
 
+const BADGE_RIBBON_SVG = `<svg viewBox="0 -26.5 172 110.5" aria-hidden="true"><path d="M-62.5 -26.5H114.9L157 84H-9.8Q-23 84 -27.4 71.6Z"/><path d="M140 44H172L161.6 71.6Q157 84 151.8 71.9Z" fill="#b08900"/></svg>`;
+
 const MEMBERSHIP_DURATION_OPTIONS = [
 	{ label: "Sem validade", months: "" },
 	{ label: "1 mês", months: 1 },
@@ -193,10 +195,9 @@ function renderPendingView() {
 		const nifLine = profile?.nif ? `<p class="membership-courts"><img src="images/icon_id.svg" class="link-icon" alt="">NIF ${profile.nif}</p>` : "";
 		return `
 			<div class="membership-card" data-id="${m.id}">
-				<div class="membership-player-row">
-					<p class="membership-player">${playerName}</p>
-					<div class="membership-hole"></div>
-				</div>
+				<div class="membership-hole"></div>
+				${BADGE_RIBBON_SVG}
+				<p class="membership-player">${playerName}</p>
 				<p class="membership-courts"><img src="images/icon_court.svg" class="link-icon" alt="">${courtNames}</p>
 				<div class="divider"></div>
 				<div class="membership-data">
@@ -261,10 +262,9 @@ function renderMembersView() {
 		const nextGameLabel = nextBooking ? gameLabel(nextBooking.start_at, nextBooking.end_at) : MSG_NO_NEXT_GAME;
 		return `
 			<div class="membership-card" data-id="${m.id}">
-				<div class="membership-player-row">
-					<p class="membership-player">${playerName}</p>
-					<div class="membership-hole"></div>
-				</div>
+				<div class="membership-hole"></div>
+				${BADGE_RIBBON_SVG}
+				<p class="membership-player">${playerName}</p>
 				<div class="membership-date-row">
 					<p class="membership-date">${MSG_MEMBER_SINCE(approvedDate)}</p>
 					<a class="revoke-btn uppercase" style="color: var(--orange)" data-id="${m.id}" href="#">Revogar</a>
@@ -324,14 +324,14 @@ function renderBookingsView() {
 		: ownerData.bookings;
 
 	container.innerHTML = `
-		<div class="view-toggle">
-			<button class="view-toggle-btn${isPast ? "" : " active"}" data-mode="upcoming" aria-label="Próximas reservas"><img src="images/icon_calendar_tennis.svg" alt=""></button>
-			<button class="view-toggle-btn${isPast ? " active" : ""}" data-mode="past" aria-label="Reservas passadas"><img src="images/icon_history.svg" alt=""></button>
+		<div class="folder-tabs">
+			<button class="folder-tab${isPast ? "" : " active"}" data-mode="upcoming" aria-label="Próximas reservas"><img src="images/icon_calendar_tennis.svg" alt=""><span>Reservas</span></button>
+			<button class="folder-tab${isPast ? " active" : ""}" data-mode="past" aria-label="Reservas passadas"><img src="images/icon_history.svg" alt=""><span>Histórico</span></button>
 		</div>
-		<div class="bookings-list"></div>
+		<div class="bookings-list margin-top-10"></div>
 	`;
 
-	container.querySelectorAll(".view-toggle-btn").forEach(btn => {
+	container.querySelectorAll(".folder-tab").forEach(btn => {
 		btn.addEventListener("click", () => {
 			if (btn.dataset.mode === bookingsMode) return;
 			bookingsMode = btn.dataset.mode;
