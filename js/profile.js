@@ -472,7 +472,7 @@ async function loadMemberships(container, user) {
 function showVisitor() {
 	const loginBtn = `<button data-action="login" class="margin-top-20"><img src="images/icon_login.svg" class="link-icon" alt="">${MSG_VISITOR_LOGIN}</button>`;
 	app.innerHTML = `
-		${VIEW_TOGGLE_HTML}
+		${FOLDER_TABS_HTML}
 		<div data-pane-body="history" hidden>
 			<div class="bookings-list margin-top-20 margin-bottom-20"></div>
 			<!-- HIDDEN UNTIL THE HISTORY LOADS: WITH NO GAMES THE PIG STANDS ALONE -->
@@ -489,23 +489,23 @@ function showVisitor() {
 	loadHistory(app.querySelector(".bookings-list"), fetchHistory(null)).then(count => {
 		document.getElementById("visitor-history-extra").hidden = !count;
 	});
-	wireViewToggle();
+	wireFolderTabs();
 	app.querySelectorAll('[data-action="login"]').forEach(btn => btn.addEventListener("click", () => { location.href = "login.html"; }));
 }
 
 // PROGRESS IS THE DEFAULT PANE FOR PLAYERS AND VISITORS ALIKE (A VISITOR TEASER WILL FILL THEIRS LATER)
-const VIEW_TOGGLE_HTML = `
-	<div class="view-toggle margin-top-20">
-		<button class="view-toggle-btn active" data-pane="progress" aria-label="${MSG_VIEW_PROGRESS}"><img src="images/icon_medal.svg" alt=""></button>
-		<button class="view-toggle-btn" data-pane="history" aria-label="${MSG_HISTORY_TITLE}"><img src="images/icon_history.svg" alt=""></button>
-		<button class="view-toggle-btn" data-pane="memberships" aria-label="${MSG_VIEW_MEMBERSHIPS}"><img src="images/icon_id.svg" alt=""></button>
-		<button class="view-toggle-btn" data-pane="info" aria-label="${MSG_VIEW_INFO}"><img src="images/icon_gear.svg" alt=""></button>
+const FOLDER_TABS_HTML = `
+	<div class="folder-tabs">
+		<button class="folder-tab active" data-pane="progress" aria-label="${MSG_VIEW_PROGRESS}"><img src="images/icon_medal.svg" alt=""><span>Progresso</span></button>
+		<button class="folder-tab" data-pane="history" aria-label="${MSG_HISTORY_TITLE}"><img src="images/icon_history.svg" alt=""><span>Histórico</span></button>
+		<button class="folder-tab" data-pane="memberships" aria-label="${MSG_VIEW_MEMBERSHIPS}"><img src="images/icon_id.svg" alt=""><span>Passes</span></button>
+		<button class="folder-tab" data-pane="info" aria-label="${MSG_VIEW_INFO}"><img src="images/icon_gear.svg" alt=""><span>Dados</span></button>
 	</div>
 `;
 
 // PANES ARE RENDERED ONCE AND ONLY HIDDEN, SO SWITCHING NEITHER LOSES UNSAVED EDITS NOR REFETCHES ANY LIST
-function wireViewToggle() {
-	const toggleBtns = app.querySelectorAll(".view-toggle-btn");
+function wireFolderTabs() {
+	const toggleBtns = app.querySelectorAll(".folder-tab");
 	toggleBtns.forEach(btn => btn.addEventListener("click", () => {
 		toggleBtns.forEach(b => b.classList.toggle("active", b === btn));
 		app.querySelectorAll("[data-pane-body]").forEach(pane => { pane.hidden = pane.dataset.paneBody !== btn.dataset.pane; });
@@ -524,7 +524,7 @@ const PROFILE_FIELDS = [
 function showProfile(user, profile) {
 	document.body.classList.remove("onboarding");
 	app.innerHTML = `
-		${VIEW_TOGGLE_HTML}
+		${FOLDER_TABS_HTML}
 		<div data-pane-body="info" hidden>
 			<p class="profile-name margin-top-20"></p>
 			<p class="profile-email"></p>
@@ -557,7 +557,7 @@ function showProfile(user, profile) {
 	loadProgress(app.querySelector('[data-pane-body="progress"] .bookings-list'), games);
 	loadMemberships(app.querySelector('[data-pane-body="memberships"] .bookings-list'), user);
 
-	wireViewToggle();
+	wireFolderTabs();
 
 	// VALUES GO IN THROUGH THE DOM, NOT THE TEMPLATE, SO A QUOTE OR < IN A NAME CAN'T BREAK THE MARKUP
 	const greeting = app.querySelector(".profile-name");

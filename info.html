@@ -23,21 +23,19 @@
 		</div>
 	</header>
 
-	<div class="info-toggle">
-		<div class="view-toggle" id="infoToggle">
-			<button class="view-toggle-btn active" data-panel="info" aria-label="Informação" aria-pressed="true">
-				<img src="images/icon_info.svg" alt="">
-				<span>Saber</span>
-			</button>
-			<button class="view-toggle-btn padding-10" data-panel="download" aria-label="Descarregar" aria-pressed="false">
-				<img src="images/icon_app.svg" alt="">
-				<span>Guardar</span>
-			</button>
-			<button class="view-toggle-btn" data-panel="mail" aria-label="Contacto" aria-pressed="false">
-				<img src="images/icon_mail.svg" alt="">
-				<span>Falar</span>
-			</button>
-		</div>
+	<div class="folder-tabs margin-bottom-20" id="infoToggle">
+		<button class="folder-tab active" data-panel="info" aria-label="Informação" aria-pressed="true">
+			<img src="images/icon_info.svg" alt="">
+			<span>Como funciona</span>
+		</button>
+		<button class="folder-tab" data-panel="download" aria-label="Descarregar" aria-pressed="false">
+			<img src="images/icon_app.svg" alt="">
+			<span>Como voltar cá</span>
+		</button>
+		<button class="folder-tab" data-panel="mail" aria-label="Contacto" aria-pressed="false">
+			<img src="images/icon_mail.svg" alt="">
+			<span>Como contactar</span>
+		</button>
 	</div>
 
 	<div class="info-content" id="panel-info">
@@ -69,7 +67,7 @@
 	<script src="js/utils.js"></script>
 	<script>
 		const toggle = document.getElementById("infoToggle");
-		const btns = toggle.querySelectorAll(".view-toggle-btn");
+		const btns = toggle.querySelectorAll(".folder-tab");
 
 		function openPanel(name) {
 			btns.forEach(b => { b.classList.remove("active"); b.setAttribute("aria-pressed", "false"); });

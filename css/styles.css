@@ -58,6 +58,7 @@ html:has(.page-court-list) {
 
 :root {
 	--pink: #e6b5b2;
+	--pink-dark: #b48582;
 	--green: #2c5745;
 	--orange: #e55604;
 	--white: #fff;
@@ -657,24 +658,6 @@ header {
 	outline: none;
 }
 
-.info-toggle {
-	display: flex;
-	justify-content: center;
-	padding: 20px;
-	padding-top: 0px;
-}
-
-#infoToggle {
-	width: 100%;
-}
-
-#infoToggle .view-toggle-btn {
-	flex: 1;
-	gap: 5px;
-	font-size: .8em;
-	font-weight: 700;
-}
-
 .info-hero {
 	height: 200px;
 	margin: 20px 0 40px 0;
@@ -938,9 +921,90 @@ input[type="number"]::-webkit-outer-spin-button {
 	width: 100%;
 }
 
-/* #app IS A PLAIN BLOCK HERE, SO THE FLEX TOGGLE WOULD OTHERWISE STRETCH TO FULL WIDTH */
-.page-profile .view-toggle {
-	width: fit-content;
+/* === FOLDER TABS ===
+   EDGE TO EDGE: THE NEGATIVE MARGIN BLEEDS OVER THE BODY'S 20px SIDE PADDING. THE BOTTOM BORDER IS THE SHEET'S TOP EDGE;
+   SIDE PADDING KEEPS THE FIRST AND LAST TABS OFF THE SCREEN EDGES */
+.folder-tabs {
+	display: flex;
+	align-items: flex-end;
+	margin-left: -20px;
+	margin-right: -20px;
+	padding: 0 10px;
+	border-bottom: 2px solid var(--black);
+}
+
+/* ROUNDED TOP CORNERS. EVERY TAB IS AS WIDE AS ITS CONTENT: ICON-ONLY TABS STAY SMALL, THE ACTIVE ONE FITS ICON + TEXT.
+   THE SHEET'S EDGE (THE ROW'S BOTTOM BORDER) STILL RUNS THE FULL WIDTH PAST THE LAST TAB.
+   margin-bottom -2px SITS EACH TAB ON THE SHEET'S EDGE, SO AN INACTIVE TAB'S BOTTOM BORDER IS THAT EDGE AND THE ACTIVE
+   TAB'S TRANSPARENT ONE OPENS INTO THE SHEET */
+.folder-tab {
+	position: relative;
+	flex: none;
+	width: auto;
+	height: 40px;
+	padding: 0 20px;
+	margin-bottom: -2px;
+	gap: 5px;
+	border: 2px solid var(--black);
+	border-radius: 10px 10px 0 0;
+	background: var(--pink-dark);
+	box-shadow: none;
+	text-transform: uppercase;
+}
+
+/* EACH TAB TUCKS 20px UNDER THE ONE BEFORE IT; THE EXTRA 20px OF PADDING RE-CENTRES ITS ICON IN THE PART LEFT VISIBLE */
+.folder-tab + .folder-tab {
+	margin-left: -20px;
+	padding-left: 40px;
+}
+
+/* PINK = THE PAGE, SO THE ACTIVE TAB READS AS PART OF THE SHEET BELOW IT */
+.folder-tab.active {
+	background: var(--pink);
+	flex: none;
+	padding: 1px 20px 1px 20px;
+	padding-right: 20px;
+	border-bottom-color: transparent;
+	box-shadow: 4px 0 0 var(--black);
+	box-sizing: content-box;
+}
+
+.folder-tab + .folder-tab.active {
+	padding-left: 20px;
+}
+
+.folder-tab:not(.active) span {
+	display: none;
+}
+
+.folder-tab img {
+	width: 15px;
+	height: auto;
+}
+
+.folder-tab * {
+	margin-top: 3px;
+}
+
+/* EACH TAB SITS IN FRONT OF THE NEXT, SO IT COVERS THE NEXT TAB'S LEFT EDGE. FOUR TABS AT MOST */
+.folder-tab:nth-child(1) { z-index: 4; }
+.folder-tab:nth-child(2) { z-index: 3; }
+.folder-tab:nth-child(3) { z-index: 2; }
+.folder-tab:nth-child(4) { z-index: 1; }
+
+/* THE FURTHER BACK AN INACTIVE TAB SITS, THE DARKER IT GETS — --pink-dark MIXED WITH MORE BLACK, NO NEW COLOURS */
+.folder-tab:not(.active):nth-child(2) { background: color-mix(in srgb, var(--pink-dark), var(--black) 0%); }
+.folder-tab:not(.active):nth-child(3) { background: color-mix(in srgb, var(--pink-dark), var(--black) 20%); }
+.folder-tab:not(.active):nth-child(4) { background: color-mix(in srgb, var(--pink-dark), var(--black) 40%); }
+
+/* THE ACTIVE TAB COMES FULLY TO THE FRONT, OVER BOTH NEIGHBOURS. AFTER THE nth-child RULES: SAME SPECIFICITY, SO ORDER WINS */
+.folder-tab.active {
+	z-index: 5;
+}
+
+/* THE TAB BEFORE THE ACTIVE ONE NOW LOSES ITS RIGHT 20px UNDER IT, SO IT RE-CENTRES ITS ICON THE SAME WAY */
+.folder-tab:has(+ .folder-tab.active) {
+	padding-right: 40px;
 }
 
 .profile-form {
