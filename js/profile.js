@@ -341,7 +341,7 @@ const XP_LEVEL_INFO = [
 	{ title: "Recruta", description: "Ainda a descobrir de que lado se segura a raquete." },
 ];
 
-// A CHARACTER CARD (THINK MAGIC / POKÉMON): SAME CARD AS THE SKILLS, LEVEL IN THE BANNER, PLAYER ART, THEN THE XP BAR
+// THE TRADING CARD (THINK MAGIC / POKÉMON): LEVEL IN THE BANNER, PLAYER ART, CHARACTER NAME AND FLAVOUR TEXT, THEN THE XP BAR
 function xpCard(xp) {
 	const found = XP_LEVEL_ENDS.findIndex(end => xp < end);
 	const index = found === -1 ? XP_LEVEL_ENDS.length - 1 : found;
@@ -350,15 +350,48 @@ function xpCard(xp) {
 	const fill = Math.min((xp - from) / (to - from), 1) * 100;
 	const info = XP_LEVEL_INFO[index] ?? XP_LEVEL_INFO[0];
 	return `
-		<div class="membership-card">
-			<p class="skill-title">${MSG_XP_LEVEL(index + 1)}</p>
-			<img src="images/${XP_LEVEL_IMAGES[index]}.svg" alt="" style="width: 90%; margin: 20px auto">
-			<p class="card-status" style="text-align: center; color: var(--black)">${info.title}</p>
-			<p class="membership-date">${info.description}</p>
-			<p class="stat-level" style="justify-content: flex-end">${MSG_XP(to)}</p>
+		<div class="trading-card">
+			<p class="trading-card-level">${MSG_XP_LEVEL(index + 1)}</p>
+			<div class="trading-card-art">
+				<div class="trading-card-frame"></div>
+				<img src="images/${XP_LEVEL_IMAGES[index]}.svg" alt="">
+			</div>
+			<p class="trading-card-name">${info.title}</p>
+			<p class="trading-card-text">${info.description}</p>
+			<p class="trading-card-next">${MSG_XP(to)}</p>
 			<div class="level-bar xp-bar"><div style="width: ${fill}%"></div><span>${MSG_XP(xp)}</span></div>
 		</div>
 	`;
+}
+
+// SCROLL TILT: THE TRADING CARD TURNS SIDEWAYS AS THE PAGE SCROLLS DOWN — FLAT AT THE TOP, FULLY TURNED AFTER TILT_DISTANCE
+// px, WHATEVER THE PAGE'S HEIGHT — WHILE THE PIG TURNS BACK BY THE SAME ANGLE, SO IT STAYS FACING THE VIEWER AS THE CARD
+// TURNS UNDER IT. NO SENSOR, SO NO PERMISSION PROMPT. THE ANGLE FOLLOWS ITS TARGET ON A SPRING: EACH FRAME PULLS IT TOWARDS
+// THE TARGET BY TILT_PULL AND KEEPS TILT_KEEP OF ITS SPEED, SO IT SWINGS A LITTLE PAST THE TARGET AND SETTLES BACK — BOTH
+// WAYS, PAST FLAT TOO WHEN SCROLLED BACK TO THE TOP. LESS KEEP = LESS OVERSHOOT. THE LOOP STOPS ONCE IT HAS SETTLED.
+// THE PIG NEEDS ITS OWN perspective(): THE CARD'S overflow: hidden FLATTENS 3D, SO THE COUNTER-TURN IS DRAWN FLAT INTO THE
+// CARD — CLOSE TO, BUT NOT EXACTLY, STILL
+const CARD_TILT = 7, TILT_DISTANCE = 200, TILT_PULL = 0.08, TILT_KEEP = 0.85;
+function tiltOnScroll(card) {
+	if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+	const art = card.querySelector(".trading-card-art img");
+	let current = 0, speed = 0, frame = null;
+	// CLAMPED AT 0 TOO: iOS RUBBER-BANDING PAST THE TOP GIVES A NEGATIVE scrollY
+	const target = () => Math.max(0, Math.min(scrollY / TILT_DISTANCE, 1));
+	const step = () => {
+		const goal = target();
+		speed = (speed + (goal - current) * TILT_PULL) * TILT_KEEP;
+		current += speed;
+		const settled = Math.abs(goal - current) < 0.001 && Math.abs(speed) < 0.001;
+		if (settled) current = goal, speed = 0;
+		card.style.transform = `perspective(800px) rotateY(${current * CARD_TILT}deg)`;
+		art.style.transform = `perspective(800px) rotateY(${-current * CARD_TILT}deg)`;
+		frame = settled ? null : requestAnimationFrame(step);
+	};
+	const start = () => { frame ??= requestAnimationFrame(step); };
+	addEventListener("scroll", start, { passive: true });
+	addEventListener("resize", start);
+	start();
 }
 
 // FILL FROM 0 TO max OVER ONE EQUAL SEGMENT PER LEVEL, EACH LABELLED WITH ITS TITLE
@@ -404,6 +437,7 @@ async function loadProgress(container, gamesPromise) {
 		statCard("Consistência", levelTitle(LEVELS_STREAK, streak) + levelStars(LEVELS_STREAK, streak), MSG_STAT_STREAK(streak), MSG_STAT_STREAK_HINT, levelBar(LEVELS_STREAK, streak)),
 		statCard(MSG_TITLE_MOVEMENT, levelTitle(LEVELS_MOVEMENT, courts - 1) + levelStars(LEVELS_MOVEMENT, courts - 1), MSG_STAT_COURTS(courts), MSG_STAT_COURTS_HINT(courts), levelBar(LEVELS_MOVEMENT, courts)),
 	].join("");
+	tiltOnScroll(container.querySelector(".trading-card"));
 }
 
 // LANYARD STRAP DIPPING INTO THE BADGE SLOT: THE FRONT STRAP, THEN THE FOLD (THE STRAP'S BACK, SEEN AS IT TURNS INTO

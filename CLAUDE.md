@@ -227,7 +227,7 @@ Bar max: 4 courts. Unlike the other two, one court is already level 1, so the le
 
 The game thresholds are a first guess, to be tuned once real play is known.
 
-**XP** (`playerXp` / `xpCard` in `profile.js`), shown on a character card above the skill cards — same `.membership-card` as the skills, "Nível N" in the `.skill-title` banner, the pig for the current level as the player art (`XP_LEVEL_IMAGES`; width 90%, centred with 20px above and below, a plain image for now, not a pig appearance), then the XP bar. The idea is a Magic / Pokémon style character card. XP only ever grows, so it comes from lifetime events, never from the skills' rolling values (Momentum's 6-month count can drop). Every increment is +500 XP (`XP_PER_INCREMENT`):
+**XP** (`playerXp` / `xpCard` in `profile.js`), shown on the **trading card** above the skill cards — its own `.trading-card*` classes (not `.membership-card`), so it can evolve on its own: "Nível N" in the `.trading-card-level` banner, the pig for the current level as the player art (`.trading-card-art`, `XP_LEVEL_IMAGES`; width 90%, centred with 20px above and below, a plain image for now, not a pig appearance), the character name and flavour text (`XP_LEVEL_INFO`), then the XP bar. The idea is a Magic / Pokémon style character card. XP only ever grows, so it comes from lifetime events, never from the skills' rolling values (Momentum's 6-month count can drop). Every increment is +500 XP (`XP_PER_INCREMENT`):
 - each past game
 - each distinct court played
 - each week with a game right after another week with a game (a lone week is already paid by its games)
@@ -506,6 +506,7 @@ Sessions are kept alive indefinitely for active users. Supabase auto-refreshes t
   - [ ] Notify the player when the owner cancels their booking; booking confirmation email (later — Resend sandbox still blocks player emails)
   - [x] Booking history view — past games for the owner (upcoming/past toggle on the bookings tab)
     - [ ] Played / no-show / paid status on past games
+- [ ] Fix the closed-day message in the slot picker, "Hoje não há ténis cá, o campo está encerrado." (`slot-picker.js`). It's inline copy instead of a `MSG_*` constant, and plain text instead of a pig appearance. "Hoje" is right: closed days can't be tapped in the day strip, so it only ever shows when today is closed
 - [ ] Test what each page shows after an action (approve, deny, revoke, cancel, book…) — the page often just sits blank
   - Likely cause: owner.js removes the acted-on card with `card.remove()`, so removing the last one leaves an empty list with no pig appearance. Approving also doesn't move the player into the members tab (or deny into anything) until a reload
   - Fix options: re-render the view from the patched `ownerData` cache (keeps the pig appearance and cross-tab consistency), or just reload the page after the action
