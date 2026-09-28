@@ -25,6 +25,7 @@ js/utils.js           — shared helpers: setPigAppearance, gameLabel, formatTim
 js/secondary-card.js  — secondary info card (rules, hours, city)
 js/slot-picker.js     — booking slot selection UI
 js/success.js         — every success screen: copy, SUCCESS presets, showSuccess() renderer (countdown + reload)
+js/tear-reveal.js     — showTearReveal({ label, onDone }): full-screen tear-strip "parcel" over the page; drag to tear, box splits, page revealed
 js/weather.js         — Open-Meteo daily forecast → one icon per day (rain/sunny/part_cloudy/cloudy), 3h localStorage cache
 js/config.js          — Supabase credentials + db client
 css/styles.css        — single global stylesheet
@@ -384,6 +385,7 @@ Sessions are kept alive indefinitely for active users. Supabase auto-refreshes t
   - [ ] Email notification to player when revoked — send before deleting the row so we still have their email
   - [ ] Allow owner to set membership duration per member on approval (override the group default)
   - [ ] In-app notification card for membership status changes (accept, deny, revoke) — dedicated card UI, not just inline state on court page
+  - [ ] Tear-strip reveal (tear-to-open) for important notifications: the notification arrives sealed like an Amazon-style parcel, and as the player drags up they pull the tear strip away to open it (the tear follows the finger; releasing early snaps it back)
 - [ ] Support multiple owners per court group (receptionists)
   - [ ] Create `court_group_members (group_id UUID, user_id UUID)` table
   - [ ] Migrate existing `court_groups.owner_id` rows into `court_group_members`

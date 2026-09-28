@@ -2089,3 +2089,160 @@ input[type="number"]::-webkit-outer-spin-button {
 		margin: 0 auto;
 	}
 }
+
+/* === TEAR-STRIP REVEAL (js/tear-reveal.js) ===
+   A SEALED "PARCEL" WITH A TEAR STRIP DOWN THE MIDDLE. THE STRIP IS A CHAIN OF NESTED SLICES (.tear-seg, BUILT IN JS),
+   EACH HINGED ON ITS PARENT'S BOTTOM EDGE; JS SETS EVERY HINGE'S ANGLE PER FRAME, SO THE TORN PART BENDS INTO A REAL 3D CURL.
+   perspective ON THE OVERLAY + preserve-3d DOWN THE CHAIN KEEP THE SLICES IN ONE 3D SPACE — NO filter OR opacity ON THEM,
+   BOTH WOULD FLATTEN IT. ALL PINK: THE SEALED STRIP IS ONLY ITS BLACK CUT LINES UNTIL IT'S TORN */
+/* FULL SCREEN, ON TOP OF EVERYTHING. TRANSPARENT ITSELF: THE PARCEL IS THE TWO BOX HALVES, SO WHEN THEY SLIDE AWAY THE PAGE
+   BEHIND SHOWS THROUGH (THEN JS REMOVES THE OVERLAY). touch-action: none + overscroll-behavior STOP A SWIPE ON IT FROM
+   SCROLLING OR BOUNCING THE PAGE UNDERNEATH */
+.tear-reveal {
+	position: fixed;
+	inset: 0;
+	perspective: 500px;
+	touch-action: none;
+	overscroll-behavior: none;
+	z-index: 1000;
+}
+
+/* THE PARCEL, AS TWO FULL-SCREEN HALVES CLIPPED AT THE TEAR (THE SCREEN'S CENTRE). EACH HALF HOLDS ITS OWN BOX AND SHADOW, SO
+   THE TORN SLOT SPLITS WITH THEM. ON .split EACH SLIDES OFF ITS OWN SIDE; THE RIGHT ONE STARTS A BEAT LATER.
+   700ms + 500ms = SPLIT_MS IN THE SCRIPT */
+.tear-half {
+	position: absolute;
+	inset: 0;
+	/* A CLEAR BUT MODERATE EASE-IN (CUBIC): THE HALVES START SLOW, THEN SPEED OFF */
+	transition: transform 700ms cubic-bezier(0.32, 0, 0.67, 0);
+}
+
+.tear-half-left {
+	clip-path: inset(0 50% 0 0);
+}
+
+.tear-half-right {
+	clip-path: inset(0 0 0 50%);
+	transition-delay: 500ms;
+}
+
+.tear-reveal.split .tear-half-left {
+	transform: translateX(-50%);
+}
+
+.tear-reveal.split .tear-half-right {
+	transform: translateX(50%);
+}
+
+/* THE PINK BOX. JS CUTS THE TORN SLOT OUT OF IT (AN evenodd clip-path HOLE IN THE STRIP'S NOTCHED SHAPE, FROM THE TEAR LINE
+   DOWN), SO THE PAGE BEHIND SHOWS THROUGH WHERE THE STRIP IS GONE */
+.tear-box {
+	position: absolute;
+	inset: 0;
+	background: var(--pink);
+}
+
+/* AND NO PAGE SCROLL AT ALL WHILE THE REVEAL IS UP (WHEEL, KEYS, SCROLLBAR); LIFTS ITSELF WHEN THE OVERLAY IS REMOVED */
+html:has(.tear-reveal),
+body:has(.tear-reveal) {
+	overflow: hidden;
+}
+
+/* THE SLOT'S SHADOW AND THE CHAIN'S ANCHOR — SAME COLUMN DOWN THE MIDDLE */
+.tear-slot,
+.tear-chain {
+	position: absolute;
+	top: 0;
+	bottom: 0;
+	left: 50%;
+	width: 70px;
+	transform: translateX(-50%);
+}
+
+/* THE SHADOW THE BOX'S EDGE CASTS INTO THE HOLE: A BLACK BAND ALONG THE SLOT'S LEFT EDGES, DENTS INCLUDED (JS SETS ITS MASK:
+   THE SLOT SHAPE MINUS THE SAME SHAPE SHIFTED). EVERYTHING ELSE IS SEE-THROUGH. JS CLIPS IT TO BELOW THE TEAR LINE, SO IT
+   ONLY SHOWS WHERE THE STRIP IS ALREADY TORN. HIDDEN UNTIL THE FIRST render() */
+.tear-slot {
+	clip-path: inset(100% 0 0 0);
+	background: var(--black);
+}
+
+.tear-chain {
+	transform-style: preserve-3d;
+}
+
+/* EACH SLICE HANGS OFF THE BOTTOM OF THE ONE BEFORE. THE SLICE IS ONLY THE 3D HINGE — NO BORDER (A NESTED SLICE SITS INSIDE
+   ITS PARENT'S BORDER, SO EACH LEVEL WOULD SHIFT AND SHRINK) AND NO clip-path (IT WOULD FLATTEN THE CHAIN'S 3D) */
+.tear-seg {
+	position: absolute;
+	top: 100%;
+	left: 0;
+	width: 100%;
+	height: 40px;
+	transform-origin: top center;
+	transform-style: preserve-3d;
+}
+
+.tear-chain > .tear-seg {
+	top: 0;
+}
+
+/* THE VISIBLE SLICE: A HEXAGON WITH ROUNDED UPPER CORNERS, CUT BY A clip-path THE SCRIPT SETS (FACE_SHAPE, SHARED WITH THE
+   CUT LINES). CHAINED, THE CUT-AWAY TOP CORNERS LEAVE A V-NOTCH ON BOTH EDGES AT EVERY JOINT. PINK LIKE THE PAGE, SO SEALED
+   IT'S INVISIBLE BUT FOR ITS SVG CUT LINES. A LEAF ELEMENT, SO ITS clip-path IS SAFE */
+.tear-face,
+.tear-back {
+	position: absolute;
+	inset: 0;
+	background: var(--pink);
+	backface-visibility: hidden;
+}
+
+/* THE STRIP'S BACK, SEEN ONCE A SLICE CURLS PAST 90° — SOLID, SO THE FRONT'S LABEL NEVER SHOWS THROUGH MIRRORED */
+.tear-back {
+	background: color-mix(in srgb, var(--pink), var(--black) 20%);
+	transform: rotateY(180deg);
+}
+
+/* THE CUT LINES: EACH SIDE PLUS ITS NOTCH SLOPE, NOTHING ACROSS THE STRIP. THE LINES RUN ON THE FACE'S EDGE AND THE clip-path
+   CUTS THEIR OUTER HALF, SO THE 6px STROKE SHOWS AS 3px */
+.tear-face svg {
+	position: absolute;
+	inset: 0;
+	width: 100%;
+	height: 100%;
+	fill: none;
+	stroke: var(--black);
+	stroke-width: 6px;
+}
+
+/* THE STRIP'S LABEL, ONE COPY PER FACE, SIZED AND SHIFTED TO THE WHOLE STRIP BY JS (top / height / padding-bottom), SO EVERY
+   COPY LINES UP AND EACH FACE'S clip-path SHOWS ITS OWN PIECE. SITS AT THE BOTTOM, JUST ABOVE THE PULL END */
+.tear-text {
+	position: absolute;
+	left: 0;
+	width: 100%;
+	display: flex;
+	justify-content: center;
+	align-items: flex-end;
+	font-weight: 700;
+	text-transform: uppercase;
+	pointer-events: none;
+}
+
+/* VERTICAL, READING BOTTOM TO TOP — FROM THE PULL END, THE WAY THE STRIP TEARS */
+.tear-text span {
+	writing-mode: vertical-rl;
+	transform: rotate(180deg);
+	white-space: nowrap;
+}
+
+/* THE GRAB AREA: INVISIBLE, FULL WIDTH ACROSS THE BOTTOM OF THE SCREEN — FAR BIGGER THAN THE STRIP'S END, SO THE GRAB NEVER
+   MISSES. JS SETS ITS HEIGHT. touch-action: none STOPS THE PAGE SCROLLING MID-DRAG */
+.tear-tab {
+	position: absolute;
+	left: 0;
+	bottom: 0;
+	width: 100%;
+	touch-action: none;
+}
