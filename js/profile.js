@@ -321,7 +321,7 @@ function peakRecentGames(games) {
 	}));
 }
 
-const DIAMOND_ICON = `<img src="images/icon_diamond.svg" class="link-icon" alt="">`;
+const DIAMOND_ICON = `<img src="images/icon_diamond_color.svg" class="link-icon" alt="">`;
 
 function levelIndex(scale, value) {
 	return scale.levels.findLastIndex(level => value >= level.from);
@@ -375,8 +375,9 @@ const XP_LEVEL_INFO = [
 	{ title: "Recruta", description: "Ainda a descobrir de que lado se segura a raquete." },
 ];
 
-// THE TRADING CARD (THINK MAGIC / POKÉMON): LEVEL IN THE BANNER, PLAYER ART, CHARACTER NAME AND FLAVOUR TEXT, THEN THE XP BAR
-function xpCard(xp, diamonds) {
+// THE TRADING CARD (THINK MAGIC / POKÉMON): LEVEL IN THE BANNER, PLAYER ART, CHARACTER NAME AND FLAVOUR TEXT,
+// THE FOUR SKILL RATINGS, THEN THE XP BAR
+function xpCard(xp, diamonds, skills) {
 	const found = XP_LEVEL_ENDS.findIndex(end => xp < end);
 	const index = found === -1 ? XP_LEVEL_ENDS.length - 1 : found;
 	const from = index ? XP_LEVEL_ENDS[index - 1] : 0;
@@ -392,6 +393,12 @@ function xpCard(xp, diamonds) {
 			</div>
 			<p class="trading-card-name">${info.title}</p>
 			<p class="trading-card-text">${info.description}</p>
+			<div class="trading-card-skills">${skills.map(skill => `
+				<div class="trading-card-skill">
+					${skill.rating}
+					<img src="images/icon_${skill.icon}.svg" class="link-icon" alt="">
+				</div>
+			`).join("")}</div>
 			<p class="trading-card-next">${MSG_XP(to)}</p>
 			${barHtml(fill, `<span>${MSG_XP(xp)}</span>`, "xp-bar")}
 		</div>
@@ -403,10 +410,15 @@ function barHtml(fill, labels, modifier = "") {
 	return `<div class="level-bar ${modifier}" style="--fill: ${fill}%"><div></div><p>${labels}</p><p>${labels}</p></div>`;
 }
 
+// THE SKILL AS A SHARE OF ITS BAR, 0–100, SO THE TRADING CARD'S FOUR NUMBERS SHARE ONE SCALE (THINK FIFA CARD RATINGS).
+// 100 IS A FULL BAR, THE SAME MOMENT THE DIAMOND IS EARNED
+function skillRating(scale, value) {
+	return Math.min(value / scale.max, 1) * 100;
+}
+
 // FILL FROM 0 TO max OVER ONE EQUAL SEGMENT PER LEVEL, EACH LABELLED WITH ITS TITLE
 function levelBar(scale, value) {
-	const fill = Math.min(value / scale.max, 1) * 100;
-	return barHtml(fill, scale.levels.map(level => `<span>${level.title}</span>`).join(""));
+	return barHtml(skillRating(scale, value),scale.levels.map(level => `<span>${level.title}</span>`).join(""));
 }
 
 // PROGRESS FROM THE SAME GAMES AS THE HISTORY (ALREADY WITHOUT THE ≤10 MIN ONES). DECLARED TIME ON COURT,
@@ -452,7 +464,12 @@ async function loadProgress(container, gamesPromise) {
 		</div>
 	`;
 	container.innerHTML = [
-		xpCard(playerXp(games), Object.values(diamonds).filter(Boolean).length),
+		xpCard(playerXp(games), Object.values(diamonds).filter(Boolean).length, [
+			{ icon: "fire_color", rating: Math.round(skillRating(LEVELS_GAMES, gamesRecent)) },
+			{ icon: "sheriff_color", rating: Math.round(skillRating(LEVELS_TARIMBA, hours)) },
+			{ icon: "repeat_color", rating: Math.round(skillRating(LEVELS_STREAK, streak)) },
+			{ icon: "globe_color", rating: Math.round(skillRating(LEVELS_TERRITORY, courts)) },
+		]),
 		statCard("fire", "Momentum", levelTitle(LEVELS_GAMES, gamesRecent) + levelStars(LEVELS_GAMES, gamesRecent), MSG_STAT_GAMES_VALUE(gamesRecent), MSG_STAT_GAMES_HINT, levelBar(LEVELS_GAMES, gamesRecent), diamonds.games),
 		statCard("sheriff", "Tarimba", levelTitle(LEVELS_TARIMBA, hours) + levelStars(LEVELS_TARIMBA, hours), MSG_STAT_HOURS(hours), MSG_STAT_HOURS_HINT, levelBar(LEVELS_TARIMBA, hours), diamonds.hours),
 		statCard("repeat", "Consistência", levelTitle(LEVELS_STREAK, streak) + levelStars(LEVELS_STREAK, streak), MSG_STAT_STREAK(streak), MSG_STAT_STREAK_HINT, levelBar(LEVELS_STREAK, streak), diamonds.streak),

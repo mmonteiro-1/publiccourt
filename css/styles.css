@@ -1526,6 +1526,34 @@ input[type="time"]::-webkit-date-and-time-value {
 	text-transform: uppercase;
 }
 
+/* FOUR SKILL RATINGS IN A ROW, FIFA-CARD STYLE: BIG NUMBER ON THE LEFT, SKILL ICON ON THE BOTTOM-RIGHT CORNER */
+.trading-card-skills {
+	display: grid;
+	grid-template-columns: repeat(4, 1fr);
+	gap: 15px;
+	margin-top: 10px;
+}
+
+.trading-card-skill {
+	position: relative;
+	padding: 10px;
+	text-align: center;
+	border: 2px solid var(--black);
+	border-radius: 10px;
+	font-size: 2em;
+	font-weight: 700;
+}
+
+/* CENTRED ON THE BOX'S CORNER, HALF INSIDE AND HALF OUT. TRANSLATE, NOT A NEGATIVE OFFSET, SINCE THE ICONS AREN'T SQUARE */
+.trading-card-skill .link-icon {
+	position: absolute;
+	right: 0;
+	bottom: 0;
+	height: 40px;
+	max-width: 30px;
+	transform: translate(30%, 30%);
+}
+
 /* THE NEXT LEVEL'S XP, RIGHT ABOVE THE BAR'S END — WHERE THE FILL IS HEADING */
 .trading-card-next {
 	text-align: right;
