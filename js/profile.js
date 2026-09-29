@@ -399,7 +399,6 @@ function xpCard(xp, diamonds, skills) {
 					<img src="images/icon_${skill.icon}.svg" class="link-icon" alt="">
 				</div>
 			`).join("")}</div>
-			<p class="trading-card-next">${MSG_XP(to)}</p>
 			${barHtml(fill, `<span>${MSG_XP(xp)}</span>`, "xp-bar")}
 		</div>
 	`;

@@ -1437,6 +1437,10 @@ input[type="time"]::-webkit-date-and-time-value {
 }
 
 /* XP BAR: SAME TRACK AS THE SKILL BARS, BUT ONE SEGMENT WITH THE PLAYER'S XP INSIDE AND A YELLOW FILL */
+.xp-bar {
+	margin-top: 20px;
+}
+
 .xp-bar div {
 	background: var(--yellow);
 }
@@ -1462,7 +1466,7 @@ input[type="time"]::-webkit-date-and-time-value {
 	padding: 35px 10px 10px;
 	border: 2px solid var(--black);
 	border-radius: 15px;
-	background: var(--white);
+	background: #ececec;
 	box-shadow: 4px 4px 0 var(--black);
 }
 
@@ -1472,7 +1476,6 @@ input[type="time"]::-webkit-date-and-time-value {
 	left: 5px;
 	width: calc(100% - 10px);
 	padding: 5px 10px;
-	background: var(--white);
 	text-align: center;
 	font-size: 0.8em;
 	text-transform: uppercase;
@@ -1481,7 +1484,7 @@ input[type="time"]::-webkit-date-and-time-value {
 
 /* THE PLAYER'S DIAMOND TOTAL, NEXT TO THE LEVEL */
 .trading-card-level span {
-	margin-left: 10px;
+	margin-left: 20px;
 }
 
 /* THE ART BREAKS OUT OF ITS FRAME AT THE TOP: THE WHITE FRAME ONLY COVERS THE LOWER PART OF THE ART'S BOX, AND THE PIG IS
@@ -1490,7 +1493,6 @@ input[type="time"]::-webkit-date-and-time-value {
    THAN THE FRAME AND ENDS ON ITS FLOOR, SO IT CAN ONLY SPILL OUT AT THE TOP */
 .trading-card-art {
 	position: relative;
-	margin: 10px 0;
 	padding-bottom: 10px;
 }
 
@@ -1499,10 +1501,10 @@ input[type="time"]::-webkit-date-and-time-value {
 	left: 0;
 	right: 0;
 	bottom: 0;
-	height: 90%;
+	height: 100%;
 	border: 2px solid var(--black);
 	border-radius: 10px;
-	background: var(--yellow);
+	background: url("../images/ball_boy_bg.jpg") center / contain;
 }
 
 /* position: relative PUTS IT OVER THE FRAME (LATER IN THE MARKUP, SO IT PAINTS ON TOP) */
@@ -1538,10 +1540,12 @@ input[type="time"]::-webkit-date-and-time-value {
 	position: relative;
 	padding: 10px;
 	text-align: center;
-	border: 2px solid var(--black);
+	border: 2px dashed var(--black);
+	background: var(--white);
 	border-radius: 10px;
 	font-size: 2em;
 	font-weight: 700;
+	-webkit-text-stroke: 1px var(--black);
 }
 
 /* CENTRED ON THE BOX'S CORNER, HALF INSIDE AND HALF OUT. TRANSLATE, NOT A NEGATIVE OFFSET, SINCE THE ICONS AREN'T SQUARE */
@@ -1552,12 +1556,6 @@ input[type="time"]::-webkit-date-and-time-value {
 	height: 40px;
 	max-width: 30px;
 	transform: translate(30%, 30%);
-}
-
-/* THE NEXT LEVEL'S XP, RIGHT ABOVE THE BAR'S END — WHERE THE FILL IS HEADING */
-.trading-card-next {
-	text-align: right;
-	font-weight: 700;
 }
 
 .level-bar span + span::before {

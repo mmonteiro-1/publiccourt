@@ -249,7 +249,7 @@ Numbers are inflated ×10 on purpose (big numbers, big fun) with the level ends 
 
 Examples: once a week for 6 months on 2 courts ≈ 26 500 XP (level 8, the calibration target); twice a week on 3 courts ≈ 40 000 (level 10); once a month for a year on 1 court ≈ 6 500 (level 3).
 
-Levels 1–10, each needing 500 XP more than the last (level n spans 1 500 + 500n XP, `XP_LEVEL_ENDS`). A first try at the equivalent of 4 000 + 1 000n put the once-a-week player at level 5 — too hard. Reaching a level's max XP is a level-up (the max shown above the bar is where the next level starts), so 4 500 XP is level 3 at 0%:
+Levels 1–10, each needing 500 XP more than the last (level n spans 1 500 + 500n XP, `XP_LEVEL_ENDS`). A first try at the equivalent of 4 000 + 1 000n put the once-a-week player at level 5 — too hard. Reaching a level's max XP is a level-up, so 4 500 XP is level 3 at 0%:
 
 | Level | XP |
 |---|---|
@@ -264,7 +264,7 @@ Levels 1–10, each needing 500 XP more than the last (level n spans 1 500 + 500
 | 9 | 30 000–35 999 |
 | 10 | 36 000+ (bar full at 42 500) |
 
-Unlike the skill bars, the XP bar is relative: the fill only covers the current level. The player's total XP is written inside the bar; the level's max XP sits right-aligned just above it. Past 42 500 the player stays level 10 with a full bar. Reuses `.level-bar` with a single segment plus the `.xp-bar` modifier (yellow fill, 1em text).
+Unlike the skill bars, the XP bar is relative: the fill only covers the current level. The player's total XP is written inside the bar; the level's max XP isn't shown. Past 42 500 the player stays level 10 with a full bar. Reuses `.level-bar` with a single segment plus the `.xp-bar` modifier (yellow fill, 1em text).
 
 ### Leaderboards and social comparison
 
