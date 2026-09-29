@@ -372,7 +372,7 @@ const XP_LEVEL_IMAGES = [
 // CHARACTER NAME + FLAVOUR TEXT PER XP LEVEL (INDEX 0 = LEVEL 1). ONLY ONE FOR TESTING — UNTIL EVERY LEVEL HAS ITS OWN,
 // A MISSING ENTRY FALLS BACK TO THE FIRST
 const XP_LEVEL_INFO = [
-	{ title: "Recruta", description: "Ainda a descobrir de que lado se segura a raquete." },
+	{ title: "Apanha-bolas", description: "Passa mais tempo a apanhar bolas do que a batê-las. Chega a casa com dores nas costas de tanto que se dobra." },
 ];
 
 // THE TRADING CARD (THINK MAGIC / POKÉMON): LEVEL IN THE BANNER, PLAYER ART, CHARACTER NAME AND FLAVOUR TEXT,
