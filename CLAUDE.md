@@ -160,7 +160,7 @@ When a court's burocracia level requires document verification, documents are ne
 
 ### Activity stats — a reason to use Campo Livre beyond booking
 
-**First set implemented** (profile progress view, see Todo): games in the last 6 months (replaced hours in the last 30 days; the comparison with the previous period was dropped), weekly streak, distinct courts played ("Movimento", replaced the favourite court card). Cities collected was dropped. A rolling window rather than a calendar period, so the total doesn't reset to zero on a fixed date and knock the player down a level. All three carry a level title, stars and a segmented progress bar (`LEVELS_GAMES` / `LEVELS_STREAK` / `LEVELS_MOVEMENT` in `profile.js`). The rest below is still exploration.
+**First set implemented** (profile progress view, see Todo): games in the last 6 months (replaced hours in the last 30 days; the comparison with the previous period was dropped), weekly streak, distinct courts played ("Território", replaced the favourite court card). Cities collected was dropped. A rolling window rather than a calendar period, so the total doesn't reset to zero on a fixed date and knock the player down a level. All three carry a level title, stars and a segmented progress bar (`LEVELS_GAMES` / `LEVELS_STREAK` / `LEVELS_TERRITORY` in `profile.js`). The rest below is still exploration.
 
 The chosen levels are listed under "Player progress" below, since they're the first piece of that progress layer.
 
@@ -196,7 +196,7 @@ Builds on activity stats. Short, interactive questions after each game collect t
   - Tone: too much confetti feels childish. The pig's cheeky voice ("batotas", "porreiríssimo") should carry it, not badges everywhere
 - **Where to start:** only the post-game card (duration, singles/doubles, result) stored on the game row, with no points or levels. It pays off alone by making stats more accurate, and it shows whether players actually answer before a progression system is built on top. Since stats are behind the login wall, answering is also the natural moment to prompt visitors to make an account ("guarda o teu progresso")
 
-**Levels already implemented** (progress view, `LEVELS_GAMES` / `LEVELS_STREAK` / `LEVELS_MOVEMENT` in `profile.js`). Titles are ranks that grow with the number, so a low value never gets a mocking title. Each bar runs from 0 to its max in four equal segments, one per level, with the level title written inside. Each scale is defined as a step plus its titles (`levelScale(step, titles)`): every level spans the same step, so the segments are always equal. Games step: 5. Streak step: 2 weeks. Four stars next to the card title, filled up to the current level.
+**Levels already implemented** (progress view, `LEVELS_GAMES` / `LEVELS_STREAK` / `LEVELS_TERRITORY` in `profile.js`). Titles are ranks that grow with the number, so a low value never gets a mocking title. Each bar runs from 0 to its max in four equal segments, one per level, with the level title written inside. Each scale is defined as a step plus its titles (`levelScale(step, titles)`): every level spans the same step, so the segments are always equal. Games step: 5. Streak step: 2 weeks. Four stars next to the card title, filled up to the current level.
 
 | Games in the last 6 months ("Momentum") | Title |
 |---|---|
@@ -216,7 +216,7 @@ Bar max: 20 games. Replaced hours in the last 30 days: a game count is more tang
 
 Bar max: 8 weeks.
 
-| Distinct courts played ("Movimento") | Title |
+| Distinct courts played ("Território") | Title |
 |---|---|
 | 1 | Gato de apartamento |
 | 2 | Turista |
@@ -224,6 +224,19 @@ Bar max: 8 weeks.
 | 4+ | Sem morada fixa |
 
 Bar max: 4 courts. Unlike the other two, one court is already level 1, so the level is `courts - 1` while the bar uses `courts` — each reached level's segment is full rather than filling gradually. Counts walk-ins and bookings alike.
+
+| Lifetime hours on court ("Tarimba", `LEVELS_TARIMBA`) | Title |
+|---|---|
+| 0–9h | Ainda com etiqueta |
+| 10–19h | Já tem calos |
+| 20–29h | Mobília do clube |
+| 30h+ | Património do ténis |
+
+Bar max: 40h. Lifetime, like XP, so it never drops. It fills the gap Momentum leaves (a 2h match weighs four times a 30 min hit). Declared hours, not measured: a walk-in counts what the player chose unless ended early. Named after "ter tarimba" (experience from years on the job); "Rodagem", "Estrada" and "Veterania" were the alternatives, "Resistência" was ruled out as physical/health-adjacent.
+
+**Diamonds** (`icon_diamond.svg`): one per skill whose bar was ever full (20 games in 6 months / 40h / 8 weeks / 4 courts), kept forever. So the rolling skills check their best value ever, not the current one (`peakRecentGames`, `longestStreak` in `profile.js`). Shown after the value on each skill card that earned one, and as the total next to the level in the trading card's banner (always shown, 0 included).
+
+**Next skill candidate — Desportivismo:** walk-ins closed by hand with "Terminar jogo atual" (`manual_finished_at`), counting only games over 10 min. Rewards freeing the court for the next player, which keeps the live status honest. Chosen over a plain "signals sent" count, which would just duplicate Momentum. Not built yet.
 
 The game thresholds are a first guess, to be tuned once real play is known.
 
@@ -257,12 +270,12 @@ Unlike the skill bars, the XP bar is relative: the fill only covers the current 
 
 Future exploration, not planned yet. XP and the skill levels give every player a number, and numbers can be ranked. Comparing yourself with others is the strongest motivator in Duolingo (its leagues) and Strava (segment rankings), and it could turn solo progress into a reason to come back every week.
 
-- **Rank activity, never results:** XP, games, streak and Movimento all come from recorded games, so they can be ranked. Self-reported wins and losses can't be (see "Honesty" under Player progress). The leaderboard measures who plays the most, not who plays the best, and the copy should say so.
+- **Rank activity, never results:** XP, games, streak and Território all come from recorded games, so they can be ranked. Self-reported wins and losses can't be (see "Honesty" under Player progress). The leaderboard measures who plays the most, not who plays the best, and the copy should say so.
 - **Cheating is the real risk:** a walk-in is only a declared game. Once a ranking is at stake, fake check-ins become tempting. Walk-ins already require the location step, and bookings are backed by the owner. Possible guards: cap the XP per day, don't count walk-ins that overlap, or count only walk-ins confirmed by the post-game card.
 - **Scopes, smallest first:**
   - A court group's members: they already share a court, and the owner vouches for them (same reasoning as matchmaking's "chicken and egg")
   - A court: everyone who played there, walk-ins included ("Rei do campo" for the top player)
-  - A city: this ties in with city flags and Movimento
+  - A city: this ties in with city flags and Território
   - Friends: only once matchmaking exists, because it needs a "who you played with" link
 - **Weekly leagues beat all-time tables:** an all-time XP ranking can never be caught by a newcomer, which kills motivation. A weekly ranking that resets (XP earned this week) gives everyone a fresh start, and a rainy week can be frozen the same way as the rain freeze.
 - **Show the neighbourhood, not the whole table:** the player sees who's just above and just below them ("Estás em 7.º, a 500 XP do Rui"). Being told you're 43rd of 50 demotivates, whereas "1 jogo para passares o Rui" gives a concrete next step. The top three can still be shown for the aspiration.
@@ -284,7 +297,7 @@ Seasons and time-limited events give the ranking a rhythm: something new to chas
 - **Event ideas:**
   - Double points weekend: the simplest boost, and an easy way to test whether events move play at all
   - Local calendar: Santos Populares in June, the Aveiro summer, school holidays. Portuguese moments suit the pig's voice
-  - Explorer week: bonus points for a court you've never played (feeds Movimento and pushes players to new courts)
+  - Explorer week: bonus points for a court you've never played (feeds Território and pushes players to new courts)
   - Off-peak bonus: extra points for booking empty weekday slots. This is the owner's angle, since it fills hours that would otherwise sit empty
   - Owner events: an owner runs their own event for their group (a "torneio de verão", a points bonus on a new court). A candidate add-on under Degrees of Complexity
 - **End-of-season rewards:** a season title or badge that stays on the profile ("Campeão da primavera 2027"), or a special pig outfit for the season's top players (ties in with the per-level pig drawings). Cosmetic only, never booking perks, so the ranking can't turn into a paywall or a fight over slots.
@@ -470,11 +483,11 @@ Sessions are kept alive indefinitely for active users. Supabase auto-refreshes t
     - [x] Tested: logging in claims the device's older anonymous walk-ins
   - [x] Profile split into toggle views: progress (`icon_medal`, first and the default for players and visitors — the visitor teaser will fill theirs), history, memberships (`icon_id`), personal info (`icon_gear`)
   - [x] Progress view (players only; visitors get the login button), being turned into RPG-like mechanics: games in the last 6 months, weekly streak, distinct courts played. Computed in JS from the same fetch as the history, so games of 10 min or less are excluded
-    - [x] Metric name above the level title: "Momentum" (hours; common in PT-PT sports talk — "Balanço" alone reads as "summary", "Forma" drifts towards health), "Consistência" (streak) and "Movimento" (distinct courts). The metric name is `.skill-title`, a white banner across the top of the card; the level title is `.stat-level` (1em, 700) with the stars after it
+    - [x] Metric name above the level title: "Momentum" (hours; common in PT-PT sports talk — "Balanço" alone reads as "summary", "Forma" drifts towards health), "Consistência" (streak) and "Território" (distinct courts). The metric name is `.skill-title`, a white banner across the top of the card; the level title is `.stat-level` (1em, 700) with the stars after it
     - [x] Level titles instead of plain labels — see the tables under "Levels already implemented"
-    - [x] Movimento replaced the favourite court card ("Segunda casa")
+    - [x] Território (first named "Movimento", renamed because it read as physical agility rather than variety of courts) replaced the favourite court card ("Segunda casa")
     - [x] Progress bars on all three skills, 0 to max (20 games / 8 weeks / 4 courts) in four equal segments with the level title inside each
-    - [x] Segment titles are white with `mix-blend-mode: difference`: black on the empty track, white over the fill
+    - [x] Segment titles are black on the empty track and white over the fill: the labels are rendered twice (`barHtml` in `profile.js`), with the white copy on top clipped to the fill width via `clip-path` and a `--fill` variable. The XP bar keeps both copies black, which reads better on its yellow fill
     - [x] Stars next to the level title: one per level (four each), the current level and those below it filled `--yellow`, so the first level already shows one. Inline SVG (`STAR_SVG` in `profile.js`) so CSS can switch the fill
     - [x] XP bar above the skill cards: +500 XP per game / new court / streak week, levels 1–10 (see "XP")
     - [x] Character card art linked to the XP level: `XP_LEVEL_IMAGES` in `profile.js`, one entry per level (index 0 = level 1). Placeholders for now: `pig_sitting` (1–3), `pig_reaching` (4–6), `pig_serving` (7–10)

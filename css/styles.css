@@ -360,14 +360,18 @@ header {
 	color: #fff;
 }
 
-.view-toggle-btn img, #back-link img {
+.view-toggle-btn img {
 	width: 15px;
 	height: auto;
 }
 .link-icon {
-	height: 20px;
+	height: 15px;
 	width: auto;
 	vertical-align: middle;
+}
+
+button .link-icon {
+	height: 20px;
 }
 
 .view-toggle-btn.active img {
@@ -1358,6 +1362,7 @@ input[type="time"]::-webkit-date-and-time-value {
 	gap: 5px;
 	font-size: 1em;
 	font-weight: 700;
+	margin-top: 10px;
 }
 
 /* LEVEL STARS NEXT TO A STAT'S TITLE: FIRST PATH IS THE FILL (EMPTY UNTIL REACHED), SECOND IS THE OUTLINE */
@@ -1365,6 +1370,10 @@ input[type="time"]::-webkit-date-and-time-value {
 	height: 15px;
 	width: auto;
 	flex-shrink: 0;
+}
+
+.level-star:first-of-type {
+	margin-left: auto;
 }
 
 .level-star path:first-child {
@@ -1380,15 +1389,13 @@ input[type="time"]::-webkit-date-and-time-value {
 }
 
 /* LEVEL PROGRESS ON THE STATS CARDS: THE DIV IS THE FILL (INLINE width, 0 TO THE SCALE'S max) SITTING BEHIND
-   ONE EQUAL span PER LEVEL WITH ITS TITLE. THE BAR'S HEIGHT FOLLOWS THE TEXT, WHICH MAY WRAP IN A NARROW SEGMENT */
+   ONE EQUAL span PER LEVEL WITH ITS TITLE */
 .level-bar {
 	position: relative;
-	display: flex;
 	border: 2px solid var(--black);
 	border-radius: 100px;
 	background: var(--white);
 	overflow: hidden;
-	margin-top: 10px;
 }
 
 /* min-width KEEPS A SLIVER OF FILL VISIBLE AT 0%, SO AN EMPTY BAR STILL READS AS A BAR TO FILL */
@@ -1397,8 +1404,22 @@ input[type="time"]::-webkit-date-and-time-value {
 	top: 0;
 	bottom: 0;
 	left: 0;
+	width: var(--fill);
 	min-width: 20px;
 	background: var(--blue);
+}
+
+.level-bar p {
+	position: relative;
+	display: flex;
+}
+
+/* THE WHITE COPY: SAME SPOT AS THE BLACK ONE, CLIPPED TO THE FILL (INCLUDING ITS 20px MINIMUM) */
+.level-bar p + p {
+	position: absolute;
+	inset: 0;
+	color: var(--white);
+	clip-path: inset(0 calc(100% - max(var(--fill), 20px)) 0 0);
 }
 
 .level-bar span {
@@ -1412,6 +1433,7 @@ input[type="time"]::-webkit-date-and-time-value {
 	font-size: 0.4em;
 	font-weight: 700;
 	text-transform: uppercase;
+	white-space: nowrap;
 }
 
 /* XP BAR: SAME TRACK AS THE SKILL BARS, BUT ONE SEGMENT WITH THE PLAYER'S XP INSIDE AND A YELLOW FILL */
@@ -1421,6 +1443,11 @@ input[type="time"]::-webkit-date-and-time-value {
 
 .xp-bar span {
 	font-size: 1em;
+}
+
+/* BLACK READS BETTER THAN WHITE ON THE YELLOW FILL */
+.xp-bar p + p {
+	color: var(--black);
 }
 
 /* === TRADING CARD (THE PLAYER'S CHARACTER CARD ON THE PROGRESS PANE, js/profile.js xpCard) ===
@@ -1450,6 +1477,11 @@ input[type="time"]::-webkit-date-and-time-value {
 	font-size: 0.8em;
 	text-transform: uppercase;
 	border-radius: 10px;
+}
+
+/* THE PLAYER'S DIAMOND TOTAL, NEXT TO THE LEVEL */
+.trading-card-level span {
+	margin-left: 10px;
 }
 
 /* THE ART BREAKS OUT OF ITS FRAME AT THE TOP: THE WHITE FRAME ONLY COVERS THE LOWER PART OF THE ART'S BOX, AND THE PIG IS
@@ -1581,8 +1613,6 @@ input[type="time"]::-webkit-date-and-time-value {
 }
 
 .court-rules-title .link-icon {
-	max-height: 15px;
-	width: 18px;
 	flex-shrink: 0;
 }
 

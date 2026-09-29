@@ -35,8 +35,11 @@ const levelScale = (step, titles) => ({
 });
 const LEVELS_GAMES = levelScale(5, ["Raquete de gaveta", "Voltou da reforma", "Cliente da casa", "24 sobre 7"]);
 const LEVELS_STREAK = levelScale(2, ["Só quer postar", "Comprometido", "Joga até na chuva", "Força da natureza"]);
-const LEVELS_MOVEMENT = levelScale(1, ["Gato de apartamento", "Turista", "Presidente da junta", "Sem morada fixa"]);
-const MSG_TITLE_MOVEMENT = "Movimento";
+const LEVELS_TERRITORY = levelScale(1, ["Gato de apartamento", "Turista", "Presidente da junta", "Sem morada fixa"]);
+const MSG_TITLE_TERRITORY = "Território";
+const LEVELS_TARIMBA = levelScale(10, ["Ainda com etiqueta", "Já tem calos", "Mobília do clube", "Património do ténis"]);
+const MSG_STAT_HOURS = n => `${n} ${n === 1 ? "hora" : "horas"}`;
+const MSG_STAT_HOURS_HINT = "Em campo, desde o primeiro jogo";
 const MSG_STAT_STREAK_HINT = "Com pelo menos um jogo";
 const MSG_STAT_COURTS = n => `${n} ${n === 1 ? "campo" : "campos diferentes"}`;
 const MSG_STAT_COURTS_HINT = n => `Já ${n === 1 ? "recebeu" : "receberam"} os teus jogos`;
@@ -289,6 +292,37 @@ function weeklyStreak(games) {
 	return streak;
 }
 
+// LONGEST RUN OF WEEKS IN A ROW EVER, NOT JUST THE CURRENT ONE — A DIAMOND ONCE EARNED IS KEPT
+function longestStreak(games) {
+	const weeks = new Set(games.map(game => weekStart(game.start)));
+	let longest = 0;
+	for (const week of weeks) {
+		const cursor = new Date(week);
+		cursor.setDate(cursor.getDate() - 7);
+		if (weeks.has(cursor.getTime())) continue;
+		let run = 0;
+		cursor.setTime(week);
+		while (weeks.has(cursor.getTime())) {
+			run++;
+			cursor.setDate(cursor.getDate() + 7);
+		}
+		longest = Math.max(longest, run);
+	}
+	return longest;
+}
+
+// MOST GAMES EVER INSIDE ONE 6-MONTH WINDOW. THE COUNT ONLY PEAKS RIGHT AFTER A GAME, SO WINDOWS ENDING AT EACH GAME ARE ENOUGH
+function peakRecentGames(games) {
+	return Math.max(0, ...games.map(game => {
+		const end = new Date(game.start);
+		const start = new Date(end);
+		start.setMonth(start.getMonth() - 6);
+		return games.filter(other => new Date(other.start) >= start && new Date(other.start) <= end).length;
+	}));
+}
+
+const DIAMOND_ICON = `<img src="images/icon_diamond.svg" class="link-icon" alt="">`;
+
 function levelIndex(scale, value) {
 	return scale.levels.findLastIndex(level => value >= level.from);
 }
@@ -342,7 +376,7 @@ const XP_LEVEL_INFO = [
 ];
 
 // THE TRADING CARD (THINK MAGIC / POKÉMON): LEVEL IN THE BANNER, PLAYER ART, CHARACTER NAME AND FLAVOUR TEXT, THEN THE XP BAR
-function xpCard(xp) {
+function xpCard(xp, diamonds) {
 	const found = XP_LEVEL_ENDS.findIndex(end => xp < end);
 	const index = found === -1 ? XP_LEVEL_ENDS.length - 1 : found;
 	const from = index ? XP_LEVEL_ENDS[index - 1] : 0;
@@ -351,7 +385,7 @@ function xpCard(xp) {
 	const info = XP_LEVEL_INFO[index] ?? XP_LEVEL_INFO[0];
 	return `
 		<div class="trading-card">
-			<p class="trading-card-level">${MSG_XP_LEVEL(index + 1)}</p>
+			<p class="trading-card-level">${MSG_XP_LEVEL(index + 1)}<span>${DIAMOND_ICON} ${diamonds}</span></p>
 			<div class="trading-card-art">
 				<div class="trading-card-frame"></div>
 				<img src="images/${XP_LEVEL_IMAGES[index]}.svg" alt="">
@@ -359,46 +393,20 @@ function xpCard(xp) {
 			<p class="trading-card-name">${info.title}</p>
 			<p class="trading-card-text">${info.description}</p>
 			<p class="trading-card-next">${MSG_XP(to)}</p>
-			<div class="level-bar xp-bar"><div style="width: ${fill}%"></div><span>${MSG_XP(xp)}</span></div>
+			${barHtml(fill, `<span>${MSG_XP(xp)}</span>`, "xp-bar")}
 		</div>
 	`;
 }
 
-// SCROLL TILT: THE TRADING CARD TURNS SIDEWAYS AS THE PAGE SCROLLS DOWN — FLAT AT THE TOP, FULLY TURNED AFTER TILT_DISTANCE
-// px, WHATEVER THE PAGE'S HEIGHT — WHILE THE PIG TURNS BACK BY THE SAME ANGLE, SO IT STAYS FACING THE VIEWER AS THE CARD
-// TURNS UNDER IT. NO SENSOR, SO NO PERMISSION PROMPT. THE ANGLE FOLLOWS ITS TARGET ON A SPRING: EACH FRAME PULLS IT TOWARDS
-// THE TARGET BY TILT_PULL AND KEEPS TILT_KEEP OF ITS SPEED, SO IT SWINGS A LITTLE PAST THE TARGET AND SETTLES BACK — BOTH
-// WAYS, PAST FLAT TOO WHEN SCROLLED BACK TO THE TOP. LESS KEEP = LESS OVERSHOOT. THE LOOP STOPS ONCE IT HAS SETTLED.
-// THE PIG NEEDS ITS OWN perspective(): THE CARD'S overflow: hidden FLATTENS 3D, SO THE COUNTER-TURN IS DRAWN FLAT INTO THE
-// CARD — CLOSE TO, BUT NOT EXACTLY, STILL
-const CARD_TILT = 7, TILT_DISTANCE = 200, TILT_PULL = 0.08, TILT_KEEP = 0.85;
-function tiltOnScroll(card) {
-	if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-	const art = card.querySelector(".trading-card-art img");
-	let current = 0, speed = 0, frame = null;
-	// CLAMPED AT 0 TOO: iOS RUBBER-BANDING PAST THE TOP GIVES A NEGATIVE scrollY
-	const target = () => Math.max(0, Math.min(scrollY / TILT_DISTANCE, 1));
-	const step = () => {
-		const goal = target();
-		speed = (speed + (goal - current) * TILT_PULL) * TILT_KEEP;
-		current += speed;
-		const settled = Math.abs(goal - current) < 0.001 && Math.abs(speed) < 0.001;
-		if (settled) current = goal, speed = 0;
-		card.style.transform = `perspective(800px) rotateY(${current * CARD_TILT}deg)`;
-		art.style.transform = `perspective(800px) rotateY(${-current * CARD_TILT}deg)`;
-		frame = settled ? null : requestAnimationFrame(step);
-	};
-	const start = () => { frame ??= requestAnimationFrame(step); };
-	addEventListener("scroll", start, { passive: true });
-	addEventListener("resize", start);
-	start();
+// THE LABELS ARE RENDERED TWICE: BLACK ON THE TRACK, AND A WHITE COPY ON TOP CLIPPED TO THE FILL'S WIDTH
+function barHtml(fill, labels, modifier = "") {
+	return `<div class="level-bar ${modifier}" style="--fill: ${fill}%"><div></div><p>${labels}</p><p>${labels}</p></div>`;
 }
 
 // FILL FROM 0 TO max OVER ONE EQUAL SEGMENT PER LEVEL, EACH LABELLED WITH ITS TITLE
 function levelBar(scale, value) {
 	const fill = Math.min(value / scale.max, 1) * 100;
-	const segments = scale.levels.map(level => `<span>${level.title}</span>`).join("");
-	return `<div class="level-bar"><div style="width: ${fill}%"></div>${segments}</div>`;
+	return barHtml(fill, scale.levels.map(level => `<span>${level.title}</span>`).join(""));
 }
 
 // PROGRESS FROM THE SAME GAMES AS THE HISTORY (ALREADY WITHOUT THE ≤10 MIN ONES). DECLARED TIME ON COURT,
@@ -422,22 +430,34 @@ async function loadProgress(container, gamesPromise) {
 	// ONE COURT IS ALREADY LEVEL 1, SO THE LEVEL IS courts - 1; THE BAR USES courts ITSELF SO EACH REACHED LEVEL'S SEGMENT IS FULL
 	const courts = new Set(games.map(game => game.courtId)).size;
 
-	const statCard = (metric, title, value, detail, bar = "") => `
+	// LIFETIME, LIKE XP, SO IT NEVER DROPS. FILLS THE GAP MOMENTUM LEAVES: A 2h MATCH WEIGHS FOUR TIMES A 30 MIN HIT
+	const hours = Math.floor(games.filter(game => new Date(game.start) < now).reduce((sum, game) => sum + game.mins, 0) / 60);
+
+	// A DIAMOND PER SKILL WHOSE BAR WAS EVER FULL, KEPT FOREVER — SO THE ROLLING SKILLS CHECK THEIR BEST VALUE, NOT THE CURRENT ONE
+	const past = games.filter(game => new Date(game.start) < now);
+	const diamonds = {
+		games: peakRecentGames(past) >= LEVELS_GAMES.max,
+		hours: hours >= LEVELS_TARIMBA.max,
+		streak: longestStreak(past) >= LEVELS_STREAK.max,
+		courts: courts >= LEVELS_TERRITORY.max,
+	};
+
+	const statCard = (icon, metric, title, value, detail, bar, diamond) => `
 		<div class="membership-card">
-			${metric ? `<p class="skill-title">${metric}</p>` : ""}
-			${title ? `<p class="stat-level">${title}</p>` : ""}
-			<p class="membership-player margin-top-5" style="white-space: normal">${value}</p>
-			${detail ? `<div class="membership-date">${detail}</div>` : ""}
+			<p class="skill-title"><img src="images/icon_${icon}.svg" class="link-icon" alt="">${metric}</p>
+			<p class="membership-player margin-top-5" style="white-space: normal">${value}${diamond ? ` ${DIAMOND_ICON}` : ""}</p>
+			<div class="membership-date">${detail}</div>
+			<p class="stat-level">${title}</p>
 			${bar}
 		</div>
 	`;
 	container.innerHTML = [
-		xpCard(playerXp(games)),
-		statCard("Momentum", levelTitle(LEVELS_GAMES, gamesRecent) + levelStars(LEVELS_GAMES, gamesRecent), MSG_STAT_GAMES_VALUE(gamesRecent), MSG_STAT_GAMES_HINT, levelBar(LEVELS_GAMES, gamesRecent)),
-		statCard("Consistência", levelTitle(LEVELS_STREAK, streak) + levelStars(LEVELS_STREAK, streak), MSG_STAT_STREAK(streak), MSG_STAT_STREAK_HINT, levelBar(LEVELS_STREAK, streak)),
-		statCard(MSG_TITLE_MOVEMENT, levelTitle(LEVELS_MOVEMENT, courts - 1) + levelStars(LEVELS_MOVEMENT, courts - 1), MSG_STAT_COURTS(courts), MSG_STAT_COURTS_HINT(courts), levelBar(LEVELS_MOVEMENT, courts)),
+		xpCard(playerXp(games), Object.values(diamonds).filter(Boolean).length),
+		statCard("fire", "Momentum", levelTitle(LEVELS_GAMES, gamesRecent) + levelStars(LEVELS_GAMES, gamesRecent), MSG_STAT_GAMES_VALUE(gamesRecent), MSG_STAT_GAMES_HINT, levelBar(LEVELS_GAMES, gamesRecent), diamonds.games),
+		statCard("sheriff", "Tarimba", levelTitle(LEVELS_TARIMBA, hours) + levelStars(LEVELS_TARIMBA, hours), MSG_STAT_HOURS(hours), MSG_STAT_HOURS_HINT, levelBar(LEVELS_TARIMBA, hours), diamonds.hours),
+		statCard("repeat", "Consistência", levelTitle(LEVELS_STREAK, streak) + levelStars(LEVELS_STREAK, streak), MSG_STAT_STREAK(streak), MSG_STAT_STREAK_HINT, levelBar(LEVELS_STREAK, streak), diamonds.streak),
+		statCard("globe", MSG_TITLE_TERRITORY, levelTitle(LEVELS_TERRITORY, courts - 1) + levelStars(LEVELS_TERRITORY, courts - 1), MSG_STAT_COURTS(courts), MSG_STAT_COURTS_HINT(courts), levelBar(LEVELS_TERRITORY, courts), diamonds.courts),
 	].join("");
-	tiltOnScroll(container.querySelector(".trading-card"));
 }
 
 // LANYARD STRAP DIPPING INTO THE BADGE SLOT: THE FRONT STRAP, THEN THE FOLD (THE STRAP'S BACK, SEEN AS IT TURNS INTO
