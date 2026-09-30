@@ -333,45 +333,46 @@ Unlike the skill bars, the XP bar is relative: the fill only covers the current 
 
 ### Leaderboards and social comparison
 
-Future exploration, not planned yet. XP and the skill levels give every player a number, and numbers can be ranked. Comparing yourself with others is the strongest motivator in Duolingo (its leagues) and Strava (segment rankings), and it could turn solo progress into a reason to come back every week.
+Not built yet — the shape below is decided, the build isn't planned. XP and the skill levels give every player a number, and numbers can be ranked. Comparing yourself with others is the strongest motivator in Duolingo (its leagues) and Strava (segment rankings), and it gives solo progress a reason to come back.
 
-- **Rank activity, never results:** XP, games, streak and Território all come from recorded games, so they can be ranked. Self-reported wins and losses can't be (see "Honesty" under Player progress). The leaderboard measures who plays the most, not who plays the best, and the copy should say so.
-- **Cheating is the real risk:** a walk-in is only a declared game. Once a ranking is at stake, fake check-ins become tempting. Walk-ins already require the location step, and bookings are backed by the admin. Possible guards: cap the XP per day, don't count walk-ins that overlap, or count only walk-ins confirmed by the post-game card.
-- **Scopes, smallest first:**
-  - A court group's members: they already share a court, and the admin vouches for them (same reasoning as matchmaking's "chicken and egg")
-  - A court: everyone who played there, walk-ins included ("Rei do campo" for the top player)
-  - A city: this ties in with city flags and Território
-  - Friends: only once matchmaking exists, because it needs a "who you played with" link
-- **Weekly leagues beat all-time tables:** an all-time XP ranking can never be caught by a newcomer, which kills motivation. A weekly ranking that resets (XP earned this week) gives everyone a fresh start, and a rainy week can be frozen the same way as the rain freeze.
-- **Show the neighbourhood, not the whole table:** the player sees who's just above and just below them ("Estás em 7.º, a 500 XP do Rui"). Being told you're 43rd of 50 demotivates, whereas "1 jogo para passares o Rui" gives a concrete next step. The top three can still be shown for the aspiration.
-- **Tone:** the pig's cheeky voice teases instead of shaming ("O Rui passou-te. Vais deixar?"). Nobody at the bottom gets a mocking title, same rule as the level titles.
-- **Privacy:**
-  - Opt-in: a player is only ranked, and only sees the rankings, after choosing to join. Showing a player's name and activity to strangers is personal data in the open, and it needs consent.
-  - Only the first name (or a nickname) and the number are shown. Never the courts, days or times the player plays, which would expose their routine (same concern as matchmaking).
-  - Visitors aren't ranked. That's another reason to log in.
-- **Data access:** today every stat is computed in JS from the player's own rows, and RLS rightly blocks reading other players' games. A leaderboard needs a Postgres view or RPC that returns only aggregates (first name + weekly XP) for opted-in players, never the raw rows.
-- **Admin angle:** an admin could see the group's most active members and reward them (a free game, a "sócio do mês" badge). This is a candidate add-on under Degrees of Complexity.
-- **First step:** an opt-in weekly league inside one court group, with the neighbourhood view on the progress pane. Small, trusted, easy to moderate, and it shows whether players care before anything wider is built.
+**Decided:**
+- **Rank activity, never results:** XP, games, streak and Território all come from recorded games, so they can be ranked. Self-reported wins and losses can't be (see "Honesty" under Player progress). The leaderboard measures who plays the most, not who plays the best, and the copy should say so
+- **Six-month seasons, not weeks:** players don't play often enough for a weekly table to mean anything. Fixed seasons, two a year (e.g. Jan–Jun and Jul–Dec — possibly a summer and a winter season, to follow the tennis year), rather than a rolling 6 months: a season *ends*, so it has a winner and results to keep. Aligned with Momentum, which already counts the last 6 months
+- **What's ranked: XP earned in the season** — the same increments as the trading card (+500 per game, per court never played before, per streak week). A pass approval's +3000 doesn't count: it isn't play
+- **Ties:** equal points share the place ("1, 2, 2, 4"); then **hours played** breaks the tie (open: the season's hours — fairer to newcomers — or lifetime Tarimba, which rewards loyalty)
+- **One league for everyone** — no court-group, court or city leagues yet; the player base is too small to split. Visitors aren't ranked (they have no account — one more reason to log in); admins are left out
+- **No opt-in; an opt-out instead.** Every registered player is ranked, with a "don't show me in the ranking" switch in Dados and a line in the privacy policy
+- **Names are always "R. Barbosa"** — the first initial and the surname, the only form ever shown, never the full name. Privacy by default, with nothing for the player to configure. Only the name and the score: never the courts, days or times someone plays, which would expose their routine (same concern as matchmaking). A public ranking with names is personal data in the open, so get a quick legal check before launch (see "Activity, never health")
+- **Season results are kept** (a `league_results` table: the final table, saved when a season ends). They become lasting titles on the profile ("Campeão · 1.º semestre 2027", "Top 3") and a surprise: the end-of-season parcel, the pig hand lifting the player's final place
+- **Show the neighbourhood, not the whole table:** the top three for the aspiration, then the player with whoever is just above and just below ("Estás em 7.º — 1 jogo para passares o R. Barbosa", the "1 jogo" worked out from the gap). Being told you're 43rd of 50 demotivates; a concrete next step doesn't. Players with 0 points sit at the bottom without being called out
+- **Tone:** the pig's cheeky voice teases instead of shaming ("Passaram-te. Vais deixar?"). Nobody at the bottom gets a mocking title, same rule as the level titles
+
+**How it would work:**
+- **Computed in the database, not the browser:** today every stat is computed in JS from the player's own rows, and RLS rightly blocks reading other players' games. The ranking needs a Postgres function that returns only aggregates (the "R. Barbosa" name + season points + hours) for players who haven't opted out, never the raw rows
+- **First step, useful even without a leaderboard:** move the XP calculation into the database and have the trading card read it from there too. Otherwise the XP rules live twice — in JS and in SQL — and drift apart
+- **Cheating is the real risk:** a walk-in is only a declared game, and a ranking makes faking one tempting. Guards the function can apply: at most 2 games per player per day; ignore walk-ins that overlap another game of the same player; ignore games of 10 min or less (the history already hides them); count bookings only once past and confirmed. Walk-ins already need the location step, and bookings are backed by the admin
+- **Admin angle:** an admin could see the most active players at their courts and reward them (a free game, a "sócio do mês" badge) — a candidate add-on under Degrees of Complexity
+
+**Feeds matchmaking later** (see "Player matchmaking"): ranking neighbours play about as much as each other — a natural "people like you" — and Consistência / Território say who plays regularly and who likes new courts. But activity isn't skill: a keen beginner and a rare expert can have the same XP, so matchmaking still needs a skill signal (self-declared level, post-game results). Where and when people play is the most useful match signal and the most private, so matching happens on the server and only ever says "found someone", never the other player's routine. Keeping the XP in the database and the season snapshots is what makes this possible later.
 
 #### Seasons and events — boosting the ranking
 
-Seasons and time-limited events give the ranking a rhythm: something new to chase every few weeks, and a reason for a lapsed player to come back.
+Events give a season a rhythm: something new to chase within the six months, and a reason for a lapsed player to come back.
 
-- **Season points, separate from XP:** XP only ever grows and drives the character level, so it stays untouched. A season has its own points, which start at zero and are ranked for that season only. A game earns both: the usual XP plus the season points, with any event bonus applied to the season points alone. The character level never inflates from a double-points weekend.
-- **Seasons follow the tennis year:** roughly quarterly (spring, summer, autumn, winter), so a season is long enough to climb and short enough to feel winnable. The winter season can weigh points by the rain, so a tough season isn't a dead one (ties in with the rain freeze).
+- **Season points, separate from XP:** XP only ever grows and drives the character level, so it stays untouched. A season has its own points, which start at zero and are ranked for that season only. A game earns both: the usual XP plus the season points, with any event bonus applied to the season points alone. The character level never inflates from a double-points weekend
+- **Winter needn't be a dead season:** it can weigh points by the rain (ties in with the rain freeze)
 - **Event ideas:**
   - Double points weekend: the simplest boost, and an easy way to test whether events move play at all
   - Local calendar: Santos Populares in June, the Aveiro summer, school holidays. Portuguese moments suit the pig's voice
   - Explorer week: bonus points for a court you've never played (feeds Território and pushes players to new courts)
   - Off-peak bonus: extra points for booking empty weekday slots. This is the admin's angle, since it fills hours that would otherwise sit empty
   - Admin events: an admin runs their own event for their group (a "torneio de verão", a points bonus on a new court). A candidate add-on under Degrees of Complexity
-- **End-of-season rewards:** a season title or badge that stays on the profile ("Campeão da primavera 2027"), or a special pig outfit for the season's top players (ties in with the per-level pig drawings). Cosmetic only, never booking perks, so the ranking can't turn into a paywall or a fight over slots.
-- **Announcing it:** there are no push notifications, so a new season or event shows up on the next app open. The tear-strip reveal (`tear-reveal.js`) fits the season's results: "the parcel" with the player's final rank and reward.
+- **End-of-season rewards:** cosmetic only — the titles above, or a special pig outfit for the top players (ties in with the per-level pig drawings) — never booking perks, so the ranking can't turn into a paywall or a fight over slots
 - **Risks:**
   - Bonuses make cheating pay more. An event bonus should only apply to games that are hard to fake (bookings, or walk-ins confirmed by the post-game card)
   - Too many events at once: one at a time, so each still feels special
-  - Complexity: events are a multiplier on top of the season points, with a scope (all players, a city, a group, a court) and a date range. One small table (`events`: scope, starts_at, ends_at, multiplier, rule), not new logic per event
-- **First step:** after the weekly league, one season in one court group with a single double-points weekend. That's enough to see whether players notice and play more before building an event calendar.
+  - Complexity: events are a multiplier on top of the season points, with a scope and a date range. One small table (`events`: scope, starts_at, ends_at, multiplier, rule), not new logic per event
+- **First step:** after the first season runs plainly, a single double-points weekend — enough to see whether players notice before building an event calendar
 
 ### Surprises — tear-strip reveals for important moments
 
@@ -491,7 +492,7 @@ Supabase Auth is already included — magic link is a built-in provider, no extr
 
 | View | Visitor with walk-ins | Blank visitor | Player with no games |
 |---|---|---|---|
-| **Progress** | Dummy cards, "Já tens N XP à tua espera…" under the XP bar | Dummy cards, "O teu primeiro jogo vale logo 1000 XP." under the XP bar | Unchanged |
+| **Progress** | Dummy cards, "Já tens N XP à tua espera…" under the XP bar | Dummy cards, "O teu primeiro jogo vai valer logo 1000 XP." under the XP bar | Unchanged |
 | **History** | Their real games with XP + "Fazer login" | 1 locked dummy card (+1000 XP), no button | 1 locked dummy card, no pig |
 | **Passes / Dados** | Locked dummy | Locked dummy | Unchanged |
 
@@ -499,7 +500,7 @@ Supabase Auth is already included — magic link is a built-in provider, no extr
 - **Blank, a concrete next step:** they have nothing to lose yet, and an empty account gains nothing. 1000 XP is exact: a first game always earns +500 for the game and +500 for the new court
 - **No buttons on the previews:** the progress view has none, and the blank history has none either — an "Encontrar campo" under the dummy card made the card itself look clickable. The only button is "Fazer login" under a visitor's real history
 - **The history proves the number:** each card shows the XP it earned, so the teaser total can be traced game by game. The single dummy card shows +1000, matching the blank visitor's promise
-- **The dummy progress is the dummy first game** (the same "Tua primeira partida" as the history card), so the XP is 1000 and every level is 1, for every visitor. On top of it, `loadProgress`'s teaser mode pins the trading card's four ratings at 1 and the skill cards' numbers at 0 — an empty starting point. The trading card gets its own character, `XP_VISITOR_INFO` ("Raquete emprestada"), so it never passes for a real level-1 player's "Apanha-bolas"; the teaser sits inside it, under the XP bar
+- **The dummy progress is the dummy first game** (the same "Minha primeira partida" as the history card), so the XP is 1000 and every level is 1, for every visitor. On top of it, `loadProgress`'s teaser mode pins the trading card's four ratings at 1 and the skill cards' numbers at 0 — an empty starting point. The trading card gets its own character, `XP_VISITOR_INFO` ("Raquete emprestada"), so it never passes for a real level-1 player's "Apanha-bolas"; the teaser sits inside it, under the XP bar
 - **The XP bar loops forever** (`.locked .xp-bar div`, `fill-grow`): 1.5s growing from empty to 50% with an aggressive ease-in, 5s holding, 1.5s back down. It scales the fill with `transform: scaleX()` from its left edge, which runs on the GPU — animating `width` forced a layout on every frame, forever, and animating `--fill` itself needs `@property` and jumped. **Rule for any looping or long animation: only `transform` and `opacity`**
 
 **Redirect URL allowlist:** Supabase only returns magic links to URLs listed in Authentication → URL Configuration → Redirect URLs; anything else falls back to the Site URL. Site URL is `https://publiccourt.vercel.app`. The list (`*` matches anything except `.` and `/`):
@@ -554,13 +555,13 @@ Sessions are kept alive indefinitely for active users. Supabase auto-refreshes t
   - [x] Admin can revoke access from this view (hard-delete `memberships` row)
   - [ ] Email notification to player when revoked — send before deleting the row so we still have their email
   - [ ] Allow admin to set pass duration per member on approval (override the group default)
-  - [ ] In-app notification card for pass status changes (accept, deny, revoke) — dedicated card UI, not just inline state on court page
+  - [ ] In-app notification card for pass status changes (accept, deny, revoke) — dedicated card UI, not just inline state on court page. Accept is covered by the pass-approved surprise; deny by the orange refused card on the Passes tab. Revoke is still silent: the row is deleted, so the pass just disappears
   - [x] Tear-strip reveal (tear-to-open) for important notifications: the notification arrives sealed like an Amazon-style parcel, and as the player drags up they pull the tear strip away to open it (the tear follows the finger; releasing early snaps it back) — built as `tear-reveal.js`, now the wrapper for surprises
   - [ ] Surprises (see "Surprises — tear-strip reveals for important moments" under High Level Thoughts)
     - [x] SQL: generic `revealed_surprises` table, backfilled with every pass approved before the feature
     - [x] Label on the parcel: always the same, "Recebeste encomenda. Tu sabes o que fazer." (the `tear-reveal.js` default) for every surprise — the parcel never hints at what's inside
     - [ ] Find a placement for the pass-approved scene's "Reservar agora" and bring it back (every scene ends in a next step)
-    - [ ] Pass-approved scene as a static mockup first (stage, spotlight, turning pass, XP count-up, level-up line, pig, "Reservar agora") — judge the look before wiring it
+    - [x] ~~Pass-approved scene as a static mockup first~~ — superseded: built live instead, tuned with `?surprise`. Still to add from that list: XP count-up, level-up line, pig line (the stage, spotlight and turning pass were dropped for the pig hand)
       - [x] ~~Simplest 3D card~~ — built, then dropped as a bit cheesy
       - [x] Prize lift with a placeholder arm: lift, excited shakes, idle bob (see "The prize lift")
       - [x] Draw the pig hand (see "Drawing the pig hand") and swap it in for `.prize-arm` — `images/pig_hand.svg`, two groups on one artboard: `#hand` (forearm, cuff, palm, fingers) drawn behind the prize and `#thumb` in front, each as its own `<svg><use href="images/pig_hand.svg#…">` with the same viewBox and `.prize-arm` box, so they stack exactly. Page order is the layering (hand, prize, thumb), no `z-index`. `<use>` ignores ancestors' transforms, so each group carries the whole transform itself (the export's two wrappers folded into one) — keep that when re-exporting. The prize sits 40px deeper into the grip — done by lifting the hand (`calc(-11% - 40px)` on `.prize-arm`), not by nudging the card down, which moved the whole prize lower on screen — and is solid white (`.prize-bob > .ticket { background: var(--white) }`) — the ticket's `--muted` let the hand behind it show through
@@ -571,8 +572,8 @@ Sessions are kept alive indefinitely for active users. Supabase auto-refreshes t
     - [ ] Next surprises, one at a time: level up, first diamond on a skill; later end of a season
 - [ ] Support multiple admins per court group (receptionists)
   - [ ] Create `court_group_members (group_id UUID, user_id UUID)` table
-  - [ ] Migrate existing `court_groups.owner_id` rows into `court_group_members`
-  - [ ] Update RLS policies to check membership in `court_group_members` instead of `owner_id`
+  - [ ] Migrate existing `court_groups.admin_id` rows into `court_group_members`
+  - [ ] Update RLS policies to check membership in `court_group_members` instead of `admin_id`
   - [ ] New receptionists added manually via Supabase dashboard (no invite flow for now)
 - [ ] More court rules
   - [ ] Max active bookings per player
@@ -626,10 +627,10 @@ Sessions are kept alive indefinitely for active users. Supabase auto-refreshes t
       - [x] Visitor history shows unclaimed walk-ins only (`player_id IS NULL`)
       - [x] XP gained on each history card, players and visitors (`gamesXp`)
       - [x] Progress: dummy trading card + skill cards from the dummy first game, teaser inside the trading card, looping XP bar
-      - [x] Passes: dummy pass ("Teu primeiro passe", 30/02) with the padlock, and the passes explainer above it
+      - [x] Passes: dummy pass ("Meu primeiro passe", 30/02) with the padlock, and the passes explainer above it
       - [ ] Dados: locked dummy version for visitors
       - [ ] Padlocks on the progress cards? Their `overflow: hidden` and top banners clip and cover the history card's padlock
-      - [x] History: 1 locked dummy card ("Tua primeira partida", +1000 XP) for blank visitors and players with no games, replacing the pig, with "Teu histórico de jogos ficará guardado aqui." above it. `.locked` card with a `.padlock` in the top-right corner: the round `.ticket-hole` plus `icon_padlock_color_cut.svg`, whose shackle is already cut where it runs behind the card — so it only works at its exact hand-tuned position
+      - [x] History: 1 locked dummy card ("Minha primeira partida", +1000 XP) for blank visitors and players with no games, replacing the pig, with "Teu histórico de jogos ficará guardado aqui." above it. `.locked` card with a `.padlock` in the top-right corner: the round `.ticket-hole` plus `icon_padlock_color_cut.svg`, whose shackle is already cut where it runs behind the card — so it only works at its exact hand-tuned position
   - [x] Passes view: the player's approved passes, shown as the admin's member card with the group name in place of the player name and no revoke link
     - [x] Fix the player member card — title falls back to the group's court names, courts line removed, expiry uses `icon_trash.svg`
     - [ ] Give every court group a name, so passes stop reading as "Court X, Court Y" — `court_groups.name` is `null` on every row today, so cards fall back to the court names. Fill it in Supabase, or let the admin set it in the dashboard

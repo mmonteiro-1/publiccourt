@@ -18,13 +18,13 @@ const MSG_KIND_BOOKING = "Jogo reservado";
 const MSG_VISITOR_INTRO = "Estes são os jogos começados neste dispositivo. Faz login para os guardares na tua conta e os veres em qualquer lado.";
 const MSG_VISITOR_LOGIN = "Fazer login";
 const MSG_LINK_FAILED = "Este link de login já não funciona. Cada link só serve uma vez e expira ao fim de algum tempo. Pede um novo e abre-o logo.";
-const MSG_DUMMY_TITLE = "Tua primeira partida";
-const MSG_DUMMY_PASS = "Teu primeiro passe";
+const MSG_DUMMY_TITLE = "Minha primeira partida";
+const MSG_DUMMY_PASS = "Meu primeiro passe";
 const MSG_VISITOR_PROGRESS = "Vais ver o teu ténis progredir aqui. Usa o Campo Livre quando jogares para acumular XP. Faz login para não perderes o progresso.";
 const MSG_VISITOR_PASSES = "Passes são permissões para jogares em campos privados. É necessário login e envio de informações aos administradores do campo.";
 // LOSS AVERSION FOR A VISITOR WITH WALK-INS; A CONCRETE NEXT STEP FOR A BLANK ONE, WHO HAS NOTHING TO LOSE YET
 const MSG_TEASER_XP = xp => `Já tens ${MSG_XP(xp)} à tua espera. Faz login para não os perderes.`;
-const MSG_TEASER_FIRST = xp => `O teu primeiro jogo vale logo ${MSG_XP(xp)}.`;
+const MSG_TEASER_FIRST = xp => `O teu primeiro jogo vai valer logo ${MSG_XP(xp)}.`;
 
 // "ATIVIDADE", NEVER "SAÚDE" — SEE "ACTIVITY, NEVER HEALTH" IN CLAUDE.md
 const MSG_VIEW_PROGRESS = "Progresso";
