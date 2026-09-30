@@ -188,7 +188,6 @@ function renderAvailable(court) {
 
 	document.getElementById("court-footer").innerHTML = `
 		<a class="info-link" id="back-link" href="#">
-			<img src="images/icon_back.svg" class="link-icon" alt="">
 			Voltar
 		</a>
 	`;

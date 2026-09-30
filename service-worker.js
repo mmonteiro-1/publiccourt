@@ -21,7 +21,6 @@ const SHELL = [
   "/images/icon_fall.svg",
   "/images/icon_death.svg",
   "/images/icon_run.svg",
-  "/images/icon_back.svg",
   "/images/icon_info.svg",
   "/images/icon_list.svg",
   "/images/icon_app.svg",

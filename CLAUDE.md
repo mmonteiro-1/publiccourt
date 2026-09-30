@@ -63,6 +63,44 @@ Branch: `bookable-mvp` — building the court booking flow for courts that requi
 - `font-weight` limited to `400` or `700` only
 - Minimise classes — reuse existing ones before creating new ones
 
+## Glossary
+
+One concept, one word per layer. **Code** is what identifiers, comments, docs and table names use; **Copy** is what players and admins read (PT-PT). A term missing here gets added before it's used in two places.
+
+| Concept | Code | Copy | Meaning |
+|---|---|---|---|
+| Player | player | jogador | Anyone who plays, registered or not — the umbrella term |
+| Visitor | visitor | — | A player without an account, identified only by `device_id` |
+| Blank visitor | blank visitor | — | A visitor with no games yet |
+| Seasoned visitor | seasoned visitor | — | A visitor with unclaimed walk-ins ("games on the belt") |
+| Registered player | registered | — | A player with a `profiles` row. Not "logged": logging in is a session state, and a registered player who logs out is a visitor on that device |
+| Pass | pass | passe | Permission to book a private court group; `pending` / `approved` / `denied`. The object — the card the player holds |
+| Member | member | membro | A registered player with an approved pass ("pass holder" means the same). The status — "És membro deste campo", "Membro desde" |
+| Admin | admin | administrador | Owns at least one court group. An account is a player or an admin, never both |
+| Court | court | campo | One playable court (`courts`) |
+| Court group | court group, group | — | Courts sharing one admin, one set of rules and one pass |
+| Walk-in | walk-in | jogo público | A game on a public court, checked in on site |
+| Booking | booking | reserva, jogo reservado | A reserved slot on a private court |
+| Game | game | partida, jogo | Any walk-in or booking, as counted in history and stats. Copy uses both words |
+| Slot | slot | horário | One `slot_duration_minutes` cell of the slot picker |
+| XP | xp | XP | Lifetime points; never drops |
+| Level | level | nível | XP level 1–10 (trading card) or skill level 1–4 |
+| Skill | skill | Momentum, Tarimba, Consistência, Território | The four stats on the progress view |
+| Diamond | diamond | — (icon only) | A skill whose bar was ever full, kept forever |
+| Trading card | trading card | — | The character card on the progress view |
+| Locked preview | locked, dummy | — | Example content for visitors and empty views; dummy dates are always 30/02 |
+| Teaser | teaser | — | The line inside a visitor's trading card ("Já tens N XP à tua espera") |
+| Claim | claim | — | Adopting a device's unclaimed walk-ins on login |
+| Pig appearance | pig appearance | — | The pig with a message (`setPigAppearance`) |
+
+**Migration in progress** — the glossary is the target; the code still uses the old words until each phase lands. Phases, one at a time, each tested before the next:
+1. ~~Glossary~~ (this section)
+2. Code-only renames, no database: identifiers, `MSG_*` names, comments and CSS classes (`.membership-card` → pass, owner → admin, logged-in player → registered; "member" stays)
+3. Copy: "passe" for the object, "membro" for the status, "administrador" for the admin — every string reviewed
+4. Database renames with a safety net: `memberships` → `passes`, `court_groups.owner_id` → `admin_id`, `membership_duration_months` → `pass_duration_months`, each shipped with a compatibility view under the old name (`security_invoker`, so RLS still applies) so old and new code both work mid-switch; RLS policies and triggers re-checked; `notify-membership` redeployed as `notify-pass`. `main` only queries `courts` and `walk_ins`, so none of these tables can break production — the risk is breaking this branch and the live edge function mid-switch
+5. Page rename: `owner.html` / `owner.js` → `admin.html` / `admin.js`, with a Vercel redirect from the old URL
+6. Clean-up: drop the compatibility views once nothing reads the old names
+
 ## Database Schema (Supabase)
 
 **courts** — `id int4, name text, city text, description text, lat float8, lng float8, group_id int4, group_position int4, active bool, bookable bool, unavailable bool, missing_qr_hint int4`
@@ -93,6 +131,12 @@ Branch: `bookable-mvp` — building the court booking flow for courts that requi
 - Active when `manual_finished_at IS NULL AND ends_at > now()`
 - `player_name` is only set for logged-in players (taken from their profile). Visitors are anonymous — we have no name to ask for, so it stays `null`
 - `player_id` → `auth.users.id`, nullable. Set when a logged-in player starts a walk-in; anonymous walk-ins leave it `null` and are identified by `device_id` alone. On login the device's unclaimed walk-ins are adopted (`player_id = auth.uid()` where `device_id` matches and `player_id IS NULL`), so history survives the switch from visitor to account — per device only
+
+**pass_awards** — `player_id uuid, group_id int4, court_id int4, awarded_at timestamptz`
+- One row per pass ever approved, for XP (`fetchPassAwards` in `profile.js`). Survives the membership being revoked, so XP never drops
+- Filled only by the `award_pass` trigger (`security definer`) after insert or status update on `memberships` when `status = 'approved'`; existing approved passes were backfilled
+- Unique index `pass_awards_once` on `(player_id, coalesce(group_id, 0), coalesce(court_id, 0))` — one award per scope ever; the trigger's `on conflict do nothing` skips re-approvals
+- RLS: players SELECT own only; nobody inserts, updates or deletes directly
 
 **profiles** — `id uuid, name text, phone text, nif text, created_at timestamptz`
 - `id` = `auth.users.id`; created on first onboarding
@@ -245,6 +289,10 @@ The game thresholds are a first guess, to be tuned once real play is known.
 - each distinct court played
 - each week with a game right after another week with a game (a lone week is already paid by its games)
 
+Plus **+3000 XP per pass** (`XP_PER_MEMBERSHIP`), shown as "+3000 XP" on each pass card (dummy pass included). A pass is a bigger step than a game: an owner vetted and approved the player. It's counted from `pass_awards`, never from `memberships`: revoking hard-deletes the membership row, and **XP never drops**. One award per scope, ever, so an owner revoking and re-approving can't farm it. The history cards no longer add up to the total for members — accepted, the difference is on the Passes tab.
+
+**XP per game** (`gamesXp`): the same total split across games, oldest first, so each history card shows what it earned ("+1000 XP", right of the court-type row) and the cards add up to the trading card. A court's bonus goes to its first game there, a streak week's bonus to that week's first game — so a card shows +500, +1000 or +1500. `playerXp` is just the sum of `gamesXp`, so the two can't drift apart.
+
 Numbers are inflated ×10 on purpose (big numbers, big fun) with the level ends ×10 too, so difficulty is unchanged. Shown with PT-PT grouping ("26 500").
 
 Examples: once a week for 6 months on 2 courts ≈ 26 500 XP (level 8, the calibration target); twice a week on 3 courts ≈ 40 000 (level 10); once a month for a year on 1 court ≈ 6 500 (level 3).
@@ -374,11 +422,7 @@ Supabase Auth is already included — magic link is a built-in provider, no extr
 **What we create:**
 - `profiles` table — extends `auth.users` with fields we own (name, and future registration fields)
 
-**Audience terms** (use these consistently in code, comments and docs):
-- **Visitor** — not logged in. Identified only by `device_id`
-- **Player** — logged in, with a `profiles` row
-- **Member** — a player with an approved membership for a court group
-- **Owner** — owns at least one `court_groups` row (see Roles)
+**Audience terms:** see the Glossary (visitor, registered player, member, admin).
 
 **Roles:** one email = one role. An account is either a **player** or an **owner**, never both (an owner who also plays is too rare to design for). Owner = owns at least one `court_groups` row.
 
@@ -396,7 +440,24 @@ Supabase Auth is already included — magic link is a built-in provider, no extr
 
 **Profile entry points:** avatar icon (`icon_avatar.svg`) in the header — court list and court pages link to `profile.html`; in `owner.html` it opens the dashboard's own profile view (replaced the old gear tab in the nav).
 
-**Visitors on `profile.html`:** a logged-out visitor is no longer redirected to login. `showVisitor()` renders the same four-view toggle as the logged-in profile: history shows their walk-ins (matched on `device_id`) plus a "Fazer login" button (with no games, only the pig shows), and the stats, memberships and personal info views hold only that button, because someone who only plays walk-ins still has a history worth seeing and no reason to make an account. An explicit **Terminar sessão** still goes to `login.html` — that's a deliberate exit, not a browse.
+**Visitors on `profile.html`:** a logged-out visitor is no longer redirected to login. `showVisitor()` renders the same four-view toggle as the logged-in profile: history shows their walk-ins (matched on `device_id`, unclaimed only — see below) plus a "Fazer login" button, and the stats, memberships and personal info views hold only that button, because someone who only plays walk-ins still has a history worth seeing and no reason to make an account. An explicit **Terminar sessão** still goes to `login.html` — that's a deliberate exit, not a browse.
+
+**Unclaimed walk-ins only:** the visitor query also requires `player_id IS NULL`, so it shows exactly what `claimDeviceWalkIns` hands over on login. A player who logs out sees an empty visitor history (their games belong to the account) — accepted, a player has no business using the app logged out. It also keeps a borrowed phone from exposing the previous player's routine.
+
+**Visitor teaser (decided, being built):** every view shows the same content as a logged-in profile, with locked static dummy data where the visitor has none. The visitor's real walk-ins are never fed into the dummy progress; they only drive the teaser line.
+
+| View | Visitor with walk-ins | Blank visitor | Player with no games |
+|---|---|---|---|
+| **Progress** | Dummy cards, "Já tens N XP à tua espera…" under the XP bar | Dummy cards, "O teu primeiro jogo vale logo 1000 XP." under the XP bar | Unchanged |
+| **History** | Their real games with XP + "Fazer login" | 1 locked dummy card (+1000 XP), no button | 1 locked dummy card, no pig |
+| **Passes / Dados** | Locked dummy | Locked dummy | Unchanged |
+
+- **With walk-ins, loss aversion:** the XP is theirs already, and logging in is what saves it. "N" is `playerXp` of their unclaimed walk-ins, exactly what the account receives on login
+- **Blank, a concrete next step:** they have nothing to lose yet, and an empty account gains nothing. 1000 XP is exact: a first game always earns +500 for the game and +500 for the new court
+- **No buttons on the previews:** the progress view has none, and the blank history has none either — an "Encontrar campo" under the dummy card made the card itself look clickable. The only button is "Fazer login" under a visitor's real history
+- **The history proves the number:** each card shows the XP it earned, so the teaser total can be traced game by game. The single dummy card shows +1000, matching the blank visitor's promise
+- **The dummy progress is the dummy first game** (the same "Tua primeira partida" as the history card), so the XP is 1000 and every level is 1, for every visitor. On top of it, `loadProgress`'s teaser mode pins the trading card's four ratings at 1 and the skill cards' numbers at 0 — an empty starting point. The trading card gets its own character, `XP_VISITOR_INFO` ("Raquete emprestada"), so it never passes for a real level-1 player's "Apanha-bolas"; the teaser sits inside it, under the XP bar
+- **The XP bar loops forever** (`.locked .xp-bar div`, `fill-width`): 1.5s growing from empty to 50% with an aggressive ease-in, 5s holding, 1.5s back down. It animates `width` directly — animating `--fill` itself needs `@property` and jumped instead of moving
 
 **Redirect URL allowlist:** Supabase only returns magic links to URLs listed in Authentication → URL Configuration → Redirect URLs. Local IPs are there; Vercel URLs (production + preview wildcard) must be too, or links sent from the deploy fall back to the Site URL (a local IP).
 
@@ -477,7 +538,7 @@ Sessions are kept alive indefinitely for active users. Supabase auto-refreshes t
     - [x] Add nullable `walk_ins.player_id` column
     - [x] Write `player_id` (and `player_name` from the profile) on new walk-ins when a session exists
     - [x] Claim the device's anonymous walk-ins on login (`device_id` match, `player_id IS NULL`) — runs on every `profile.html` load, no-op once nothing is unclaimed
-    - [x] History is shown to visitors too — no login required. Visitor query is by `device_id`, logged-in query is by `player_id`. Walk-ins from a device the player never logs in on stay anonymous
+    - [x] History is shown to visitors too — no login required. Visitor query is by `device_id` (unclaimed only), logged-in query is by `player_id`. Walk-ins from a device the player never logs in on stay anonymous
     - [x] Games of 10 min or less are hidden (mis-taps, walk-ins ended right away) — only hidden, still in the database
     - [ ] Test: a walk-in started while logged in fills `player_id`
     - [x] Tested: logging in claims the device's older anonymous walk-ins
@@ -493,7 +554,14 @@ Sessions are kept alive indefinitely for active users. Supabase auto-refreshes t
     - [x] Character card art linked to the XP level: `XP_LEVEL_IMAGES` in `profile.js`, one entry per level (index 0 = level 1). Placeholders for now: `pig_sitting` (1–3), `pig_reaching` (4–6), `pig_serving` (7–10)
     - [ ] Draw progressively more "pro" pig images per level (gear, outfit, pose) and swap them into `XP_LEVEL_IMAGES`
     - [ ] Tune the level thresholds (skills and XP) once real play is known
-    - [ ] Visitor teaser: a stat computed from the device's walk-ins above the login button (e.g. "Jogaste 6h este mês")
+    - [ ] Visitor teaser (see "Visitor teaser" under Authentication)
+      - [x] Visitor history shows unclaimed walk-ins only (`player_id IS NULL`)
+      - [x] XP gained on each history card, players and visitors (`gamesXp`)
+      - [x] Progress: dummy trading card + skill cards from the dummy first game, teaser inside the trading card, looping XP bar
+      - [x] Passes: dummy pass ("Teu primeiro passe", 30/02) with the padlock, and the passes explainer above it
+      - [ ] Dados: locked dummy version for visitors
+      - [ ] Padlocks on the progress cards? Their `overflow: hidden` and top banners clip and cover the history card's padlock
+      - [x] History: 1 locked dummy card ("Tua primeira partida", +1000 XP) for blank visitors and players with no games, replacing the pig, with "Teu histórico de jogos ficará guardado aqui." above it. `.locked` card with a `.padlock` in the top-right corner: the round `.membership-hole` plus `icon_padlock_color_cut.svg`, whose shackle is already cut where it runs behind the card — so it only works at its exact hand-tuned position
   - [x] Memberships view: the player's approved memberships, shown as the owner's member card with the group name in place of the player name and no revoke link
     - [x] Fix the player member card — title falls back to the group's court names, courts line removed, expiry uses `icon_trash.svg`
     - [ ] Fill `court_groups.name` in Supabase — every row is `null` today, so cards show court names instead of a group name

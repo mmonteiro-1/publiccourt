@@ -1164,6 +1164,45 @@ input[type="time"]::-webkit-date-and-time-value {
 	box-shadow: 4px 4px 0 var(--black);
 }
 
+/* THE XP A HISTORY CARD'S GAME EARNED, PUSHED TO THE RIGHT OF THE COURT-TYPE ROW */
+.game-xp {
+	margin-left: auto;
+	color: var(--orange);
+	font-size: 1.5em;
+	font-weight: 700;
+	line-height: 1;
+}
+
+/* LOCKED EXAMPLE CONTENT ON AN EMPTY PROFILE — SHOWS HOW A VIEW WORKS WITHOUT PASSING FOR THE PLAYER'S OWN DATA.
+   ONLY THE TWO TOP ROWS MAKE ROOM FOR THE HANGING PADLOCK — PADDING THE CARD ITSELF WOULD PULL THE TICKET DIVIDER'S
+   RIGHT NOTCH OFF THE EDGE */
+.locked {
+	position: relative;
+}
+
+.locked .membership-player,
+.locked .membership-courts {
+	padding-right: 30px;
+}
+
+/* A ROUND HOLE PUNCHED IN THE TOP-RIGHT CORNER, WITH A PADLOCK HANGING THROUGH IT */
+/* z-index: THE TICKET DIVIDER IS position: relative AND COMES LATER IN THE CARD, SO IT WOULD PAINT OVER THE LOCK */
+.padlock {
+	position: absolute;
+	top: 10px;
+	right: 10px;
+	z-index: 1;
+}
+
+/* THE ARTWORK HAS THE SHACKLE ALREADY CUT WHERE IT RUNS BEHIND THE CARD, SO IT ONLY WORKS AT THIS EXACT SPOT OVER THE HOLE.
+   OFF-GRID VALUES ARE HAND-TUNED TO THE ARTWORK */
+.padlock img {
+	position: absolute;
+	top: 8px;
+	left: -18px;
+	width: 60px;
+}
+
 /* SHORT SIDE-TO-SIDE SHAKE TO POINT OUT THE CARD REACHED FROM THE OWNER SLOT PICKER */
 .membership-card.wiggle {
 	/* WIGGLE WAITS 0.3s FOR THE SCROLL; THE FLASH RUNS LONGER THAN IT AND OUTLASTS IT ON PURPOSE */
@@ -1447,6 +1486,21 @@ input[type="time"]::-webkit-date-and-time-value {
 
 .xp-bar span {
 	font-size: 1em;
+}
+
+/* THE VISITOR'S PREVIEW, LOOPING FOREVER: THE XP FILL GROWS FROM EMPTY TO ITS VALUE (1.5s), HOLDS THERE (5s), THEN RUNS
+   BACK DOWN (1.5s) INSTEAD OF SNAPPING TO EMPTY. THE FILL'S width IS ANIMATED DIRECTLY — ANIMATING --fill ITSELF NEEDS
+   @property AND JUMPED INSTEAD OF MOVING. THE LABEL COPY'S CLIP IS LEFT ALONE: ON THE XP BAR BOTH COPIES ARE BLACK.
+   AGGRESSIVE EASE-IN, APPLIED PER SEGMENT. min-width: 0 LETS IT START TRULY EMPTY — THE 20px SLIVER IS ONLY FOR STATIC BARS */
+.locked .xp-bar div {
+	min-width: 0;
+	animation: fill-width 8s cubic-bezier(0.7, 0, 0.85, 0) 0.3s infinite backwards;
+}
+
+@keyframes fill-width {
+	0%, 100% { width: 0; }
+	/* 1.5s OF 8s = 18.75% */
+	18.75%, 81.25% { width: var(--fill); }
 }
 
 /* BLACK READS BETTER THAN WHITE ON THE YELLOW FILL */

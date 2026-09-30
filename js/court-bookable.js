@@ -35,7 +35,6 @@ export async function renderBookable(court) {
 
 	document.getElementById("court-footer").innerHTML = `
 		<a class="info-link" id="back-link" href="index.html">
-			<img src="images/icon_back.svg" class="link-icon" alt="">
 			Voltar
 		</a>`;
 
