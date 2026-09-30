@@ -190,6 +190,12 @@ body:has(.pig-appearance:not([hidden] *), .info-pig) .logo-pig {
 	opacity: 0;
 }
 
+/* A SUCCESS SCREEN IS A MOMENT, NOT A PLACE TO NAVIGATE FROM — IT RELOADS BY ITSELF. visibility, NOT opacity,
+   SO THE HIDDEN ICON CAN'T STILL BE TAPPED */
+body:has(.info-pig) .header-profile {
+	visibility: hidden;
+}
+
 .page-court.success .logo span {
 	color: var(--black);
 	-webkit-text-stroke: 2px var(--black);
@@ -1148,6 +1154,29 @@ input[type="time"]::-webkit-date-and-time-value {
 	font-weight: 400;
 	background: var(--muted);
 	box-shadow: 4px 4px 0 var(--black);
+}
+
+/* A REFUSED PASS REQUEST ON THE PLAYER'S PASSES VIEW */
+.ticket.refused {
+	background: var(--orange);
+	color: var(--white);
+}
+
+/* LINKS SET THEIR OWN BLACK, SO THE "SOLICITAR NOVAMENTE" LINK NEEDS WHITE TOO; THE BLACK ICON IMAGES FLIP TO WHITE */
+/* STYLED LIKE .info-link (CENTRED, UNDERLINED, ICON GAP) WITHOUT ITS FIXED BOTTOM-BAR POSITIONING */
+.ticket.refused a {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 10px;
+	margin-top: 10px;
+	color: var(--white);
+	text-decoration: underline;
+	text-underline-offset: 3px;
+}
+
+.ticket.refused .link-icon {
+	filter: invert(1);
 }
 
 /* THE XP A HISTORY CARD'S GAME EARNED, PUSHED TO THE RIGHT OF THE COURT-TYPE ROW */

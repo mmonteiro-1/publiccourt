@@ -121,7 +121,10 @@ One concept, one word per layer. **Code** is what identifiers, comments, docs an
 - Scope: either `group_id` OR `court_id`, never both
 - `status`: `pending` | `approved` | `denied`
 - `player_id` → `auth.users.id`
-- RLS: players read/write own (`auth.uid() = player_id`); admins read/update via court_groups join; players can only DELETE when `status = 'denied'`; admins DELETE via group ownership
+- RLS: players read own; admins read/update via court_groups join; admins DELETE via group ownership; players can DELETE when `status = 'denied'` (unused since re-requests revive the row)
+  - **Players can never approve themselves.** "Players request own passes" (INSERT) only allows `status = 'pending'` with `approved_at`, `expires_at` and `denied_reason` all null. "Players re-request own passes" (UPDATE) only touches their own `pending` / `denied` row and only turns it back into that same fresh request. Both replaced policies that checked `auth.uid() = player_id` alone, which let a player insert or update their own row to `approved` from the console
+- **Request expiry:** a `pending` or `denied` row drops out of view — admin Pendentes tab, player Passes tab, court page — a month after its `created_at` (`REQUEST_EXPIRY_MONTHS` / `requestExpired` in `utils.js`, hardcoded). The row stays. Each request card shows its expiry date (trash icon)
+- **Re-requesting revives the row** (`requestPass` in `court-bookable.js`): a refused request, or any pending/refused one past its month, is updated back to `pending` with a fresh `created_at` and the reason cleared — never deleted and re-inserted. The one-row-per-scope unique constraint holds, and an expired pending request (which a player couldn't delete) no longer blocks asking again. The previous refusal reason is overwritten
 
 **bookings** — `id uuid, group_id int4, player_id uuid, court_id int8, start_at timestamptz, end_at timestamptz, status text, created_at timestamptz`
 - `player_id` → `auth.users.id`
@@ -497,7 +500,7 @@ Sessions are kept alive indefinitely for active users. Supabase auto-refreshes t
 - [x] Get the player to register to the admin (simple as possible)
   - [x] Create `memberships` table with `player_id`, `court_id` (nullable), `group_id` (nullable), `status`, `denied_reason`, `created_at`, `approved_at`
   - [x] Unique constraint per `(player_id, court_id)` and `(player_id, group_id)` to prevent duplicate requests
-  - [x] Hard-delete rows (no soft-delete) so player can re-apply freely after deletion
+  - [x] ~~Hard-delete rows (no soft-delete) so player can re-apply freely~~ — superseded: a player's re-request now revives the row (see "Re-requesting revives the row" under `passes`); only an admin's revoke still hard-deletes
   - [x] Court page shows "solicitation pending" state when pass row exists with status = pending
   - [x] A pass scoped to `group_id` covers all courts in that group; booking always references a specific `court_id`
 - [x] Get the admin to login and land on dashboard (simple as possible)
@@ -537,6 +540,7 @@ Sessions are kept alive indefinitely for active users. Supabase auto-refreshes t
   - [x] After cancelling a booking: "Jogo cancelado" (`SUCCESS.bookingCancelled`), sad tone, `pig_sitting`, no ball
   - [x] Move the walk-in "Bom jogo" and "Obrigado" screens in `court-walkin.js` onto `showSuccess()` — all four screens now come from `SUCCESS` presets in `success.js`
   - [ ] Success screen when an admin cancels a booking from the dashboard
+  - [x] Hide the header's avatar (user) icon on success screens — `body:has(.info-pig) .header-profile`, `visibility: hidden` so it can't be tapped either
 - [ ] Player profile page (`profile.html`)
   - [x] Magic link returns the player to the court they started login from (`localStorage.returnTo`)
   - [x] Header avatar icon links to the profile (player) / opens the dashboard profile view (admin, replaces the gear nav tab)
@@ -577,8 +581,10 @@ Sessions are kept alive indefinitely for active users. Supabase auto-refreshes t
       - [x] History: 1 locked dummy card ("Tua primeira partida", +1000 XP) for blank visitors and players with no games, replacing the pig, with "Teu histórico de jogos ficará guardado aqui." above it. `.locked` card with a `.padlock` in the top-right corner: the round `.ticket-hole` plus `icon_padlock_color_cut.svg`, whose shackle is already cut where it runs behind the card — so it only works at its exact hand-tuned position
   - [x] Passes view: the player's approved passes, shown as the admin's member card with the group name in place of the player name and no revoke link
     - [x] Fix the player member card — title falls back to the group's court names, courts line removed, expiry uses `icon_trash.svg`
-    - [ ] Fill `court_groups.name` in Supabase — every row is `null` today, so cards show court names instead of a group name
-    - [ ] Show pending requests there too, as a card marked "aguarda aprovação" (ties into the pending approval UX under Open Questions)
+    - [ ] Give every court group a name, so passes stop reading as "Court X, Court Y" — `court_groups.name` is `null` on every row today, so cards fall back to the court names. Fill it in Supabase, or let the admin set it in the dashboard
+    - [x] Show pending and refused requests there too, not only approved passes (one list, no toggle — a player never has many; pending first, then passes, then refusals; `requestCard` in `profile.js`, a plain ticket without the lanyard): pending as a card marked "aguarda aprovação" (ties into the pending approval UX under Open Questions), refused with its reason and a way to ask again
+    - [x] Registered players with no pass: the locked dummy pass ticket (`dummyPassCard`) instead of the lone pig, under `MSG_NO_PASSES`
+      - [ ] A follow-up action for them: "Bora mudar isso com o teu primeiro passe!" promises a next step but nothing is tappable. Something that leads to a private court where they can ask for a pass. Keep it off the dummy ticket, which must not look clickable (see "No buttons on the previews")
   - [ ] Upcoming game alerts (billing alerts once billing exists)
   - [x] Replace the placeholder skull icon (`icon_avatar.svg`)
 - [ ] Get the admin to see the player booking and modify it

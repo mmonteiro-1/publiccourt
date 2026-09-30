@@ -150,10 +150,13 @@ export async function renderBookable(court) {
 
 	// PASS IS GROUP-SCOPED IF THE COURT BELONGS TO A GROUP, OTHERWISE COURT-SCOPED
 	const passQuery = court.group_id
-		? db.from("passes").select("status, denied_reason, expires_at").eq("player_id", user.id).eq("group_id", court.group_id)
-		: db.from("passes").select("status, denied_reason, expires_at").eq("player_id", user.id).eq("court_id", court.id);
+		? db.from("passes").select("status, denied_reason, expires_at, created_at").eq("player_id", user.id).eq("group_id", court.group_id)
+		: db.from("passes").select("status, denied_reason, expires_at, created_at").eq("player_id", user.id).eq("court_id", court.id);
 
-	const { data: pass } = await passQuery.maybeSingle();
+	const { data: row } = await passQuery.maybeSingle();
+	// A PENDING OR REFUSED REQUEST OVER A MONTH OLD COUNTS AS NO REQUEST — THE SAME RULE AS THE PASSES VIEWS (requestExpired IN
+	// utils.js). ITS ROW STAYS, AND ASKING AGAIN REVIVES IT RATHER THAN INSERTING A SECOND ONE
+	const pass = row && row.status !== "approved" && requestExpired(row.created_at) ? null : row;
 
 	if (pass?.status === "pending") {
 		app.innerHTML = `${header}
@@ -170,7 +173,7 @@ export async function renderBookable(court) {
 			${flipLink}
 			<button id="reapply-btn"><img src="images/icon_praying.svg" class="link-icon" alt="">Solicitar novamente</button>
 		`;
-		document.getElementById("reapply-btn").addEventListener("click", () => requestPass(court, user, app, header, true));
+		document.getElementById("reapply-btn").addEventListener("click", () => requestPass(court, user, app, header, true, true));
 		return;
 	}
 
@@ -258,26 +261,25 @@ export async function renderBookable(court) {
 		${flipLink}
 		<button id="pass-btn"><img src="images/icon_asking.svg" class="link-icon" alt="">Solicitar passe</button>
 	`;
-	document.getElementById("pass-btn").addEventListener("click", () => requestPass(court, user, app, header, false));
+	document.getElementById("pass-btn").addEventListener("click", () => requestPass(court, user, app, header, false, !!row));
 }
 
-// SUBMIT A PASS REQUEST; ON RE-APPLY, DELETES THE DENIED ROW FIRST SO INSERT IS CLEAN
-async function requestPass(court, user, app, header, isReapply) {
+// SUBMIT A PASS REQUEST. WITH A ROW ALREADY THERE (REFUSED, OR A PENDING/REFUSED ONE PAST ITS MONTH) IT REVIVES THAT ROW AS A
+// FRESH REQUEST INSTEAD OF DELETING IT — THE DATABASE KEEPS ITS HISTORY, AND THE ONE-ROW-PER-SCOPE UNIQUE CONSTRAINT HOLDS.
+// RLS ONLY LETS A PLAYER SET THEIR ROW TO pending WITH NO APPROVAL DATA, SO THIS CAN NEVER SELF-APPROVE
+async function requestPass(court, user, app, header, isReapply, hasRow) {
 	const btn = document.getElementById("pass-btn") || document.getElementById("reapply-btn");
 	if (btn) { btn.disabled = true; btn.textContent = "A enviar..."; }
-
-	if (isReapply) {
-		const deleteQuery = court.group_id
-			? db.from("passes").delete().eq("player_id", user.id).eq("group_id", court.group_id)
-			: db.from("passes").delete().eq("player_id", user.id).eq("court_id", court.id);
-		await deleteQuery;
-	}
 
 	const scope = court.group_id
 		? { player_id: user.id, group_id: court.group_id }
 		: { player_id: user.id, court_id: court.id };
 
-	const { error } = await db.from("passes").insert(scope);
+	const { error } = hasRow
+		? await db.from("passes")
+			.update({ status: "pending", created_at: new Date().toISOString(), denied_reason: null, approved_at: null, expires_at: null })
+			.match(scope)
+		: await db.from("passes").insert(scope);
 
 	if (error) {
 		if (btn) {

@@ -142,7 +142,7 @@ async function loadDashboard(user) {
 	adminData = {
 		user,
 		adminGroups,
-		pending: pending || [],
+		pending: (pending || []).filter(m => !requestExpired(m.created_at)),
 		approved: approved || [],
 		courts: courts || [],
 		bookings: notStartedBookings,
@@ -202,6 +202,7 @@ function renderPendingView() {
 				<div class="divider"></div>
 				<div class="ticket-data">
 					<p class="ticket-date"><img src="images/icon_calendar_pen.svg" class="link-icon" alt="">${date}</p>
+					<p class="ticket-date"><img src="images/icon_trash.svg" class="link-icon" alt="">${requestExpiry(m.created_at).toLocaleDateString("pt-PT")}</p>
 					${phoneLine}
 					${nifLine}
 				</div>

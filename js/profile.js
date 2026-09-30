@@ -54,11 +54,14 @@ const MSG_STAT_STREAK_HINT = "Com pelo menos um jogo";
 const MSG_STAT_COURTS = n => `${n} ${n === 1 ? "campo" : "campos diferentes"}`;
 const MSG_STAT_COURTS_HINT = n => `Já ${n === 1 ? "recebeu" : "receberam"} os teus jogos`;
 const MSG_VIEW_PASSES = "Os teus passes";
-const MSG_NO_PASSES = "Não és membro de nenhum campo, infelizmente. Bora mudar isso!";
+const MSG_NO_PASSES = "Não és membro de nenhum campo, infelizmente. Bora mudar isso com o teu primeiro passe!";
 const MSG_MEMBER_SINCE = date => `Membro desde ${date}`;
 const MSG_NO_EXPIRY = "Sem data de expiração";
 const MSG_NO_NEXT_GAME = "Sem jogos agendados";
 const MSG_BOOKING_COUNT = n => `${n} ${n === 1 ? "reserva" : "reservas"}`;
+const MSG_PASS_REQUESTED = date => `Pedido a ${date}`;
+const MSG_PASS_PENDING = "Solicitação enviada. Aguarda aprovação dos administradores do campo.";
+const MSG_PASS_DENIED = reason => reason ? `Solicitação recusada. Motivo: ${reason}` : "Solicitação recusada.";
 
 // ONE-SHOT localStorage FLAGS, READ AND CLEARED TOGETHER SO A LATER, UNRELATED VISIT TO THE PROFILE ISN'T REDIRECTED
 function takeOnce(key) {
@@ -548,47 +551,76 @@ async function fetchPassAwards(user) {
 }
 
 async function fetchPasses(user) {
+	// EVERY STATUS, NOT ONLY approved: THE PASSES VIEW ALSO SHOWS WHAT'S WAITING AND WHAT WAS REFUSED
 	const { data } = await db.from("passes")
-		.select("group_id, approved_at, expires_at")
-		.eq("player_id", user.id)
-		.eq("status", "approved");
+		.select("group_id, status, denied_reason, created_at, approved_at, expires_at")
+		.eq("player_id", user.id);
 	return data ?? [];
 }
 
 // THE PLAYER'S APPROVED PASSES AS THE SAME CARD THE ADMIN SEES IN THE MEMBERS TAB (admin.js renderMembersView),
 // WITH THE GROUP NAME WHERE THE ADMIN SEES THE PLAYER'S. NO REVOKE LINK — THAT'S THE ADMIN'S CALL, NOT THE PLAYER'S
 async function loadPasses(container, user, passesPromise) {
-	const passes = await passesPromise;
+	// A PENDING OR REFUSED REQUEST DROPS OUT A MONTH AFTER IT WAS MADE (requestExpired IN utils.js); APPROVED PASSES STAY
+	const passes = (await passesPromise).filter(m => m.status === "approved" || !requestExpired(m.created_at));
+	// NO PASS YET: THE SAME LOCKED DUMMY TICKET VISITORS GET, SO THE VIEW SHOWS WHAT A PASS LOOKS LIKE INSTEAD OF A LONE PIG.
+	// THE MESSAGE GOES ABOVE THE LIST, 10px EACH, LIKE EVERY OTHER PANE WITH A DESCRIPTION
 	if (!passes.length) {
-		setPigAppearance(container, MSG_NO_PASSES, "pig_reaching");
+		container.insertAdjacentHTML("beforebegin", `<p class="card-sub margin-top-10" style="font-size: .7em">${MSG_NO_PASSES}</p>`);
+		container.classList.replace("margin-top-20", "margin-top-10");
+		container.innerHTML = dummyPassCard();
 		return;
 	}
 
 	const groupIds = passes.map(m => m.group_id);
 	const [{ data: groups }, { data: courts }, { data: bookings }] = await Promise.all([
 		db.from("court_groups").select("id, name").in("id", groupIds),
-		db.from("courts").select("group_id, name").in("group_id", groupIds).eq("active", true).order("group_position"),
+		db.from("courts").select("id, group_id, name").in("group_id", groupIds).eq("active", true).order("group_position"),
 		// ORDERED BY start_at SO THE FIRST NOT-YET-STARTED MATCH PER GROUP IS THE NEXT GAME
 		db.from("bookings").select("group_id, start_at, end_at").eq("player_id", user.id).eq("status", "confirmed").in("group_id", groupIds).order("start_at"),
 	]);
 
 	const now = new Date();
+	const date = ts => ts ? new Date(ts).toLocaleDateString("pt-PT") : "—";
+	// WAITING FIRST (THE PLAYER IS WATCHING FOR IT), THEN THE PASSES THEY HOLD, THEN REFUSALS; NEWEST FIRST WITHIN EACH
+	const order = { pending: 0, approved: 1, denied: 2 };
 	container.innerHTML = [...passes]
-		.sort((a, b) => new Date(b.approved_at) - new Date(a.approved_at))
+		.sort((a, b) => order[a.status] - order[b.status] || new Date(b.created_at) - new Date(a.created_at))
 		.map(m => {
-			const courtNames = (courts ?? []).filter(c => c.group_id === m.group_id).map(c => c.name).join(", ");
+			const groupCourts = (courts ?? []).filter(c => c.group_id === m.group_id);
+			const courtNames = groupCourts.map(c => c.name).join(", ");
 			// MOST GROUPS HAVE NO name IN THE DB, SO THEIR COURTS STAND IN FOR IT
 			const groupName = (groups ?? []).find(g => g.id === m.group_id)?.name || courtNames || MSG_COURT_UNKNOWN;
+			if (m.status !== "approved") return requestCard(groupName, m, date(m.created_at), groupCourts[0]?.id);
 			const groupBookings = (bookings ?? []).filter(b => b.group_id === m.group_id);
 			const nextBooking = groupBookings.find(b => new Date(b.start_at) > now);
 			return passCard({
 				name: groupName,
-				since: m.approved_at ? new Date(m.approved_at).toLocaleDateString("pt-PT") : "—",
-				expires: m.expires_at ? new Date(m.expires_at).toLocaleDateString("pt-PT") : null,
+				since: date(m.approved_at),
+				expires: m.expires_at ? date(m.expires_at) : null,
 				nextGame: nextBooking ? gameLabel(nextBooking.start_at, nextBooking.end_at) : null,
 				bookings: groupBookings.length,
 			});
 		}).join("");
+}
+
+// A PENDING OR REFUSED REQUEST: THE PASS'S BADGE SLOT BUT NO STRAP, SO ONLY A REAL PASS LOOKS LIKE SOMETHING YOU HOLD.
+// A REFUSAL LINKS TO THE COURT PAGE, WHICH ALREADY HANDLES ASKING AGAIN (court-bookable.js)
+function requestCard(name, request, requested, courtId) {
+	const pending = request.status === "pending";
+	return `
+		<div class="ticket${pending ? "" : " refused"}">
+			<div class="ticket-hole"></div>
+			<p class="ticket-title">${name}</p>
+			<div class="ticket-date-row">
+				<p class="ticket-date">${MSG_PASS_REQUESTED(requested)}</p>
+				<p class="ticket-date"><img src="images/icon_trash.svg" class="link-icon" alt="">${requestExpiry(request.created_at).toLocaleDateString("pt-PT")}</p>
+			</div>
+			<div class="divider"></div>
+			<p class="ticket-line"><img src="images/${pending ? "icon_clock" : "icon_user_exclamation"}.svg" class="link-icon" alt="">${pending ? MSG_PASS_PENDING : MSG_PASS_DENIED(request.denied_reason)}</p>
+			${!pending && courtId ? `<a href="court?court=${courtId}"><img src="images/icon_praying.svg" class="link-icon" alt="">Solicitar novamente</a>` : ""}
+		</div>
+	`;
 }
 
 function passCard({ name, since, expires, nextGame, bookings, locked }) {

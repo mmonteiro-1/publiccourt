@@ -1,3 +1,17 @@
+// PENDING AND REFUSED PASS REQUESTS DROP OUT OF VIEW — ADMIN AND PLAYER ALIKE — A MONTH AFTER THEY WERE MADE. HIDDEN ONLY:
+// THE ROW STAYS IN THE DATABASE. COUNTED FROM created_at FOR BOTH, SINCE passes HAS NO COLUMN FOR WHEN A REQUEST WAS REFUSED
+const REQUEST_EXPIRY_MONTHS = 1;
+
+function requestExpiry(createdAt) {
+	const d = new Date(createdAt);
+	d.setMonth(d.getMonth() + REQUEST_EXPIRY_MONTHS);
+	return d;
+}
+
+function requestExpired(createdAt) {
+	return requestExpiry(createdAt) <= new Date();
+}
+
 // RENDER THE PIG WITH A MESSAGE INTO A CONTAINER — FOR EMPTY LISTS, BUT ALSO ANYWHERE THE PIG HAS SOMETHING
 // TO SAY. pig IS AN images/ FILE NAME WITHOUT .svg (E.G. "pig_serving")
 function setPigAppearance(container, message, pig = "pig_sitting") {
