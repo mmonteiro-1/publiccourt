@@ -12,7 +12,7 @@ function formatTime(ts) {
 	return new Date(ts).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 }
 
-// "SAB, 26/09, 10:30-12:00" — SHARED BY THE OWNER'S MEMBER AND BOOKING CARDS AND THE PLAYER HISTORY.
+// "SAB, 26/09, 10:30-12:00" — SHARED BY THE ADMIN'S MEMBER AND BOOKING CARDS AND THE PLAYER HISTORY.
 // TAKES TWO RAW TIMESTAMPS RATHER THAN A ROW BECAUSE bookings (start_at/end_at) AND
 // walk_ins (started_at/ends_at) NAME THEIR COLUMNS DIFFERENTLY
 function gameLabel(start, end) {
@@ -29,7 +29,7 @@ function minutesLeft(endsAt) {
 	return Math.max(0, Math.ceil(ms / 60000));
 }
 
-// PERSISTENT DEVICE ID FOR TAILORING MESSAGES TO THE RESERVATION OWNER
+// PERSISTENT DEVICE ID FOR TAILORING MESSAGES TO THE DEVICE THAT STARTED THE WALK-IN
 function getDeviceId() {
 	let id = localStorage.getItem("device_id");
 	if (!id) {

@@ -273,7 +273,7 @@ header {
 
 /* THESE PAGES HAVE NO BODY SIDE PADDING, SO THE ICON NEEDS ITS OWN INSET */
 .page-court-list .header-profile,
-.page-owner .header-profile {
+.page-admin .header-profile {
 	right: 20px;
 }
 
@@ -1067,15 +1067,15 @@ input[type="time"]::-webkit-date-and-time-value {
 	font-family: inherit;
 }
 
-/* === OWNER DASHBOARD === */
+/* === ADMIN DASHBOARD === */
 
-.page-owner {
+.page-admin {
 	justify-content: flex-start;
 	align-items: stretch;
 	padding: 0;
 }
 
-.page-owner header {
+.page-admin header {
 	display: flex;
 	justify-content: center;
 	align-items: center;
@@ -1083,26 +1083,20 @@ input[type="time"]::-webkit-date-and-time-value {
 	margin-bottom: 0;
 }
 
-.owner-logout {
-	width: auto;
-	padding: 10px 15px;
-	font-size: 0.8em;
-}
-
-.page-owner #app {
+.page-admin #app {
 	display: flex;
 	flex-direction: column;
 	width: 100%;
 	padding: 0px 20px 90px 20px;
 }
 
-.owner-view {
+.admin-view {
 	display: flex;
 	flex-direction: column;
 	gap: 10px;
 }
 
-.owner-nav {
+.admin-nav {
 	position: fixed;
 	bottom: 20px;
 	left: 50%;
@@ -1115,7 +1109,7 @@ input[type="time"]::-webkit-date-and-time-value {
 	z-index: 10;
 }
 
-.owner-nav-btn {
+.admin-nav-btn {
 	flex: 1;
 	width: auto;
 	padding: 10px 15px;
@@ -1128,31 +1122,23 @@ input[type="time"]::-webkit-date-and-time-value {
 	gap: 5px;
 }
 
-.owner-nav-btn.active {
+.admin-nav-btn.active {
 	background: var(--white);
 	color: var(--black);
 	border-radius: 10px;
 	transition: background 0.15s;
 }
 
-.owner-nav-btn:not(.active) {
+.admin-nav-btn:not(.active) {
 	box-shadow: none;
 	border: none;
 }
 
-.owner-nav-btn img {
+.admin-nav-btn img {
 	height: 20px;
 	max-width: 25px;
 }
-.owner-section {
-	font-size: 0.8em;
-	font-weight: 700;
-	text-transform: uppercase;
-	color: var(--gray);
-	margin-bottom: 5px;
-}
-
-.membership-card {
+.ticket {
 	display: flex;
 	flex-direction: column;
 	gap: 5px;
@@ -1180,8 +1166,8 @@ input[type="time"]::-webkit-date-and-time-value {
 	position: relative;
 }
 
-.locked .membership-player,
-.locked .membership-courts {
+.locked .ticket-title,
+.locked .ticket-line {
 	padding-right: 30px;
 }
 
@@ -1203,8 +1189,8 @@ input[type="time"]::-webkit-date-and-time-value {
 	width: 60px;
 }
 
-/* SHORT SIDE-TO-SIDE SHAKE TO POINT OUT THE CARD REACHED FROM THE OWNER SLOT PICKER */
-.membership-card.wiggle {
+/* SHORT SIDE-TO-SIDE SHAKE TO POINT OUT THE CARD REACHED FROM THE ADMIN SLOT PICKER */
+.ticket.wiggle {
 	/* WIGGLE WAITS 0.3s FOR THE SCROLL; THE FLASH RUNS LONGER THAN IT AND OUTLASTS IT ON PURPOSE */
 	animation: wiggle 450ms linear 0.3s, card-flash 1s ease-in-out;
 }
@@ -1230,19 +1216,19 @@ input[type="time"]::-webkit-date-and-time-value {
 	100% { transform: translate(0, 0); }
 }
 
-/* SAME SPACING THE CARDS HAD AS DIRECT CHILDREN OF .owner-view */
+/* SAME SPACING THE CARDS HAD AS DIRECT CHILDREN OF .admin-view */
 .bookings-list {
 	display: flex;
 	flex-direction: column;
 	gap: 10px;
 }
 
-.membership-card .divider {
+.ticket .divider {
 	margin: 10px 0;
 }
 
 /* TEAR-OUT TICKET LINE: THE DOTTED DIVIDER PLUS A FAUX NOTCH AT EACH END, DRAWN BY THE DIVIDER ITSELF.
-   GEOMETRY ASSUMES A 2px-BORDER, 10px-PADDING CARD (.membership-card): THE CARD'S OUTER EDGE SITS
+   GEOMETRY ASSUMES A 2px-BORDER, 10px-PADDING CARD (.ticket): THE CARD'S OUTER EDGE SITS
    12px BEYOND EACH END OF THE DIVIDER, SO EACH 20px CIRCLE IS CENTRED THERE AND HALF OF IT BITES INTO THE CARD. */
 .ticket-divider {
 	position: relative;
@@ -1277,18 +1263,18 @@ input[type="time"]::-webkit-date-and-time-value {
 	clip-path: polygon(-5px -5px, 14px -5px, 14px 24px, 10px 24px, 10px 20px, -5px 20px);
 }
 
-.membership-card a {
+.ticket a {
 	font-size: .8em;
 }
 
-.membership-courts .link-icon, .membership-data .link-icon, .membership-date .link-icon {
+.ticket-line .link-icon, .ticket-data .link-icon, .ticket-date .link-icon {
 	max-height: 13px;
 	width: 15px;
 	flex-shrink: 0;
 }
 
-.membership-courts,
-.membership-date,
+.ticket-line,
+.ticket-date,
 .skill-title {
 	display: flex;
 	align-items: center;
@@ -1297,8 +1283,8 @@ input[type="time"]::-webkit-date-and-time-value {
 	text-transform: uppercase;
 }
 
-/* SCOPED WITH :has SO THE OTHER CARDS SHARING .membership-card (OWNER, BOOKINGS, MEMBERSHIPS) KEEP THEIR PADDING */
-.membership-card:has(.skill-title) {
+/* SCOPED WITH :has SO THE OTHER CARDS SHARING .ticket (ADMIN, BOOKINGS, PASSES) KEEP THEIR PADDING */
+.ticket:has(.skill-title) {
 	position: relative;
 	overflow: hidden;
 	padding-top: 35px;
@@ -1314,12 +1300,12 @@ input[type="time"]::-webkit-date-and-time-value {
 	justify-content: center;
 }
 
-.membership-player-row {
+.ticket-title-row {
 	display: flex;
 	justify-content: space-between;
 }
 
-.membership-card-toggle {
+.ticket-toggle {
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
@@ -1332,12 +1318,12 @@ input[type="time"]::-webkit-date-and-time-value {
 	transition: transform 0.2s ease;
 }
 
-.membership-card-body {
+.ticket-body {
 	margin-top: 15px;
 }
 
 /* PINK FILL = THE PAGE BEHIND THE CARD; THE INSET MIRRORS THE CARD'S OWN SHADOW SO IT READS AS A PUNCHED HOLE */
-.membership-hole {
+.ticket-hole {
 	width: 25px;
 	height: 25px;
 	flex-shrink: 0;
@@ -1349,12 +1335,12 @@ input[type="time"]::-webkit-date-and-time-value {
 
 /* LANYARD BADGE (PLAYER'S MEMBERSHIPS): A HOLE THAT'S A DIRECT CHILD OF THE CARD BECOMES A PILL SLOT, TOP CENTRE,
    WITH A STRAP (THE SVG RIGHT AFTER IT) DIPPING INTO IT. SAME BORDER AND INSET SHADOW AS THE ROUND HOLE */
-.membership-card:has(> .membership-hole) {
+.ticket:has(> .ticket-hole) {
 	position: relative;
 	padding-top: 50px;
 }
 
-.membership-card > .membership-hole {
+.ticket > .ticket-hole {
 	position: absolute;
 	top: 15px;
 	left: 50%;
@@ -1367,7 +1353,7 @@ input[type="time"]::-webkit-date-and-time-value {
 
 /* 65px WIDE SO THE FOLD'S TOP LINES UP WITH THE SLOT'S TOP EDGE. top: -12px = THE 2px CARD BORDER + THE 10px THE STRAP
    RISES ABOVE THE CARD, AS IF IT COMES FROM THE PLAYER'S NECK. left IS OFFSET SO THE STRAP SITS SLIGHTLY LEFT OF CENTRE */
-.membership-card > .membership-hole + svg {
+.ticket > .ticket-hole + svg {
 	position: absolute;
 	top: -12px;
 	left: calc(50% - 25px);
@@ -1377,7 +1363,7 @@ input[type="time"]::-webkit-date-and-time-value {
 }
 
 /* non-scaling-stroke KEEPS THE BORDER AT A TRUE 2px, SAME AS THE CARD'S, WHATEVER THE SVG'S SCALE */
-.membership-hole + svg path {
+.ticket-hole + svg path {
 	stroke: var(--black);
 	stroke-width: 2px;
 	stroke-linejoin: round;
@@ -1385,11 +1371,11 @@ input[type="time"]::-webkit-date-and-time-value {
 }
 
 /* ONLY THE STRAP — THE FOLD CARRIES ITS OWN fill ATTRIBUTE, WHICH A CSS fill WOULD OVERRIDE */
-.membership-hole + svg path:first-child {
+.ticket-hole + svg path:first-child {
 	fill: var(--yellow);
 }
 
-.membership-hole + svg path:last-child {
+.ticket-hole + svg path:last-child {
 	transform: translate(4px, 6px);
 }
 
@@ -1622,7 +1608,7 @@ input[type="time"]::-webkit-date-and-time-value {
 	background: var(--black);
 }
 
-.membership-player {
+.ticket-title {
 	font-size: 1.5em;
 	line-height: 1;
 	font-weight: 700;
@@ -1630,7 +1616,7 @@ input[type="time"]::-webkit-date-and-time-value {
 	white-space: nowrap;
 	overflow: hidden;
 	text-overflow: ellipsis;
-	/* LETS IT SHRINK INSIDE .membership-player-row INSTEAD OF PUSHING THE HOLE OUT */
+	/* LETS IT SHRINK INSIDE .ticket-title-row INSTEAD OF PUSHING THE HOLE OUT */
 	min-width: 0;
 }
 
@@ -1640,24 +1626,24 @@ input[type="time"]::-webkit-date-and-time-value {
 	flex-shrink: 0;
 }
 
-.membership-date-row {
+.ticket-date-row {
 	display: flex;
 	align-items: center;
 	gap: 10px;
 }
 
-.membership-date-row .membership-date {
+.ticket-date-row .ticket-date {
 	margin-bottom: 0;
 }
 
-.membership-data {
+.ticket-data {
 	display: flex;
 	flex-wrap: wrap;
 	gap: 10px;
 }
 
-.membership-data .membership-date,
-.membership-data .membership-courts {
+.ticket-data .ticket-date,
+.ticket-data .ticket-line {
 	margin-bottom: 0;
 }
 
@@ -1775,25 +1761,25 @@ input[type="time"]::-webkit-date-and-time-value {
 	gap: 5px;
 }
 
-.membership-actions {
+.ticket-actions {
 	display: flex;
 	gap: 10px;
 	margin-top: 10px;
 }
 
-.membership-actions button {
+.ticket-actions button {
 	flex: 1;
 	width: auto;
 }
 
 /* ORANGE MARKS THE DESTRUCTIVE CONFIRMS; APPROVING IS POSITIVE, SO IT KEEPS THE DEFAULT BUTTON LOOK */
-.membership-actions button:not(.button-shallow, .approve-btn),
+.ticket-actions button:not(.button-shallow, .approve-btn),
 .confirm-deny-btn {
 	background: var(--orange);
 	color: var(--white);
 }
 
-.membership-actions button:not(.button-shallow, .approve-btn) img,
+.ticket-actions button:not(.button-shallow, .approve-btn) img,
 .confirm-deny-btn img {
 	filter: invert(1);
 }
@@ -1891,7 +1877,7 @@ input[type="time"]::-webkit-date-and-time-value {
 	background: var(--green);
 	color: var(--black);
 	padding: 5px;
-	/* COLUMN SO THE OWNER'S PLAYER NAME STACKS UNDER THE HOUR; BOTH CENTRED WHATEVER THE CELL HOLDS */
+	/* COLUMN SO THE ADMIN'S PLAYER NAME STACKS UNDER THE HOUR; BOTH CENTRED WHATEVER THE CELL HOLDS */
 	display: flex;
 	flex-direction: column;
 	align-items: center;

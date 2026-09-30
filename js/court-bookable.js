@@ -8,10 +8,10 @@ const MSG_MEMBER = "És membro deste campo.";
 // A FUNCTION BECAUSE IT EMBEDS THE LINKED NAMES OF THE GROUP'S OTHER COURTS
 const MSG_SIBLINGS = courtLinks => `Se não encontrares horário aqui, procura em ${courtLinks}.`;
 const MSG_EXPIRED = expiryDate => `O teu passe expirou a ${expiryDate}. Fala com os administradores do campo para o renovar.`;
-const MSG_NO_MEMBERSHIP = "Este campo é exclusivo para membros. Podes solicitar acesso aos administradores.";
-const MSG_NOT_LOGGED = `Este campo opera sob o <b>sistema de reservas</b>. <br><br> Para fazeres reserva, o Campo Livre precisa repassar as tuas informações aos administradores do campo. Após aceite, já podes reservar e jogar.`;
+const MSG_NO_PASS = "Este campo é exclusivo para membros. Para reservar precisas de um passe, que podes pedir aos administradores.";
+const MSG_VISITOR = `Este campo opera sob o <b>sistema de reservas</b>. <br><br> Para reservares precisas de um <b>passe</b>: o Campo Livre envia as tuas informações aos administradores do campo e, quando aceitarem, já podes reservar e jogar.`;
 
-// ENTRY POINT: RENDERS THE FULL BOOKABLE COURT VIEW, BRANCHING ON AUTH AND MEMBERSHIP STATUS
+// ENTRY POINT: RENDERS THE FULL BOOKABLE COURT VIEW, BRANCHING ON AUTH AND PASS STATUS
 export async function renderBookable(court) {
 	const app = document.getElementById("app");
 	app.classList.add("available");
@@ -38,7 +38,7 @@ export async function renderBookable(court) {
 			Voltar
 		</a>`;
 
-	// FETCH GROUP DATA FOR SECONDARY CARD — DONE UPFRONT SO NON-LOGGED-IN PLAYERS SEE IT TOO
+	// FETCH GROUP DATA FOR SECONDARY CARD — DONE UPFRONT SO VISITORS SEE IT TOO
 	let siblingCourts = [];
 	let groupRules = null;
 	let openingHours = [];
@@ -63,7 +63,7 @@ export async function renderBookable(court) {
 		openingHours = hours || [];
 	}
 
-	// FETCH BOOKING DATA — ONLY NEEDED WHEN LOGGED IN
+	// FETCH BOOKING DATA — ONLY NEEDED FOR REGISTERED PLAYERS
 	let existingBookings = [];
 	let playerActiveBooking = null;
 	if (user && court.group_id) {
@@ -129,10 +129,10 @@ export async function renderBookable(court) {
 
 	setSecondaryCardInfo({ siblingSubtitle, rulesHtml, openingHoursHtml });
 
-	// NOT LOGGED IN → PROMPT TO LOGIN; NO MEMBERSHIP CHECK NEEDED
+	// VISITOR → PROMPT TO LOG IN; NO PASS CHECK NEEDED
 	if (!user) {
 		app.innerHTML = `${header}
-			<p class="card-sub margin-bottom-20">${MSG_NOT_LOGGED}</p>
+			<p class="card-sub margin-bottom-20">${MSG_VISITOR}</p>
 			${flipLink}
 			<button id="login-btn"><img src="images/icon_login.svg" alt=""> Fazer login</button>
 		`;
@@ -148,14 +148,14 @@ export async function renderBookable(court) {
 	const playerName = profile?.name || user.user_metadata?.name || "jogador";
 	const greeting = `<p class="card-sub">${hi(playerName)} ${MSG_MEMBER}</p>`;
 
-	// MEMBERSHIP IS GROUP-SCOPED IF THE COURT BELONGS TO A GROUP, OTHERWISE COURT-SCOPED
-	const membershipQuery = court.group_id
-		? db.from("memberships").select("status, denied_reason, expires_at").eq("player_id", user.id).eq("group_id", court.group_id)
-		: db.from("memberships").select("status, denied_reason, expires_at").eq("player_id", user.id).eq("court_id", court.id);
+	// PASS IS GROUP-SCOPED IF THE COURT BELONGS TO A GROUP, OTHERWISE COURT-SCOPED
+	const passQuery = court.group_id
+		? db.from("passes").select("status, denied_reason, expires_at").eq("player_id", user.id).eq("group_id", court.group_id)
+		: db.from("passes").select("status, denied_reason, expires_at").eq("player_id", user.id).eq("court_id", court.id);
 
-	const { data: membership } = await membershipQuery.maybeSingle();
+	const { data: pass } = await passQuery.maybeSingle();
 
-	if (membership?.status === "pending") {
+	if (pass?.status === "pending") {
 		app.innerHTML = `${header}
 			<p class="card-sub margin-bottom-20">${MSG_PENDING}</p>
 			${flipLink}
@@ -163,19 +163,19 @@ export async function renderBookable(court) {
 		return;
 	}
 
-	if (membership?.status === "denied") {
-		const reason = membership.denied_reason ? ` Motivo: ${membership.denied_reason}.` : "";
+	if (pass?.status === "denied") {
+		const reason = pass.denied_reason ? ` Motivo: ${pass.denied_reason}.` : "";
 		app.innerHTML = `${header}
 			<p class="card-sub margin-bottom-20">${hi(playerName)} ${MSG_DENIED}${reason} Podes solicitar novamente.</p>
 			${flipLink}
 			<button id="reapply-btn"><img src="images/icon_praying.svg" class="link-icon" alt="">Solicitar novamente</button>
 		`;
-		document.getElementById("reapply-btn").addEventListener("click", () => requestMembership(court, user, app, header, true));
+		document.getElementById("reapply-btn").addEventListener("click", () => requestPass(court, user, app, header, true));
 		return;
 	}
 
 	// APPROVED MEMBER → SHOW THE SLOT PICKER, UNLESS THEY ALREADY HAVE AN ACTIVE BOOKING IN THIS GROUP
-	if (membership?.status === "approved") {
+	if (pass?.status === "approved") {
 		// PLAYER HAS A FUTURE BOOKING IN THE GROUP — CHECK WHICH COURT
 		if (playerActiveBooking) {
 			const s = new Date(playerActiveBooking.start_at);
@@ -212,9 +212,9 @@ export async function renderBookable(court) {
 		}
 
 		// EXPIRED PASS: NO NEW BOOKINGS. CHECKED AFTER THE ACTIVE-BOOKING BRANCH SO A GAME BOOKED BEFORE
-		// EXPIRY STAYS VISIBLE AND CANCELLABLE; THE MEMBERSHIP ROW ITSELF IS LEFT UNTOUCHED
-		if (membership.expires_at && new Date(membership.expires_at) <= new Date()) {
-			const expiryDate = new Date(membership.expires_at).toLocaleDateString("pt-PT");
+		// EXPIRY STAYS VISIBLE AND CANCELLABLE; THE PASS ROW ITSELF IS LEFT UNTOUCHED
+		if (pass.expires_at && new Date(pass.expires_at) <= new Date()) {
+			const expiryDate = new Date(pass.expires_at).toLocaleDateString("pt-PT");
 			app.innerHTML = `${header}
 				<p class="card-sub margin-bottom-20">${hi(playerName)} ${MSG_EXPIRED(expiryDate)}</p>
 				${flipLink}
@@ -252,24 +252,24 @@ export async function renderBookable(court) {
 		return;
 	}
 
-	// NO MEMBERSHIP YET → OFFER TO REQUEST ONE
+	// NO PASS YET → OFFER TO REQUEST ONE
 	app.innerHTML = `${header}
-		<p class="card-sub margin-bottom-20">${hi(playerName)} ${MSG_NO_MEMBERSHIP}</p>
+		<p class="card-sub margin-bottom-20">${hi(playerName)} ${MSG_NO_PASS}</p>
 		${flipLink}
-		<button id="membership-btn"><img src="images/icon_asking.svg" class="link-icon" alt="">Solicitar acesso</button>
+		<button id="pass-btn"><img src="images/icon_asking.svg" class="link-icon" alt="">Solicitar passe</button>
 	`;
-	document.getElementById("membership-btn").addEventListener("click", () => requestMembership(court, user, app, header, false));
+	document.getElementById("pass-btn").addEventListener("click", () => requestPass(court, user, app, header, false));
 }
 
-// SUBMIT A MEMBERSHIP REQUEST; ON RE-APPLY, DELETES THE DENIED ROW FIRST SO INSERT IS CLEAN
-async function requestMembership(court, user, app, header, isReapply) {
-	const btn = document.getElementById("membership-btn") || document.getElementById("reapply-btn");
+// SUBMIT A PASS REQUEST; ON RE-APPLY, DELETES THE DENIED ROW FIRST SO INSERT IS CLEAN
+async function requestPass(court, user, app, header, isReapply) {
+	const btn = document.getElementById("pass-btn") || document.getElementById("reapply-btn");
 	if (btn) { btn.disabled = true; btn.textContent = "A enviar..."; }
 
 	if (isReapply) {
 		const deleteQuery = court.group_id
-			? db.from("memberships").delete().eq("player_id", user.id).eq("group_id", court.group_id)
-			: db.from("memberships").delete().eq("player_id", user.id).eq("court_id", court.id);
+			? db.from("passes").delete().eq("player_id", user.id).eq("group_id", court.group_id)
+			: db.from("passes").delete().eq("player_id", user.id).eq("court_id", court.id);
 		await deleteQuery;
 	}
 
@@ -277,14 +277,14 @@ async function requestMembership(court, user, app, header, isReapply) {
 		? { player_id: user.id, group_id: court.group_id }
 		: { player_id: user.id, court_id: court.id };
 
-	const { error } = await db.from("memberships").insert(scope);
+	const { error } = await db.from("passes").insert(scope);
 
 	if (error) {
 		if (btn) {
 			btn.disabled = false;
 			btn.innerHTML = isReapply
 				? '<img src="images/icon_praying.svg" class="link-icon" alt="">Solicitar novamente'
-				: '<img src="images/icon_asking.svg" class="link-icon" alt="">Solicitar acesso';
+				: '<img src="images/icon_asking.svg" class="link-icon" alt="">Solicitar passe';
 		}
 		return;
 	}

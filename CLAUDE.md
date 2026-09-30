@@ -16,9 +16,9 @@ index.html / js/court-list.js     — court discovery list
 court.html / js/court-stage.js    — court detail + walk-in flow
                 js/court-walkin.js
                 js/court-bookable.js  — bookable court flow (active)
-owner.html / js/owner.js          — owner dashboard (members, rules, hours)
+admin.html / js/admin.js          — admin dashboard (members, rules, hours)
 login.html / js/login.js
-profile.html / js/profile.js     — post-login router, onboarding, profile views (history, stats, memberships, info)
+profile.html / js/profile.js     — post-login router, onboarding, profile views (history, stats, passes, info)
 info.html
 
 js/utils.js           — shared helpers: setPigAppearance, gameLabel, formatTime, minutesLeft, getDeviceId, cityHtml
@@ -34,7 +34,7 @@ images/               — SVG icons (icon_*.svg) + flags + pig mascot
 
 ## Current Work
 
-Branch: `bookable-mvp` — building the court booking flow for courts that require membership and slot reservations. Recent work: shared success screens (`success.js`), newcomer/returning login copy with post-login landing on the court list, visitor profile toggle, player activity stats with level titles and progress bars.
+Branch: `bookable-mvp` — building the court booking flow for courts that require pass and slot reservations. Recent work: shared success screens (`success.js`), newcomer/returning login copy with post-login landing on the court list, visitor profile toggle, player activity stats with level titles and progress bars.
 
 ## Working Style
 
@@ -47,7 +47,7 @@ Branch: `bookable-mvp` — building the court booking flow for courts that requi
 - **Comments:** ALL CAPS always, every file, every comment type
 - **Commits:** Don't commit after small edits. Batch changes; commit only when asked or at a natural milestone — ask before committing even then
 - **scp:** shorthand for git status → commit → push
-- **Dev server:** `npx http-server` on port 8080
+- **Dev server:** `npx http-server` — port 3000 on the Macs (work `192.168.10.112`, home `192.168.1.112`), port 8080 on the home PC (`192.168.1.111`)
 - **Screenshots:** Skip Puppeteer/screenshot verification for mechanical CSS edits. Use it only when the visual outcome is genuinely uncertain (new layout, new component, tricky CSS interaction)
 - **No over-engineering:** No abstractions beyond what the task needs. No error handling for impossible cases. No comments explaining what code does — only WHY when non-obvious
 - **Supabase renames:** There is one database shared by every branch and by production. Renaming a table or column while working on a branch breaks `main` the moment it's applied — the deployed code still queries the old name. Never rename in place. Add the new name alongside the old, update every branch, then drop the old one once nothing references it. The same applies to dropping columns and tightening RLS
@@ -88,39 +88,40 @@ One concept, one word per layer. **Code** is what identifiers, comments, docs an
 | Skill | skill | Momentum, Tarimba, Consistência, Território | The four stats on the progress view |
 | Diamond | diamond | — (icon only) | A skill whose bar was ever full, kept forever |
 | Trading card | trading card | — | The character card on the progress view |
+| Ticket | ticket | — | The generic card (`.ticket`, `.ticket-title`, `.ticket-line`, `.ticket-date`…) used for history, bookings, passes, skills and admin requests. Named for its look: notched divider, punched hole. Not a pass |
 | Locked preview | locked, dummy | — | Example content for visitors and empty views; dummy dates are always 30/02 |
 | Teaser | teaser | — | The line inside a visitor's trading card ("Já tens N XP à tua espera") |
 | Claim | claim | — | Adopting a device's unclaimed walk-ins on login |
 | Pig appearance | pig appearance | — | The pig with a message (`setPigAppearance`) |
 
-**Migration in progress** — the glossary is the target; the code still uses the old words until each phase lands. Phases, one at a time, each tested before the next:
+**Migration (complete)** — code, copy and database now follow the glossary. How it was done, one phase at a time, each tested before the next:
 1. ~~Glossary~~ (this section)
-2. Code-only renames, no database: identifiers, `MSG_*` names, comments and CSS classes (`.membership-card` → pass, owner → admin, logged-in player → registered; "member" stays)
-3. Copy: "passe" for the object, "membro" for the status, "administrador" for the admin — every string reviewed
-4. Database renames with a safety net: `memberships` → `passes`, `court_groups.owner_id` → `admin_id`, `membership_duration_months` → `pass_duration_months`, each shipped with a compatibility view under the old name (`security_invoker`, so RLS still applies) so old and new code both work mid-switch; RLS policies and triggers re-checked; `notify-membership` redeployed as `notify-pass`. `main` only queries `courts` and `walk_ins`, so none of these tables can break production — the risk is breaking this branch and the live edge function mid-switch
-5. Page rename: `owner.html` / `owner.js` → `admin.html` / `admin.js`, with a Vercel redirect from the old URL
-6. Clean-up: drop the compatibility views once nothing reads the old names
+2. Code-only renames, no database: identifiers, `MSG_*` names and comments — membership → pass (done), owner → admin (done — `owner_id`, `owner.html` and `owner.js` wait for phases 4–5; the walk-in sense of "owner" became `isMine`), logged-in player → registered (done); "member" stays. Phase 2 complete. The `membership-*` card classes became `ticket-*` (done)
+3. ~~Copy~~: "passe" for the object, "membro" for the status, "administrador" for the admin — every string reviewed (done; the emails say "passe" too, `notify-membership` redeployed from the dashboard)
+4. ~~Database renames~~ (done — one transaction; policies also renamed from "Owners…" to "Admins…"; `notify-pass` deployed alongside the old function, then the code switched to it). Plan as run: renames with a safety net: `memberships` → `passes`, `court_groups.owner_id` → `admin_id`, `membership_duration_months` → `pass_duration_months`, each shipped with a compatibility view under the old name (`security_invoker`, so RLS still applies) so old and new code both work mid-switch; RLS policies and triggers re-checked; `notify-membership` redeployed as `notify-pass`. `main` only queries `courts` and `walk_ins`, so none of these tables can break production — the risk is breaking this branch and the live edge function mid-switch
+5. ~~Page rename~~: `owner.html` / `owner.js` → `admin.html` / `admin.js` (done). `vercel.json` redirects `/owner` and `/owner.html` to `/admin` (permanent), so old links and bookmarks still work in production
+6. ~~Clean-up~~: `memberships` view dropped, `notify-membership` deleted (dashboard and repo)
 
 ## Database Schema (Supabase)
 
 **courts** — `id int4, name text, city text, description text, lat float8, lng float8, group_id int4, group_position int4, active bool, bookable bool, unavailable bool, missing_qr_hint int4`
-- `bookable`: requires membership + slot booking (vs walk-in)
+- `bookable`: requires pass + slot booking (vs walk-in)
 - `group_id` → `court_groups.id` (nullable for standalone courts)
 - RLS: SELECT open to all; UPDATE fully open (no condition) — intentional for `missing_qr_hint` increment
 
-**court_groups** — `id int4, name text, owner_id uuid, membership_duration_months int4, slot_duration_minutes int4, min_game_duration_minutes int4, price_per_slot_cents int4`
-- `owner_id` → `auth.users.id`
-- RLS: SELECT open to all; UPDATE only where `owner_id = auth.uid()`
+**court_groups** — `id int4, name text, admin_id uuid, pass_duration_months int4, slot_duration_minutes int4, min_game_duration_minutes int4, price_per_slot_cents int4`
+- `admin_id` → `auth.users.id`
+- RLS: SELECT open to all; UPDATE only where `admin_id = auth.uid()`
 
 **court_opening_hours** — `id int8, group_id int4, day_of_week int4, closed bool, open time, close time, pause_start time, pause_end time`
 - One row per day (0=Sun–6=Sat); `closed` disables the day; `open`/`close`/`pause_*` are `time` type
-- RLS: SELECT open to all; ALL operations gated on owner via `group_id IN (SELECT id FROM court_groups WHERE owner_id = auth.uid())`
+- RLS: SELECT open to all; ALL operations gated on admin via `group_id IN (SELECT id FROM court_groups WHERE admin_id = auth.uid())`
 
-**memberships** — `id uuid, player_id uuid, group_id int4, court_id int4, status text, denied_reason text, created_at timestamptz, approved_at timestamptz, expires_at timestamptz`
+**passes** — `id uuid, player_id uuid, group_id int4, court_id int4, status text, denied_reason text, created_at timestamptz, approved_at timestamptz, expires_at timestamptz`
 - Scope: either `group_id` OR `court_id`, never both
 - `status`: `pending` | `approved` | `denied`
 - `player_id` → `auth.users.id`
-- RLS: players read/write own (`auth.uid() = player_id`); owners read/update via court_groups join; players can only DELETE when `status = 'denied'`; owners DELETE via group ownership
+- RLS: players read/write own (`auth.uid() = player_id`); admins read/update via court_groups join; players can only DELETE when `status = 'denied'`; admins DELETE via group ownership
 
 **bookings** — `id uuid, group_id int4, player_id uuid, court_id int8, start_at timestamptz, end_at timestamptz, status text, created_at timestamptz`
 - `player_id` → `auth.users.id`
@@ -133,30 +134,31 @@ One concept, one word per layer. **Code** is what identifiers, comments, docs an
 - `player_id` → `auth.users.id`, nullable. Set when a logged-in player starts a walk-in; anonymous walk-ins leave it `null` and are identified by `device_id` alone. On login the device's unclaimed walk-ins are adopted (`player_id = auth.uid()` where `device_id` matches and `player_id IS NULL`), so history survives the switch from visitor to account — per device only
 
 **pass_awards** — `player_id uuid, group_id int4, court_id int4, awarded_at timestamptz`
-- One row per pass ever approved, for XP (`fetchPassAwards` in `profile.js`). Survives the membership being revoked, so XP never drops
-- Filled only by the `award_pass` trigger (`security definer`) after insert or status update on `memberships` when `status = 'approved'`; existing approved passes were backfilled
+- One row per pass ever approved, for XP (`fetchPassAwards` in `profile.js`). Survives the pass being revoked, so XP never drops
+- Filled only by the `award_pass` trigger (`security definer`) after insert or status update on `passes` when `status = 'approved'`; existing approved passes were backfilled
 - Unique index `pass_awards_once` on `(player_id, coalesce(group_id, 0), coalesce(court_id, 0))` — one award per scope ever; the trigger's `on conflict do nothing` skips re-approvals
 - RLS: players SELECT own only; nobody inserts, updates or deletes directly
 
 **profiles** — `id uuid, name text, phone text, nif text, created_at timestamptz`
 - `id` = `auth.users.id`; created on first onboarding
-- `phone` and `nif` collected at onboarding, editable on the player profile, shown to owners on pending request cards
-- RLS: players read/insert/update own; owners can read profiles of their approved members
+- `phone` and `nif` collected at onboarding, editable on the player profile, shown to admins on pending request cards
+- RLS: players read/insert/update own; admins can read profiles of their approved members
 
 ## Backend Services
 
 ### Supabase Edge Functions
 Deployed under `supabase/functions/`, run on Deno.
 
-**Deploy command** (run from project root):
+**Deploying:** easiest from the dashboard — Edge Functions → the function → Code tab → paste the whole file from the repo → Deploy (paste the full file so the live code matches the repo). The CLI also works, but needs `npx supabase login` once per machine (interactive, opens a browser):
 ```
 npx supabase link --project-ref xfshczzojvbkfxkmsvsn
-npx supabase functions deploy notify-membership
+npx supabase functions deploy notify-pass
 ```
-`link` only needed once per machine. `supabase` CLI is not globally installed — always use `npx supabase`.
+`supabase` CLI is not globally installed — always use `npx supabase`.
 
-**notify-membership** (`supabase/functions/notify-membership/index.ts`)
-- Triggered by `owner.js` via `db.functions.invoke("notify-membership", { body: { membershipId } })` after approve or deny
+**notify-pass** (`supabase/functions/notify-pass/index.ts`)
+- Triggered by `admin.js` via `db.functions.invoke("notify-pass", { body: { passId } })` after approve or deny
+- Replaced `notify-membership` (same code, reading `passes` and taking `passId`), which was deleted in phase 6
 - Uses **service role key** (not anon key) to read auth user email via `db.auth.admin.getUserById`
 - Sends email via Resend, then returns `{ ok: true }`
 
@@ -170,9 +172,9 @@ Used exclusively inside edge functions. Not called from the frontend.
 - From address: `Campo Livre <onboarding@resend.dev>` (Resend sandbox domain — intentional, app has no public domain yet)
 - Sends approval/denial emails in Portuguese to the player's auth email
 - Email content: plain text only, no HTML
-- More email flows are planned beyond membership notify (booking confirmation, etc.)
-- **When a production domain is set up:** update the Resend from-address AND the Supabase auth redirect URLs (currently pointing to local IPs: `192.168.1.111:8080`, `192.168.10.112:3000`)
-- **Email notifications currently broken:** Resend sandbox only sends to the Resend account owner's email — arbitrary player emails are rejected. Fix: add a verified domain in Resend, update `from` address in the edge function. `notify-membership` also has debug `console.log` statements that should be cleaned up when this is addressed.
+- More email flows are planned beyond pass notify (booking confirmation, etc.)
+- **When a custom domain is set up:** update the Resend from-address AND add the domain to the Supabase auth Redirect URLs and Site URL (see "Redirect URL allowlist")
+- **Email notifications currently broken:** Resend sandbox only sends to the Resend account owner's email — arbitrary player emails are rejected. Fix: add a verified domain in Resend, update `from` address in the edge function. `notify-pass` also has debug `console.log` statements that should be cleaned up when this is addressed.
 
 ## Conventions
 
@@ -190,17 +192,17 @@ Used exclusively inside edge functions. Not called from the frontend.
 
 ### Degrees of Complexity — platform features as add-ons
 
-Not all owners need the same features. The platform is built in layers: the booking and registration foundation comes first and works standalone. Everything else — billing, cancellation rules, automated payments — is an add-on that activates per court.
+Not all admins need the same features. The platform is built in layers: the booking and registration foundation comes first and works standalone. Everything else — billing, cancellation rules, automated payments — is an add-on that activates per court.
 
 The specific degrees aren't defined yet, but the principle is: each court has a complexity level that determines which features are active. A free court and a paid court share the same foundation and the same codebase.
 
 ### Degrees of Burocracia — registration requirements per court
 
-Not all owners need the same information from a player. Some just need a name, others need full documentation. Each court has a burocracia level that determines which fields are required during player registration and what the owner sees in the approval dashboard.
+Not all admins need the same information from a player. Some just need a name, others need full documentation. Each court has a burocracia level that determines which fields are required during player registration and what the admin sees in the approval dashboard.
 
 The specific degrees aren't defined yet, but the two systems are independent — a court can be any combination of complexity and burocracia level.
 
-When a court's burocracia level requires document verification, documents are never uploaded to the platform. The player delivers them in person to the owner, who verifies them offline. Campo Livre only stores the outcome: a **Verificado** tag on the player's profile, set manually by the owner. The platform is a record of trust, not a document vault.
+When a court's burocracia level requires document verification, documents are never uploaded to the platform. The player delivers them in person to the admin, who verifies them offline. Campo Livre only stores the outcome: a **Verificado** tag on the player's profile, set manually by the admin. The platform is a record of trust, not a document vault.
 
 ### Activity stats — a reason to use Campo Livre beyond booking
 
@@ -284,12 +286,12 @@ Bar max: 40h. Lifetime, like XP, so it never drops. It fills the gap Momentum le
 
 The game thresholds are a first guess, to be tuned once real play is known.
 
-**XP** (`playerXp` / `xpCard` in `profile.js`), shown on the **trading card** above the skill cards — its own `.trading-card*` classes (not `.membership-card`), so it can evolve on its own: "Nível N" in the `.trading-card-level` banner, the pig for the current level as the player art (`.trading-card-art`, `XP_LEVEL_IMAGES`; width 90%, centred with 20px above and below, a plain image for now, not a pig appearance), the character name and flavour text (`XP_LEVEL_INFO`), the four skill ratings, then the XP bar. **Skill ratings** (`.trading-card-skills`, `skillRating`): each skill as a share of its bar max, 0–100, FIFA-card style — one scale for all four, so strengths read at a glance. Big number with the skill icon on the bottom-right corner; no diamonds here, only in the banner and on the skill cards. The rolling skills can drop (current form), while the XP level is permanent; the skill cards below are the breakdown behind each number. The idea is a Magic / Pokémon style character card. XP only ever grows, so it comes from lifetime events, never from the skills' rolling values (Momentum's 6-month count can drop). Every increment is +500 XP (`XP_PER_INCREMENT`):
+**XP** (`playerXp` / `xpCard` in `profile.js`), shown on the **trading card** above the skill cards — its own `.trading-card*` classes (not `.ticket`), so it can evolve on its own: "Nível N" in the `.trading-card-level` banner, the pig for the current level as the player art (`.trading-card-art`, `XP_LEVEL_IMAGES`; width 90%, centred with 20px above and below, a plain image for now, not a pig appearance), the character name and flavour text (`XP_LEVEL_INFO`), the four skill ratings, then the XP bar. **Skill ratings** (`.trading-card-skills`, `skillRating`): each skill as a share of its bar max, 0–100, FIFA-card style — one scale for all four, so strengths read at a glance. Big number with the skill icon on the bottom-right corner; no diamonds here, only in the banner and on the skill cards. The rolling skills can drop (current form), while the XP level is permanent; the skill cards below are the breakdown behind each number. The idea is a Magic / Pokémon style character card. XP only ever grows, so it comes from lifetime events, never from the skills' rolling values (Momentum's 6-month count can drop). Every increment is +500 XP (`XP_PER_INCREMENT`):
 - each past game
 - each distinct court played
 - each week with a game right after another week with a game (a lone week is already paid by its games)
 
-Plus **+3000 XP per pass** (`XP_PER_MEMBERSHIP`), shown as "+3000 XP" on each pass card (dummy pass included). A pass is a bigger step than a game: an owner vetted and approved the player. It's counted from `pass_awards`, never from `memberships`: revoking hard-deletes the membership row, and **XP never drops**. One award per scope, ever, so an owner revoking and re-approving can't farm it. The history cards no longer add up to the total for members — accepted, the difference is on the Passes tab.
+Plus **+3000 XP per pass** (`XP_PER_PASS`), shown as "+3000 XP" on each pass card (dummy pass included). A pass is a bigger step than a game: an admin vetted and approved the player. It's counted from `pass_awards`, never from `memberships`: revoking hard-deletes the pass row, and **XP never drops**. One award per scope, ever, so an admin revoking and re-approving can't farm it. The history cards no longer add up to the total for members — accepted, the difference is on the Passes tab.
 
 **XP per game** (`gamesXp`): the same total split across games, oldest first, so each history card shows what it earned ("+1000 XP", right of the court-type row) and the cards add up to the trading card. A court's bonus goes to its first game there, a streak week's bonus to that week's first game — so a card shows +500, +1000 or +1500. `playerXp` is just the sum of `gamesXp`, so the two can't drift apart.
 
@@ -319,9 +321,9 @@ Unlike the skill bars, the XP bar is relative: the fill only covers the current 
 Future exploration, not planned yet. XP and the skill levels give every player a number, and numbers can be ranked. Comparing yourself with others is the strongest motivator in Duolingo (its leagues) and Strava (segment rankings), and it could turn solo progress into a reason to come back every week.
 
 - **Rank activity, never results:** XP, games, streak and Território all come from recorded games, so they can be ranked. Self-reported wins and losses can't be (see "Honesty" under Player progress). The leaderboard measures who plays the most, not who plays the best, and the copy should say so.
-- **Cheating is the real risk:** a walk-in is only a declared game. Once a ranking is at stake, fake check-ins become tempting. Walk-ins already require the location step, and bookings are backed by the owner. Possible guards: cap the XP per day, don't count walk-ins that overlap, or count only walk-ins confirmed by the post-game card.
+- **Cheating is the real risk:** a walk-in is only a declared game. Once a ranking is at stake, fake check-ins become tempting. Walk-ins already require the location step, and bookings are backed by the admin. Possible guards: cap the XP per day, don't count walk-ins that overlap, or count only walk-ins confirmed by the post-game card.
 - **Scopes, smallest first:**
-  - A court group's members: they already share a court, and the owner vouches for them (same reasoning as matchmaking's "chicken and egg")
+  - A court group's members: they already share a court, and the admin vouches for them (same reasoning as matchmaking's "chicken and egg")
   - A court: everyone who played there, walk-ins included ("Rei do campo" for the top player)
   - A city: this ties in with city flags and Território
   - Friends: only once matchmaking exists, because it needs a "who you played with" link
@@ -333,7 +335,7 @@ Future exploration, not planned yet. XP and the skill levels give every player a
   - Only the first name (or a nickname) and the number are shown. Never the courts, days or times the player plays, which would expose their routine (same concern as matchmaking).
   - Visitors aren't ranked. That's another reason to log in.
 - **Data access:** today every stat is computed in JS from the player's own rows, and RLS rightly blocks reading other players' games. A leaderboard needs a Postgres view or RPC that returns only aggregates (first name + weekly XP) for opted-in players, never the raw rows.
-- **Owner angle:** an owner could see the group's most active members and reward them (a free game, a "sócio do mês" badge). This is a candidate add-on under Degrees of Complexity.
+- **Admin angle:** an admin could see the group's most active members and reward them (a free game, a "sócio do mês" badge). This is a candidate add-on under Degrees of Complexity.
 - **First step:** an opt-in weekly league inside one court group, with the neighbourhood view on the progress pane. Small, trusted, easy to moderate, and it shows whether players care before anything wider is built.
 
 #### Seasons and events — boosting the ranking
@@ -346,8 +348,8 @@ Seasons and time-limited events give the ranking a rhythm: something new to chas
   - Double points weekend: the simplest boost, and an easy way to test whether events move play at all
   - Local calendar: Santos Populares in June, the Aveiro summer, school holidays. Portuguese moments suit the pig's voice
   - Explorer week: bonus points for a court you've never played (feeds Território and pushes players to new courts)
-  - Off-peak bonus: extra points for booking empty weekday slots. This is the owner's angle, since it fills hours that would otherwise sit empty
-  - Owner events: an owner runs their own event for their group (a "torneio de verão", a points bonus on a new court). A candidate add-on under Degrees of Complexity
+  - Off-peak bonus: extra points for booking empty weekday slots. This is the admin's angle, since it fills hours that would otherwise sit empty
+  - Admin events: an admin runs their own event for their group (a "torneio de verão", a points bonus on a new court). A candidate add-on under Degrees of Complexity
 - **End-of-season rewards:** a season title or badge that stays on the profile ("Campeão da primavera 2027"), or a special pig outfit for the season's top players (ties in with the per-level pig drawings). Cosmetic only, never booking perks, so the ranking can't turn into a paywall or a fight over slots.
 - **Announcing it:** there are no push notifications, so a new season or event shows up on the next app open. The tear-strip reveal (`tear-reveal.js`) fits the season's results: "the parcel" with the player's final rank and reward.
 - **Risks:**
@@ -356,14 +358,14 @@ Seasons and time-limited events give the ranking a rhythm: something new to chas
   - Complexity: events are a multiplier on top of the season points, with a scope (all players, a city, a group, a court) and a date range. One small table (`events`: scope, starts_at, ends_at, multiplier, rule), not new logic per event
 - **First step:** after the weekly league, one season in one court group with a single double-points weekend. That's enough to see whether players notice and play more before building an event calendar.
 
-### Court suggestions in the memberships view
+### Court suggestions in the passes view
 
-Future exploration, not planned yet. The player's memberships view is a natural place to suggest and advertise courts, with prices and promos. The player is already thinking about which courts they belong to, so "courts you could join" reads as help rather than an ad.
+Future exploration, not planned yet. The player's passes view is a natural place to suggest and advertise courts, with prices and promos. The player is already thinking about which courts they belong to, so "courts you could join" reads as help rather than an ad.
 
-- **The empty state becomes the pitch:** "Não és membro de nenhum campo… Bora mudar isso!" is already an invitation, so suggestions sit right under the pig. Players with memberships see them below their own cards.
-- **Walk-in history is the targeting signal:** we know where and when a player uses public courts ("Sábados de manhã em Aveiro. O campo X, a 2 km, tem slots ao sábado por €Y"). It's a direct funnel from free walk-ins to paid bookings, the thing owners care about.
-- **Prices exist, promos don't:** `court_groups.price_per_slot_cents` can go on the card today. Promos ("primeiro jogo grátis", discounts for new members) would be a new owner feature, and a candidate add-on under Degrees of Complexity.
-- **Possible revenue:** owners could pay for placement. Sponsored suggestions must be clearly labelled "patrocinado", both for trust and because EU consumer law requires ads to be identifiable. Keep sponsored and organic suggestions visibly separate.
+- **The empty state becomes the pitch:** "Não és membro de nenhum campo… Bora mudar isso!" is already an invitation, so suggestions sit right under the pig. Players with passes see them below their own cards.
+- **Walk-in history is the targeting signal:** we know where and when a player uses public courts ("Sábados de manhã em Aveiro. O campo X, a 2 km, tem slots ao sábado por €Y"). It's a direct funnel from free walk-ins to paid bookings, the thing admins care about.
+- **Prices exist, promos don't:** `court_groups.price_per_slot_cents` can go on the card today. Promos ("primeiro jogo grátis", discounts for new members) would be a new admin feature, and a candidate add-on under Degrees of Complexity.
+- **Possible revenue:** admins could pay for placement. Sponsored suggestions must be clearly labelled "patrocinado", both for trust and because EU consumer law requires ads to be identifiable. Keep sponsored and organic suggestions visibly separate.
 - **Limit the clutter:** one or two suggestions at most, always below the player's own cards, and never in the history view.
 
 ### Player matchmaking
@@ -383,7 +385,7 @@ Future exploration, not planned yet. Finding someone to play with is the main ba
   - First names only. Never expose the phone number stored in `profiles`.
   - Contact happens in the app.
   - Needs blocking and reporting, which is a moderation burden. Minors complicate everything.
-- **Chicken and egg:** matching needs density. Start inside one court group's member base, where players already share a court and an owner who vouches for them. That solves density and trust together.
+- **Chicken and egg:** matching needs density. Start inside one court group's member base, where players already share a court and an admin who vouches for them. That solves density and trust together.
 - **First step:** an opt-in "falta 1" spot on a booking, visible only to that group's members. Least moderation, most existing trust.
 
 ## Open Questions
@@ -394,20 +396,20 @@ Future exploration, not planned yet. Finding someone to play with is the main ba
 → Yes. The slot was held and the court lost the opportunity to give it to someone else. Booking confirmed = payment owed, regardless of presence.
 
 **b) Player cancellation**
-→ Free cancellation if cancelled more than 48h before the slot starts. Less than 48h = full charge, slot is freed but payment is still owed. Owner can always waive manually as an exception.
+→ Free cancellation if cancelled more than 48h before the slot starts. Less than 48h = full charge, slot is freed but payment is still owed. Admin can always waive manually as an exception.
 
-**c) Rain / force majeure** — Who cancels when it rains — player or owner?
-→ Owner-initiated only. Player can't self-cancel and claim weather. Owner marks the slot as `cancelled_weather`, all affected players are automatically waived and unblocked. Owner should be able to do this proactively if the forecast is bad.
+**c) Rain / force majeure** — Who cancels when it rains — player or admin?
+→ Admin-initiated only. Player can't self-cancel and claim weather. Admin marks the slot as `cancelled_weather`, all affected players are automatically waived and unblocked. Admin should be able to do this proactively if the forecast is bad.
 
-**d) Owner forgets to unblock**
-→ Auto-unblock after 24h from `ends_at`, flagged as auto-released (not manually confirmed) so the owner can see it. Player can also tap "já paguei" to send a notification nudge to the owner — without being able to self-unblock.
+**d) Admin forgets to unblock**
+→ Auto-unblock after 24h from `ends_at`, flagged as auto-released (not manually confirmed) so the admin can see it. Player can also tap "já paguei" to send a notification nudge to the admin — without being able to self-unblock.
 
 ### Things to decide before building
 
 - **Pending approval UX** — player is registered but not yet verified. They need a clear "aguarda aprovação" state so they don't think the app is broken.
-- **Owner scope** — is it one owner per court, or one owner managing multiple courts? A municipal receptionist might manage 3 courts. Affects whether the owner entity sits above or alongside the court entity in the data model.
+- **Admin scope** — is it one admin per court, or one admin managing multiple courts? A municipal receptionist might manage 3 courts. Affects whether the admin entity sits above or alongside the court entity in the data model.
 - **Pricing** — flat rate per hour, or variable by time of day / weekday vs weekend? If variable, need a pricing table per court, not just a single `price_per_hour` column.
-- **MBWay number** — whose number does the player pay? The court's dedicated number or the receptionist's? Must be configurable per court in the owner dashboard.
+- **MBWay number** — whose number does the player pay? The court's dedicated number or the receptionist's? Must be configurable per court in the admin dashboard.
 - **Reference format** — sequential reservation IDs leak booking volume. Use a short opaque code instead: `CPL-4X7K`. Must fit MBWay's free-text character limit (~20 chars).
 
 ## Implementing the MVP
@@ -424,23 +426,23 @@ Supabase Auth is already included — magic link is a built-in provider, no extr
 
 **Audience terms:** see the Glossary (visitor, registered player, member, admin).
 
-**Roles:** one email = one role. An account is either a **player** or an **owner**, never both (an owner who also plays is too rare to design for). Owner = owns at least one `court_groups` row.
+**Roles:** one email = one role. An account is either a **player** or an **admin**, never both (an admin who also plays is too rare to design for). Admin = owns at least one `court_groups` row.
 
 **Login flow:**
 1. `login.html` — player submits email only (`signInWithOtp`, `emailRedirectTo: profile.html`). Already logged in → straight to `profile.html`
 2. Magic link lands on `profile.html`, which is also the post-login router (`js/profile.js`):
-   - **Owner** → `owner.html` (owners have no `profile.html`; their profile is a view inside the dashboard)
+   - **Admin** → `admin.html` (admins have no `profile.html`; their profile is a view inside the dashboard)
    - **No `profiles` row** → 3-step onboarding (name required; phone, NIF optional), then continues below
    - **Came from a court page** → back to that court (see "Return to court")
    - **Otherwise, landing from a magic link** → the court list. `login.js` sets a one-shot `localStorage.justLoggedIn` when the link is sent, so this doesn't fire when the profile is opened from the header avatar
    - **Otherwise** (avatar visit, or a link opened in another browser) → the player profile
-3. `owner.html` bounces anyone who owns no group back to `profile.html`
+3. `admin.html` bounces anyone who owns no group back to `profile.html`
 
 **Return to court:** "Fazer login" on a court page stores that page in `localStorage.returnTo`; `profile.js` reads and clears it once the session exists (after onboarding for new players). One-shot, and only works if the magic link is opened in the **same browser** that requested it — a link opened on another device lands on the profile instead.
 
-**Profile entry points:** avatar icon (`icon_avatar.svg`) in the header — court list and court pages link to `profile.html`; in `owner.html` it opens the dashboard's own profile view (replaced the old gear tab in the nav).
+**Profile entry points:** avatar icon (`icon_avatar.svg`) in the header — court list and court pages link to `profile.html`; in `admin.html` it opens the dashboard's own profile view (replaced the old gear tab in the nav).
 
-**Visitors on `profile.html`:** a logged-out visitor is no longer redirected to login. `showVisitor()` renders the same four-view toggle as the logged-in profile: history shows their walk-ins (matched on `device_id`, unclaimed only — see below) plus a "Fazer login" button, and the stats, memberships and personal info views hold only that button, because someone who only plays walk-ins still has a history worth seeing and no reason to make an account. An explicit **Terminar sessão** still goes to `login.html` — that's a deliberate exit, not a browse.
+**Visitors on `profile.html`:** a logged-out visitor is no longer redirected to login. `showVisitor()` renders the same four-view toggle as a registered player's profile: history shows their walk-ins (matched on `device_id`, unclaimed only — see below) plus a "Fazer login" button, and the stats, passes and personal info views hold only that button, because someone who only plays walk-ins still has a history worth seeing and no reason to make an account. An explicit **Terminar sessão** still goes to `login.html` — that's a deliberate exit, not a browse.
 
 **Unclaimed walk-ins only:** the visitor query also requires `player_id IS NULL`, so it shows exactly what `claimDeviceWalkIns` hands over on login. A player who logs out sees an empty visitor history (their games belong to the account) — accepted, a player has no business using the app logged out. It also keeps a borrowed phone from exposing the previous player's routine.
 
@@ -459,11 +461,22 @@ Supabase Auth is already included — magic link is a built-in provider, no extr
 - **The dummy progress is the dummy first game** (the same "Tua primeira partida" as the history card), so the XP is 1000 and every level is 1, for every visitor. On top of it, `loadProgress`'s teaser mode pins the trading card's four ratings at 1 and the skill cards' numbers at 0 — an empty starting point. The trading card gets its own character, `XP_VISITOR_INFO` ("Raquete emprestada"), so it never passes for a real level-1 player's "Apanha-bolas"; the teaser sits inside it, under the XP bar
 - **The XP bar loops forever** (`.locked .xp-bar div`, `fill-width`): 1.5s growing from empty to 50% with an aggressive ease-in, 5s holding, 1.5s back down. It animates `width` directly — animating `--fill` itself needs `@property` and jumped instead of moving
 
-**Redirect URL allowlist:** Supabase only returns magic links to URLs listed in Authentication → URL Configuration → Redirect URLs. Local IPs are there; Vercel URLs (production + preview wildcard) must be too, or links sent from the deploy fall back to the Site URL (a local IP).
+**Redirect URL allowlist:** Supabase only returns magic links to URLs listed in Authentication → URL Configuration → Redirect URLs; anything else falls back to the Site URL. Site URL is `https://publiccourt.vercel.app`. The list (`*` matches anything except `.` and `/`):
+
+```
+http://localhost:3000/**
+http://192.168.*.*:3000/**
+http://localhost:8080/**
+http://192.168.*.*:8080/**
+https://publiccourt.vercel.app/**
+https://publiccourt-*-public-court.vercel.app/**
+```
+
+The LAN patterns survive a new IP on either network; the last line covers every branch preview (e.g. `publiccourt-git-bookable-mvp-public-court.vercel.app`). A link always returns to the origin it was requested from, so request and open it on the same address. A link that arrives with an `error=` (expired, or already used — email apps that preview links can use them up) shows `MSG_LINK_FAILED` with a "Pedir novo link" button instead of the visitor profile.
 
 **Testing a logged-in walk-in locally — the localhost/LAN-IP trap:** geolocation needs a secure context, so the walk-in check-in only works on `localhost`, never on `192.168.x.x` over HTTP. But magic links redirect to the LAN IP, which stores the session on *that* origin. Sessions and `device_id` are per-origin, so a check-in done on `localhost` sees no session (`player_id` stays null) and a different `device_id` (the "is this my game?" check fails, showing the visitor copy). Neither is a bug — it's two origins.
 
-To test properly, add `http://localhost:8080/profile.html` to the Redirect URLs and log in from `localhost:8080`, so login and check-in share one origin. Use the LAN IP only for testing on a real phone, where the walk-in's location step won't work anyway.
+To test properly, log in from `localhost` (already on the Redirect URLs, both ports), so login and check-in share one origin. Use the LAN IP only for testing on a real phone, where the walk-in's location step won't work anyway.
 
 ### Sessions
 
@@ -471,7 +484,7 @@ Sessions are kept alive indefinitely for active users. Supabase auto-refreshes t
 
 - Magic links only needed on first login, after explicit logout, or after session expiry
 - Session expiry window is configurable (e.g. 30 or 90 days of inactivity)
-- If an owner revokes a player's access, their session is invalidated server-side via the Supabase admin API
+- If an admin revokes a player's access, their session is invalidated server-side via the Supabase admin API
 - New devices always require a new magic link — sessions don't transfer across devices
 
 ### Todo
@@ -481,28 +494,28 @@ Sessions are kept alive indefinitely for active users. Supabase auto-refreshes t
     - [x] Newcomers get `pig_reaching` ("Bora usar o Campo Livre a sério?"), the account pitch and a "login is optional for public courts" note; returning players get a single line
     - [x] "Voltar" back link on `login.html`; a failed send keeps the form and restores the button
   - [x] After a magic link, land on the court list (not the profile), unless login started from a court page or it's a first login (onboarding)
-- [x] Get the player to register to the owner (simple as possible)
+- [x] Get the player to register to the admin (simple as possible)
   - [x] Create `memberships` table with `player_id`, `court_id` (nullable), `group_id` (nullable), `status`, `denied_reason`, `created_at`, `approved_at`
   - [x] Unique constraint per `(player_id, court_id)` and `(player_id, group_id)` to prevent duplicate requests
   - [x] Hard-delete rows (no soft-delete) so player can re-apply freely after deletion
-  - [x] Court page shows "solicitation pending" state when membership row exists with status = pending
-  - [x] A membership scoped to `group_id` covers all courts in that group; booking always references a specific `court_id`
-- [x] Get the owner to login and land on dashboard (simple as possible)
-- [x] Get the owner to see and validate the player registration
-  - [x] Owner can approve or deny a membership request
+  - [x] Court page shows "solicitation pending" state when pass row exists with status = pending
+  - [x] A pass scoped to `group_id` covers all courts in that group; booking always references a specific `court_id`
+- [x] Get the admin to login and land on dashboard (simple as possible)
+- [x] Get the admin to see and validate the player registration
+  - [x] Admin can approve or deny a pass request
   - [x] Denial must include a `denied_reason` field; player sees the reason on the court page with option to re-apply
   - [x] In-app notification: player sees approval/denial state on next court page visit
-  - [x] Email notification: Supabase Edge Function triggered on membership status change
+  - [x] Email notification: Supabase Edge Function triggered on pass status change
     - [x] Create Resend account and get API key
-    - [x] Deploy Edge Function: receives membership id, fetches player email + status + denied_reason, sends email via Resend
-- [x] Get the owner to see the full membership list
-  - [x] List all approved memberships with player names and approval dates
-  - [x] Owner can revoke access from this view (hard-delete `memberships` row)
+    - [x] Deploy Edge Function: receives pass id, fetches player email + status + denied_reason, sends email via Resend
+- [x] Get the admin to see the full pass list
+  - [x] List all approved passes with player names and approval dates
+  - [x] Admin can revoke access from this view (hard-delete `memberships` row)
   - [ ] Email notification to player when revoked — send before deleting the row so we still have their email
-  - [ ] Allow owner to set membership duration per member on approval (override the group default)
-  - [ ] In-app notification card for membership status changes (accept, deny, revoke) — dedicated card UI, not just inline state on court page
+  - [ ] Allow admin to set pass duration per member on approval (override the group default)
+  - [ ] In-app notification card for pass status changes (accept, deny, revoke) — dedicated card UI, not just inline state on court page
   - [ ] Tear-strip reveal (tear-to-open) for important notifications: the notification arrives sealed like an Amazon-style parcel, and as the player drags up they pull the tear strip away to open it (the tear follows the finger; releasing early snaps it back)
-- [ ] Support multiple owners per court group (receptionists)
+- [ ] Support multiple admins per court group (receptionists)
   - [ ] Create `court_group_members (group_id UUID, user_id UUID)` table
   - [ ] Migrate existing `court_groups.owner_id` rows into `court_group_members`
   - [ ] Update RLS policies to check membership in `court_group_members` instead of `owner_id`
@@ -511,27 +524,27 @@ Sessions are kept alive indefinitely for active users. Supabase auto-refreshes t
   - [ ] Max active bookings per player
   - [ ] Advance booking window (how many days ahead a player can book)
   - [ ] Cancellation deadline (hours before slot for free cancellation)
-- [x] Get the owner to set court availability — covered by opening hours, pauses and slot length (`court_opening_hours` + `court_groups`); no separate `slots` table needed
+- [x] Get the admin to set court availability — covered by opening hours, pauses and slot length (`court_opening_hours` + `court_groups`); no separate `slots` table needed
 - [x] Get the player to see the availability calendar and book a game
   - [x] `bookings` table: `id, group_id, player_id, court_id, start_at, end_at, status, created_at`
   - [x] Player must have an approved `memberships` row for the court's `group_id` to be allowed to book
 - [x] Get the player to cancel a booking
-  - [x] Update `bookings` row status to `cancelled` (two-step Cancelar/Voltar confirm, mirrors owner's revoke flow)
+  - [x] Update `bookings` row status to `cancelled` (two-step Cancelar/Voltar confirm, mirrors admin's revoke flow)
   - [ ] Cancellation rules apply (free >48h before, full charge <48h)
 - [ ] Figure out the rescheduling/cancelling process for bad weather — who triggers it, whether players get offered a new slot or just a waiver, and how it ties to the forecast icons (starting point: edge case (c) under Open Questions)
 - [x] Add success pig views after booking and after cancelling a booking
   - [x] After booking: "Jogo reservado" (`SUCCESS.booked`), then reload
   - [x] After cancelling a booking: "Jogo cancelado" (`SUCCESS.bookingCancelled`), sad tone, `pig_sitting`, no ball
   - [x] Move the walk-in "Bom jogo" and "Obrigado" screens in `court-walkin.js` onto `showSuccess()` — all four screens now come from `SUCCESS` presets in `success.js`
-  - [ ] Success screen when an owner cancels a booking from the dashboard
+  - [ ] Success screen when an admin cancels a booking from the dashboard
 - [ ] Player profile page (`profile.html`)
   - [x] Magic link returns the player to the court they started login from (`localStorage.returnTo`)
-  - [x] Header avatar icon links to the profile (player) / opens the dashboard profile view (owner, replaces the gear nav tab)
-  - [ ] Add the Vercel production + preview URLs to Supabase's auth Redirect URLs
+  - [x] Header avatar icon links to the profile (player) / opens the dashboard profile view (admin, replaces the gear nav tab)
+  - [x] Add the Vercel production + preview URLs to Supabase's auth Redirect URLs (see "Redirect URL allowlist")
   - [ ] Test the loop for a new user (onboarding → back to court) and a returning user (straight back to court)
     - [x] Returning user lands back on the court
     - [ ] New user after onboarding: back to the court if login started there, otherwise the court list (was: stayed on the profile — retest with the `justLoggedIn` change, same browser)
-  - [ ] Check what happens when a new user leaves mid-onboarding (e.g. via "Voltar"): no `profiles` row exists yet, so they're logged in but nameless — court pages fall back to "jogador", and booking/membership requests may go through without a name for the owner
+  - [ ] Check what happens when a new user leaves mid-onboarding (e.g. via "Voltar"): no `profiles` row exists yet, so they're logged in but nameless — court pages fall back to "jogador", and booking/pass requests may go through without a name for the admin
   - [x] View and edit personal info (name, phone, NIF) — email shown read-only; save disabled until something changes, name required
     - [x] Confirm `profiles` has an UPDATE policy for the player's own row — saving works
   - [x] "Teus jogos passados": booking history (`bookings` by `player_id = auth.uid()`) plus walk-in history
@@ -542,7 +555,7 @@ Sessions are kept alive indefinitely for active users. Supabase auto-refreshes t
     - [x] Games of 10 min or less are hidden (mis-taps, walk-ins ended right away) — only hidden, still in the database
     - [ ] Test: a walk-in started while logged in fills `player_id`
     - [x] Tested: logging in claims the device's older anonymous walk-ins
-  - [x] Profile split into toggle views: progress (`icon_medal`, first and the default for players and visitors — the visitor teaser will fill theirs), history, memberships (`icon_id`), personal info (`icon_gear`)
+  - [x] Profile split into toggle views: progress (`icon_medal`, first and the default for players and visitors — the visitor teaser will fill theirs), history, passes (`icon_id`), personal info (`icon_gear`)
   - [x] Progress view (players only; visitors get the login button), being turned into RPG-like mechanics: games in the last 6 months, weekly streak, distinct courts played. Computed in JS from the same fetch as the history, so games of 10 min or less are excluded
     - [x] Metric name above the level title: "Momentum" (hours; common in PT-PT sports talk — "Balanço" alone reads as "summary", "Forma" drifts towards health), "Consistência" (streak) and "Território" (distinct courts). The metric name is `.skill-title`, a white banner across the top of the card; the level title is `.stat-level` (1em, 700) with the stars after it
     - [x] Level titles instead of plain labels — see the tables under "Levels already implemented"
@@ -561,36 +574,36 @@ Sessions are kept alive indefinitely for active users. Supabase auto-refreshes t
       - [x] Passes: dummy pass ("Teu primeiro passe", 30/02) with the padlock, and the passes explainer above it
       - [ ] Dados: locked dummy version for visitors
       - [ ] Padlocks on the progress cards? Their `overflow: hidden` and top banners clip and cover the history card's padlock
-      - [x] History: 1 locked dummy card ("Tua primeira partida", +1000 XP) for blank visitors and players with no games, replacing the pig, with "Teu histórico de jogos ficará guardado aqui." above it. `.locked` card with a `.padlock` in the top-right corner: the round `.membership-hole` plus `icon_padlock_color_cut.svg`, whose shackle is already cut where it runs behind the card — so it only works at its exact hand-tuned position
-  - [x] Memberships view: the player's approved memberships, shown as the owner's member card with the group name in place of the player name and no revoke link
+      - [x] History: 1 locked dummy card ("Tua primeira partida", +1000 XP) for blank visitors and players with no games, replacing the pig, with "Teu histórico de jogos ficará guardado aqui." above it. `.locked` card with a `.padlock` in the top-right corner: the round `.ticket-hole` plus `icon_padlock_color_cut.svg`, whose shackle is already cut where it runs behind the card — so it only works at its exact hand-tuned position
+  - [x] Passes view: the player's approved passes, shown as the admin's member card with the group name in place of the player name and no revoke link
     - [x] Fix the player member card — title falls back to the group's court names, courts line removed, expiry uses `icon_trash.svg`
     - [ ] Fill `court_groups.name` in Supabase — every row is `null` today, so cards show court names instead of a group name
     - [ ] Show pending requests there too, as a card marked "aguarda aprovação" (ties into the pending approval UX under Open Questions)
   - [ ] Upcoming game alerts (billing alerts once billing exists)
   - [x] Replace the placeholder skull icon (`icon_avatar.svg`)
-- [ ] Get the owner to see the player booking and modify it
-  - [x] Owner queries `bookings` for courts in their `court_groups` (bookings tab, default view)
-  - [x] Owner sees the exact same availability calendar as the player (read-only picker in each court-rules-card, player names on occupied slots)
-  - [x] Owner can cancel a booking (Cancelar/Voltar confirm on the bookings card)
-  - [x] Owner picker shows the whole group: "HH:MM (1/2)" = courts taken / active courts, orange as soon as any court is booked, every booked player's short name beneath
-  - [x] Tapping a booked slot in the owner picker jumps to that booking's card (first booking only when several share the slot)
-  - [ ] Owner can add a booking on behalf of a player, or edit one
+- [ ] Get the admin to see the player booking and modify it
+  - [x] Admin queries `bookings` for courts in their `court_groups` (bookings tab, default view)
+  - [x] Admin sees the exact same availability calendar as the player (read-only picker in each court-rules-card, player names on occupied slots)
+  - [x] Admin can cancel a booking (Cancelar/Voltar confirm on the bookings card)
+  - [x] Admin picker shows the whole group: "HH:MM (1/2)" = courts taken / active courts, orange as soon as any court is booked, every booked player's short name beneath
+  - [x] Tapping a booked slot in the admin picker jumps to that booking's card (first booking only when several share the slot)
+  - [ ] Admin can add a booking on behalf of a player, or edit one
 - [x] Player picker stays single-court; greeting points to the group's other courts ("Se não encontrares horário aqui, também podes reservar no …", `MSG_SIBLINGS`)
-- [x] Group stats for the owner, shown just above the slot picker in each court-rules-card (calculated in JS from the owner's bookings, whole group not per court)
+- [x] Group stats for the admin, shown just above the slot picker in each court-rules-card (calculated in JS from the admin's bookings, whole group not per court)
   - [x] This month: bookings, unique players, newcomers, estimated revenue, cancellations
   - [ ] Move to a Postgres RPC if a group's booking history gets large enough to slow the dashboard
 - [ ] Booking gaps (found after the booking back-and-forth)
-  - [ ] Enforce booking rules server-side — only JS checks opening hours, slot alignment, pause and min duration; verify the insert RLS actually requires an approved membership (later)
-  - [x] Expired membership (`expires_at` passed) blocks booking — player's info and membership row stay, only booking is impeded (`MSG_EXPIRED`; a game booked before expiry stays visible and cancellable)
-  - [x] Revoking a member cancels all their upcoming bookings (cancelled before the membership is deleted; games already underway are left alone)
-  - [ ] Flag existing bookings that no longer fit after the owner changes opening hours, pause or slot length (later)
-  - [ ] Notify the player when the owner cancels their booking; booking confirmation email (later — Resend sandbox still blocks player emails)
-  - [x] Booking history view — past games for the owner (upcoming/past toggle on the bookings tab)
+  - [ ] Enforce booking rules server-side — only JS checks opening hours, slot alignment, pause and min duration; verify the insert RLS actually requires an approved pass (later)
+  - [x] Expired pass (`expires_at` passed) blocks booking — player's info and pass row stay, only booking is impeded (`MSG_EXPIRED`; a game booked before expiry stays visible and cancellable)
+  - [x] Revoking a member cancels all their upcoming bookings (cancelled before the pass is deleted; games already underway are left alone)
+  - [ ] Flag existing bookings that no longer fit after the admin changes opening hours, pause or slot length (later)
+  - [ ] Notify the player when the admin cancels their booking; booking confirmation email (later — Resend sandbox still blocks player emails)
+  - [x] Booking history view — past games for the admin (upcoming/past toggle on the bookings tab)
     - [ ] Played / no-show / paid status on past games
 - [ ] Fix the closed-day message in the slot picker, "Hoje não há ténis cá, o campo está encerrado." (`slot-picker.js`). It's inline copy instead of a `MSG_*` constant, and plain text instead of a pig appearance. "Hoje" is right: closed days can't be tapped in the day strip, so it only ever shows when today is closed
 - [ ] Test what each page shows after an action (approve, deny, revoke, cancel, book…) — the page often just sits blank
-  - Likely cause: owner.js removes the acted-on card with `card.remove()`, so removing the last one leaves an empty list with no pig appearance. Approving also doesn't move the player into the members tab (or deny into anything) until a reload
-  - Fix options: re-render the view from the patched `ownerData` cache (keeps the pig appearance and cross-tab consistency), or just reload the page after the action
+  - Likely cause: admin.js removes the acted-on card with `card.remove()`, so removing the last one leaves an empty list with no pig appearance. Approving also doesn't move the player into the members tab (or deny into anything) until a reload
+  - Fix options: re-render the view from the patched `adminData` cache (keeps the pig appearance and cross-tab consistency), or just reload the page after the action
 - [ ] Polish pig mascot with Rive animations
   - [ ] Animate existing pig SVG in Rive editor (idle loop + reaction states)
   - [ ] Export `.riv` and integrate via `@rive-app/canvas` runtime
@@ -598,7 +611,7 @@ Sessions are kept alive indefinitely for active users. Supabase auto-refreshes t
 
 ## Booking Flow — Implementation Plan
 
-### Phase 1: Owner UI
+### Phase 1: Admin UI
 - [x] Opening hours per day (open/close toggle + times)
 - [x] Pause fields in Campo tab: Seg–Sex and Sab–Dom (two grouped time-range inputs, writes to `pause_start`/`pause_end` on all relevant day rows)
 
@@ -623,16 +636,16 @@ Sessions are kept alive indefinitely for active users. Supabase auto-refreshes t
 - [x] Wire `renderSlotPicker` from slot-picker.js into court-bookable.js approved branch
 - [x] Load existing bookings for 7-day window — occupied slots visible to all group members
 - [x] One active booking per group (JS layer) — if player already has a future booking, picker is blocked and booking details are shown instead
-- Owner booking management is tracked under "Get the owner to see the player booking and modify it" in the Todo
+- Admin booking management is tracked under "Get the admin to see the player booking and modify it" in the Todo
 
 ### Design Decisions
-- **Single-court player picker, group-wide owner picker:** the same `renderSlotPicker` serves both.
+- **Single-court player picker, group-wide admin picker:** the same `renderSlotPicker` serves both.
   - **Player** sees one court only — the court page they're on. A booking always belongs to one court, so a game can never need a court change mid-way (a group-wide player picker would need a "one court free for the whole range" check plus court auto-assignment — rejected as too complex). Other courts in the group are only mentioned in the greeting, with links; no availability check behind it.
-  - **Owner** sees the whole group in one grid (`readOnly`), because rules, membership, pricing and the one-booking limit are all per group. Each booked slot shows `HH:MM (taken/courtCount)` and all booked players; any booking makes it orange.
+  - **Admin** sees the whole group in one grid (`readOnly`), because rules, pass, pricing and the one-booking limit are all per group. Each booked slot shows `HH:MM (taken/courtCount)` and all booked players; any booking makes it orange.
 - **Slot selection:** slot-based; cells show start times; end time = last slot + `slot_duration_minutes`
 - **Contiguous only:** auto-fill slots between first and second tap; tapping past a blocker is ignored
 - **Single slot:** valid; tap same slot twice = 1-slot booking
 - **Reset:** any tap while a full range is selected resets and starts from that slot
-- **Pause:** stored per-day in `court_opening_hours.pause_start/pause_end`; edited in owner UI as two grouped fields: weekdays (1–5) and weekend (0, 6)
+- **Pause:** stored per-day in `court_opening_hours.pause_start/pause_end`; edited in admin UI as two grouped fields: weekdays (1–5) and weekend (0, 6)
 - **Min game duration:** enforced at confirm only — not during selection; message: "O tempo mínimo de reserva para este campo é de Xh."
 - **Closed days:** muted in day strip, tapping does nothing

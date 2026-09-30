@@ -84,9 +84,9 @@ function buildSlotGrid(day, dayIndex, groupRules, openingHours, selectionStart, 
 		// A BOOKING OVERLAPS THIS SLOT IF ITS RANGE INTERSECTS [t, t+slotMin)
 		const overlapping = dayBookings.filter(b => b.startMins < t + slotMin && b.endMins > t);
 		const isMine = overlapping.some(b => b.playerId === userId);
-		// ANY BOOKING TURNS THE SLOT ORANGE; THE OWNER VIEW'S 1/2-STYLE COUNT SAYS HOW FULL IT IS
+		// ANY BOOKING TURNS THE SLOT ORANGE; THE ADMIN VIEW'S 1/2-STYLE COUNT SAYS HOW FULL IT IS
 		const isOccupied = !isMine && overlapping.length > 0;
-		// READ-ONLY (OWNER VIEW) IS NEVER TAPPABLE — NO SELECTION, SO NO WHITE "MINE" SLOTS EVER APPEAR
+		// READ-ONLY (ADMIN VIEW) IS NEVER TAPPABLE — NO SELECTION, SO NO WHITE "MINE" SLOTS EVER APPEAR
 		const isTappable = !readOnly && !isPast && !isBreak && !isOccupied && !isMine;
 		const isSelected = selectionStart !== null && (
 			selectionEnd !== null ? t >= selectionStart && t <= selectionEnd : t === selectionStart
@@ -104,7 +104,7 @@ function buildSlotGrid(day, dayIndex, groupRules, openingHours, selectionStart, 
 		const playerLabel = readOnly
 			? overlapping.map(b => shortName(b.playerName)).filter(Boolean).map(n => `<span class="slot-cell-player">${n}</span>`).join('')
 			: '';
-		// READ-ONLY TAGS OCCUPIED SLOTS WITH THEIR BOOKING SO THE OWNER CAN JUMP TO ITS CARD
+		// READ-ONLY TAGS OCCUPIED SLOTS WITH THEIR BOOKING SO THE ADMIN CAN JUMP TO ITS CARD
 		const bookingAttr = readOnly && overlapping[0]?.bookingId ? ` data-booking-id="${overlapping[0].bookingId}"` : '';
 		cells.push(`<div class="${cls}" data-mins="${t}"${bookingAttr}>${timeLabel}${playerLabel}</div>`);
 	}
@@ -119,20 +119,20 @@ function buildSlotGrid(day, dayIndex, groupRules, openingHours, selectionStart, 
 			${mineLegendItem}
 		</div>`;
 
-	// READ-ONLY (OWNER VIEW) HAS NO SELECTION, SO NO SUMMARY OR ACTION BUTTON AT ALL
+	// READ-ONLY (ADMIN VIEW) HAS NO SELECTION, SO NO SUMMARY OR ACTION BUTTON AT ALL
 	if (readOnly) {
 		return `${legend}<div class="slot-grid">${cells.join('')}</div>`;
 	}
 
 	// LOCKED (PLAYER ALREADY HAS A BOOKING HERE) SWAPS THE CONFIRM BUTTON FOR A SHALLOW CANCEL BUTTON.
-	// CANCEL-BOOKING-CONFIRM STARTS HIDDEN; SAME REVEAL/BACK PATTERN AS THE OWNER'S REVOKE-MEMBERSHIP FLOW.
+	// CANCEL-BOOKING-CONFIRM STARTS HIDDEN; SAME REVEAL/BACK PATTERN AS THE ADMIN'S REVOKE-PASS FLOW.
 	// NO canCancel (E.G. THE GAME HAS ALREADY STARTED) MEANS A LOCKED PICKER SHOWS NO BUTTON AT ALL.
 	if (locked && !canCancel) {
 		return `${legend}<div class="slot-grid">${cells.join('')}</div>`;
 	}
 	const actionButton = locked
 		? `<button class="slot-confirm-btn button-shallow" id="cancel-booking-btn"><img src="images/icon_fall.svg" class="link-icon" alt="">Cancelar reserva</button>
-			<div class="membership-actions" id="cancel-booking-confirm" hidden>
+			<div class="ticket-actions" id="cancel-booking-confirm" hidden>
 				<button id="confirm-cancel-booking-btn"><img src="images/icon_skull.svg" class="link-icon" alt="">Cancelar</button>
 				<button class="button-shallow" id="back-cancel-booking-btn">Voltar</button>
 			</div>`
@@ -156,9 +156,9 @@ function toISODateTime(day, mins) {
 // onConfirm(startAt, endAt) IS CALLED ON CONFIRM; SHOULD RETURN AN ERROR OR null.
 // startLocked=true SKIPS INTERACTION ENTIRELY (USED WHEN PLAYER ALREADY HAS A BOOKING ON THIS COURT).
 // onCancel() IS CALLED WHEN THE PLAYER CONFIRMS CANCELLING THEIR BOOKING; SHOULD RETURN AN ERROR OR null.
-// readOnly=true IS THE OWNER VIEW: NO TAPPING, NO ACTION BUTTONS, PLAYER NAMES SHOWN ON OCCUPIED SLOTS.
+// readOnly=true IS THE ADMIN VIEW: NO TAPPING, NO ACTION BUTTONS, PLAYER NAMES SHOWN ON OCCUPIED SLOTS.
 // coords { lat, lng } LOADS THE DAILY WEATHER ICONS INTO THE DAY STRIP; OMIT IT AND THE STRIP SHOWS NONE.
-// courtCount IS THE GROUP'S NUMBER OF ACTIVE COURTS; ONLY THE OWNER VIEW USES IT, FOR THE 1/2-STYLE COUNT.
+// courtCount IS THE GROUP'S NUMBER OF ACTIVE COURTS; ONLY THE ADMIN VIEW USES IT, FOR THE 1/2-STYLE COUNT.
 export function renderSlotPicker(container, groupRules, openingHours, onConfirm, existingBookings, userId, startLocked = false, onCancel = null, readOnly = false, coords = null, courtCount = 1) {
 	const days = getDays();
 	// null UNTIL THE FORECAST ARRIVES; THE PICKER RENDERS IMMEDIATELY WITHOUT WAITING FOR IT
@@ -301,7 +301,7 @@ export function renderSlotPicker(container, groupRules, openingHours, onConfirm,
 		}
 
 		// CANCEL-BOOKING FLOW: "Cancelar reserva" REVEALS A Cancelar/Voltar ROW; ONLY THE ROW'S
-		// Cancelar ACTUALLY CANCELS THE BOOKING. SAME REVEAL/BACK PATTERN AS THE OWNER'S REVOKE FLOW.
+		// Cancelar ACTUALLY CANCELS THE BOOKING. SAME REVEAL/BACK PATTERN AS THE ADMIN'S REVOKE FLOW.
 		const cancelBookingBtn = container.querySelector('#cancel-booking-btn');
 		const cancelBookingConfirm = container.querySelector('#cancel-booking-confirm');
 		if (cancelBookingBtn && cancelBookingConfirm) {

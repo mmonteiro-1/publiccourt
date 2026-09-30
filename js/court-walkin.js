@@ -69,9 +69,9 @@ export function renderPreview(court, active) {
 	const descriptionLine = court.description ? `<p class="card-sub">${court.description}</p>` : "";
 	const flipLink = `<a class="card-sub deck-flip-link" data-action="flip-deck" href="#">Mais informações deste campo<img src="images/icon_info.svg" class="link-icon" alt=""></a>`;
 
-	const isOwner = active && active.device_id === getDeviceId();
+	const isMine = active && active.device_id === getDeviceId();
 	const bodyText = active
-		? isOwner
+		? isMine
 			? "Podes sempre avisar que o teu jogo vai demorar mais um bocadinho. E caso pares mais cedo, podes avisar que o teu jogo terminou."
 			: "Parece que este campo está ocupado de momento. Caso esteja livre, <b>e se estiveres à beira do campo</b> podes terminar o jogo atual"
 		: "Para minimizar os batotas, não é possível iniciar um jogo sem que o jogador esteja à beira do campo.";
@@ -92,7 +92,7 @@ export function renderPreview(court, active) {
 		<div class="divider"></div>
 		<p class="margin-bottom-20 card-sub">${bodyText}</p>
 		${flipLink}
-		${isOwner ? `
+		${isMine ? `
 		<div class="extend-row">
 			<button class="extend-btn" data-mins="15" ${localStorage.getItem("extended_" + active.id) ? "disabled" : ""}>+ 15MIN</button>
 			<button class="extend-btn" data-mins="30" ${localStorage.getItem("extended_" + active.id) ? "disabled" : ""}>+ 30MIN</button>
@@ -100,7 +100,7 @@ export function renderPreview(court, active) {
 		</div>` : ""}
 		<button id="here-btn">${locationIcon} ${actionLabel}</button>
 		<button class="button-shallow margin-top-10" id="back-btn">Voltar</button>
-		${!isOwner ? `<p class="card-sub margin-top-10" style="font-size:0.75em">Por favor permite que este browser confirme a tua localização</p>` : ""}
+		${!isMine ? `<p class="card-sub margin-top-10" style="font-size:0.75em">Por favor permite que este browser confirme a tua localização</p>` : ""}
 	`;
 
 	const mapsUrl = court.lat && court.lng
@@ -116,14 +116,14 @@ export function renderPreview(court, active) {
 
 	document.getElementById("back-btn").addEventListener("click", () => { location.href = "index.html"; });
 	document.getElementById("here-btn").addEventListener("click", () => {
-		if (active && isOwner) {
+		if (active && isMine) {
 			finishOwnGame(court, active.id);
 		} else {
 			verifyLocationAndProceed(court);
 		}
 	});
 
-	if (isOwner) {
+	if (isMine) {
 		document.querySelectorAll(".extend-btn").forEach(btn => {
 			btn.addEventListener("click", () => extendGame(court, active, parseInt(btn.dataset.mins)));
 		});

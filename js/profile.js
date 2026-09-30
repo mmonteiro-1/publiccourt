@@ -4,7 +4,7 @@ const MSG_HELLO = name => `Olá, ${name}`;
 const MSG_SAVE_ERROR = "Não foi possível guardar. Tenta outra vez.";
 const MSG_SAVED = "Alterações guardadas.";
 // SHOWN BOTH DURING ONBOARDING AND ON THE PROFILE, NEXT TO WHERE THE DATA IS ENTERED
-const MSG_DATA_DISCLAIMER = "O login só é necessário caso queira reservar um campo. <br><br>Estas informações são relevantes para o administrador do campo quando solicitas uma reserva. Por este motivo o Campo Livre irá guardar os teus dados, embora não tenha interesse neles.";
+const MSG_DATA_DISCLAIMER = "O login só é necessário caso queiras reservar um campo. <br><br>Estas informações são relevantes para o administrador do campo quando pedes um passe. Por este motivo o Campo Livre irá guardar os teus dados, embora não tenha interesse neles.";
 
 const MSG_HISTORY_TITLE = "Teus jogos passados";
 const MSG_VIEW_INFO = "Dados pessoais";
@@ -17,6 +17,7 @@ const MSG_KIND_WALKIN = "Jogo público";
 const MSG_KIND_BOOKING = "Jogo reservado";
 const MSG_VISITOR_INTRO = "Estes são os jogos começados neste dispositivo. Faz login para os guardares na tua conta e os veres em qualquer lado.";
 const MSG_VISITOR_LOGIN = "Fazer login";
+const MSG_LINK_FAILED = "Este link de login já não funciona. Cada link só serve uma vez e expira ao fim de algum tempo. Pede um novo e abre-o logo.";
 const MSG_DUMMY_TITLE = "Tua primeira partida";
 const MSG_DUMMY_PASS = "Teu primeiro passe";
 const MSG_VISITOR_PROGRESS = "Vais ver o teu ténis progredir aqui. Usa o Campo Livre quando jogares para acumular XP. Faz login para não perderes o progresso.";
@@ -52,8 +53,8 @@ const MSG_STAT_HOURS_HINT = "Em campo, desde o primeiro jogo";
 const MSG_STAT_STREAK_HINT = "Com pelo menos um jogo";
 const MSG_STAT_COURTS = n => `${n} ${n === 1 ? "campo" : "campos diferentes"}`;
 const MSG_STAT_COURTS_HINT = n => `Já ${n === 1 ? "recebeu" : "receberam"} os teus jogos`;
-const MSG_VIEW_MEMBERSHIPS = "Os teus campos";
-const MSG_NO_MEMBERSHIPS = "Não és membro de nenhum campo, infelizmente. Bora mudar isso!";
+const MSG_VIEW_PASSES = "Os teus passes";
+const MSG_NO_PASSES = "Não és membro de nenhum campo, infelizmente. Bora mudar isso!";
 const MSG_MEMBER_SINCE = date => `Membro desde ${date}`;
 const MSG_NO_EXPIRY = "Sem data de expiração";
 const MSG_NO_NEXT_GAME = "Sem jogos agendados";
@@ -91,20 +92,20 @@ async function claimDeviceWalkIns(user) {
 		.is("player_id", null);
 }
 
-// ENTRY POINT: REDIRECTS OWNERS, ROUTES NEW USERS TO ONBOARDING, RETURNING USERS TO PROFILE
+// ENTRY POINT: REDIRECTS ADMINS, ROUTES NEW USERS TO ONBOARDING, RETURNING USERS TO PROFILE
 async function loadProfile(user) {
 	// LETS login.html GREET THIS DEVICE AS RETURNING NEXT TIME
 	try { localStorage.setItem("hasLoggedIn", "1"); } catch {}
 	await claimDeviceWalkIns(user);
 
-	// OWNERS NEVER LAND ON THE PLAYER PROFILE — SEND THEM TO THEIR DASHBOARD.
-	// MUST FILTER BY owner_id — MEMBERS CAN ALSO READ court_groups (FOR SLOT RULES),
-	// SO WITHOUT THE FILTER ANY APPROVED MEMBER WOULD BE WRONGLY REDIRECTED TO owner.html.
-	const { data: ownedGroups } = await db.from("court_groups").select("id").eq("owner_id", user.id).limit(1);
-	if (ownedGroups && ownedGroups.length > 0) {
+	// ADMINS NEVER LAND ON THE PLAYER PROFILE — SEND THEM TO THEIR DASHBOARD.
+	// MUST FILTER BY admin_id — MEMBERS CAN ALSO READ court_groups (FOR SLOT RULES),
+	// SO WITHOUT THE FILTER ANY APPROVED MEMBER WOULD BE WRONGLY REDIRECTED TO admin.html.
+	const { data: adminGroups } = await db.from("court_groups").select("id").eq("admin_id", user.id).limit(1);
+	if (adminGroups && adminGroups.length > 0) {
 		takeOnce("returnTo");
 		takeOnce("justLoggedIn");
-		location.href = "owner.html";
+		location.href = "admin.html";
 		return;
 	}
 
@@ -221,7 +222,7 @@ function startOnboarding(user) {
 	render();
 }
 
-// PAST GAMES FOR ONE PLAYER, NEWEST FIRST. A LOGGED-IN PLAYER IS MATCHED ON player_id SO THE HISTORY
+// PAST GAMES FOR ONE PLAYER, NEWEST FIRST. A REGISTERED PLAYER IS MATCHED ON player_id SO THE HISTORY
 // FOLLOWS THE ACCOUNT ONTO ANY DEVICE; A VISITOR HAS ONLY device_id, AND NO BOOKINGS AT ALL. A VISITOR SEES ONLY UNCLAIMED
 // WALK-INS: THOSE ARE EXACTLY WHAT claimDeviceWalkIns HANDS OVER ON LOGIN, NOT ONES AN EARLIER ACCOUNT ON THIS DEVICE ALREADY TOOK
 async function fetchHistory(user) {
@@ -252,12 +253,12 @@ async function fetchHistory(user) {
 	return games.map(game => ({ ...game, court: byId[game.courtId] ?? null }));
 }
 
-// TICKET CARDS REUSING THE OWNER DASHBOARD'S MARKUP, SO A GAME LOOKS THE SAME ON BOTH SIDES OF THE APP.
+// TICKET CARDS REUSING THE ADMIN DASHBOARD'S MARKUP, SO A GAME LOOKS THE SAME ON BOTH SIDES OF THE APP.
 // TAKES THE fetchHistory PROMISE SO THE PROGRESS VIEW CAN SHARE ONE FETCH
 // WITH NO GAMES YET, ONE FADED EXAMPLE CARD SHOWS HOW THE LIST WORKS. A FIRST GAME, SO ITS +1000 XP IS EXACTLY WHAT
 // THE PLAYER'S OWN FIRST GAME WILL EARN. REALLY DATED YESTERDAY, SO THE XP AND STREAK MATHS TREAT IT AS A RECENT PAST GAME
 // WRAPPED SO THE HOLE ISN'T A DIRECT CHILD OF THE CARD, WHICH WOULD TURN IT INTO THE LANYARD SLOT
-const PADLOCK_HTML = `<div class="padlock"><div class="membership-hole"></div><img src="images/icon_padlock_color_cut.svg" alt=""></div>`;
+const PADLOCK_HTML = `<div class="padlock"><div class="ticket-hole"></div><img src="images/icon_padlock_color_cut.svg" alt=""></div>`;
 
 function dummyGame() {
 	const start = new Date();
@@ -281,16 +282,16 @@ async function loadHistory(container, gamesPromise, emptyMessage = MSG_HISTORY_E
 	container.innerHTML = shown.map(game => {
 		const mins = game.mins;
 		const title = game.title ?? MSG_GAME_TITLE(game.court?.name ?? MSG_COURT_UNKNOWN);
-		// white-space: normal BECAUSE .membership-player TRUNCATES TO ONE LINE, AND COURT NAMES CAN BE LONG
+		// white-space: normal BECAUSE .ticket-title TRUNCATES TO ONE LINE, AND COURT NAMES CAN BE LONG
 		return `
-		<div class="membership-card${games.length ? "" : " locked"}">
+		<div class="ticket${games.length ? "" : " locked"}">
 			${games.length ? "" : PADLOCK_HTML}
-			<p class="membership-player" style="white-space: normal">${title}</p>
-			<p class="membership-courts"><img src="images/icon_court.svg" class="link-icon" alt="">${game.kind}<span class="game-xp">${MSG_GAME_XP(xpByGame.get(game))}</span></p>
+			<p class="ticket-title" style="white-space: normal">${title}</p>
+			<p class="ticket-line"><img src="images/icon_court.svg" class="link-icon" alt="">${game.kind}<span class="game-xp">${MSG_GAME_XP(xpByGame.get(game))}</span></p>
 			<div class="divider ticket-divider"></div>
-			<div class="membership-date-row">
-				<p class="membership-date"><img src="images/icon_calendar_tennis.svg" class="link-icon" alt="">${game.label ?? gameLabel(game.start, game.end)}</p>
-				<p class="membership-date"><img src="images/icon_clock.svg" class="link-icon" alt="">${MSG_GAME_DURATION(mins)}</p>
+			<div class="ticket-date-row">
+				<p class="ticket-date"><img src="images/icon_calendar_tennis.svg" class="link-icon" alt="">${game.label ?? gameLabel(game.start, game.end)}</p>
+				<p class="ticket-date"><img src="images/icon_clock.svg" class="link-icon" alt="">${MSG_GAME_DURATION(mins)}</p>
 			</div>
 		</div>
 	`;
@@ -372,8 +373,8 @@ function levelStars(scale, value) {
 // EACH DISTINCT COURT, AND EACH WEEK THAT EXTENDS A STREAK (A WEEK WITH A GAME RIGHT AFTER ANOTHER ONE — A LONE WEEK IS ALREADY PAID BY ITS GAMES)
 // INFLATED ×10 ON PURPOSE — BIG NUMBERS FEEL MORE REWARDING; THE LEVEL ENDS ARE ×10 TOO, SO DIFFICULTY IS UNCHANGED
 const XP_PER_INCREMENT = 500;
-// A PASS IS A BIGGER STEP THAN A GAME: IT MEANS THE PLAYER WAS VETTED AND APPROVED BY A COURT'S OWNER
-const XP_PER_MEMBERSHIP = 3000;
+// A PASS IS A BIGGER STEP THAN A GAME: IT MEANS THE PLAYER WAS VETTED AND APPROVED BY A COURT'S ADMIN
+const XP_PER_PASS = 3000;
 
 // THE SAME XP SPLIT PER GAME, OLDEST FIRST, SO EACH HISTORY CARD SHOWS WHAT IT EARNED AND THE CARDS ADD UP TO THE TOTAL:
 // A COURT'S BONUS GOES TO ITS FIRST GAME, A STREAK WEEK'S TO THE WEEK'S FIRST GAME
@@ -505,10 +506,10 @@ async function loadProgress(container, gamesPromise, teaserPromise, passAwardsPr
 	};
 
 	const statCard = (icon, metric, title, value, detail, bar, diamond) => `
-		<div class="membership-card">
+		<div class="ticket">
 			<p class="skill-title"><img src="images/icon_${icon}.svg" class="link-icon" alt="">${metric}</p>
-			<p class="membership-player margin-top-5" style="white-space: normal">${value}${diamond ? ` ${DIAMOND_ICON}` : ""}</p>
-			<div class="membership-date">${detail}</div>
+			<p class="ticket-title margin-top-5" style="white-space: normal">${value}${diamond ? ` ${DIAMOND_ICON}` : ""}</p>
+			<div class="ticket-date">${detail}</div>
 			<p class="stat-level">${title}</p>
 			${bar}
 		</div>
@@ -516,7 +517,7 @@ async function loadProgress(container, gamesPromise, teaserPromise, passAwardsPr
 	const rating = (scale, value) => teaser ? 1 : Math.round(skillRating(scale, value));
 	const shown = value => teaser ? 0 : value;
 	container.innerHTML = [
-		xpCard(playerXp(games) + passAwards * XP_PER_MEMBERSHIP, Object.values(diamonds).filter(Boolean).length, [
+		xpCard(playerXp(games) + passAwards * XP_PER_PASS, Object.values(diamonds).filter(Boolean).length, [
 			{ icon: "fire_color", rating: rating(LEVELS_GAMES, gamesRecent) },
 			{ icon: "sheriff_color", rating: rating(LEVELS_TARIMBA, hours) },
 			{ icon: "repeat_color", rating: rating(LEVELS_STREAK, streak) },
@@ -539,31 +540,31 @@ async function loadProgress(container, gamesPromise, teaserPromise, passAwardsPr
 // ALONG ONE EDGE AND ENDS 13 AFTER IT. THE STRAP'S BOTTOM-RIGHT STAYS SHARP
 const BADGE_RIBBON_SVG = `<svg viewBox="0 -26.5 172 110.5" aria-hidden="true"><path d="M-62.5 -26.5H114.9L157 84H-9.8Q-23 84 -27.4 71.6Z"/><path d="M140 44H172L161.6 71.6Q157 84 151.8 71.9Z" fill="#b08900"/></svg>`;
 
-// PASSES EVER APPROVED, FOR XP. NOT THE CURRENT MEMBERSHIPS: REVOKING DELETES THE ROW, AND XP NEVER DROPS.
-// pass_awards IS FILLED BY A TRIGGER ON memberships, ONE ROW PER SCOPE EVER, SO A RE-APPROVAL ISN'T PAID TWICE
+// PASSES EVER APPROVED, FOR XP. NOT THE CURRENT PASSES: REVOKING DELETES THE ROW, AND XP NEVER DROPS.
+// pass_awards IS FILLED BY A TRIGGER ON passes, ONE ROW PER SCOPE EVER, SO A RE-APPROVAL ISN'T PAID TWICE
 async function fetchPassAwards(user) {
 	const { count } = await db.from("pass_awards").select("*", { count: "exact", head: true }).eq("player_id", user.id);
 	return count ?? 0;
 }
 
-async function fetchMemberships(user) {
-	const { data } = await db.from("memberships")
+async function fetchPasses(user) {
+	const { data } = await db.from("passes")
 		.select("group_id, approved_at, expires_at")
 		.eq("player_id", user.id)
 		.eq("status", "approved");
 	return data ?? [];
 }
 
-// THE PLAYER'S APPROVED MEMBERSHIPS AS THE SAME CARD THE OWNER SEES IN THE MEMBERS TAB (owner.js renderMembersView),
-// WITH THE GROUP NAME WHERE THE OWNER SEES THE PLAYER'S. NO REVOKE LINK — THAT'S THE OWNER'S CALL, NOT THE PLAYER'S
-async function loadMemberships(container, user, membershipsPromise) {
-	const memberships = await membershipsPromise;
-	if (!memberships.length) {
-		setPigAppearance(container, MSG_NO_MEMBERSHIPS, "pig_reaching");
+// THE PLAYER'S APPROVED PASSES AS THE SAME CARD THE ADMIN SEES IN THE MEMBERS TAB (admin.js renderMembersView),
+// WITH THE GROUP NAME WHERE THE ADMIN SEES THE PLAYER'S. NO REVOKE LINK — THAT'S THE ADMIN'S CALL, NOT THE PLAYER'S
+async function loadPasses(container, user, passesPromise) {
+	const passes = await passesPromise;
+	if (!passes.length) {
+		setPigAppearance(container, MSG_NO_PASSES, "pig_reaching");
 		return;
 	}
 
-	const groupIds = memberships.map(m => m.group_id);
+	const groupIds = passes.map(m => m.group_id);
 	const [{ data: groups }, { data: courts }, { data: bookings }] = await Promise.all([
 		db.from("court_groups").select("id, name").in("id", groupIds),
 		db.from("courts").select("group_id, name").in("group_id", groupIds).eq("active", true).order("group_position"),
@@ -572,7 +573,7 @@ async function loadMemberships(container, user, membershipsPromise) {
 	]);
 
 	const now = new Date();
-	container.innerHTML = [...memberships]
+	container.innerHTML = [...passes]
 		.sort((a, b) => new Date(b.approved_at) - new Date(a.approved_at))
 		.map(m => {
 			const courtNames = (courts ?? []).filter(c => c.group_id === m.group_id).map(c => c.name).join(", ");
@@ -580,7 +581,7 @@ async function loadMemberships(container, user, membershipsPromise) {
 			const groupName = (groups ?? []).find(g => g.id === m.group_id)?.name || courtNames || MSG_COURT_UNKNOWN;
 			const groupBookings = (bookings ?? []).filter(b => b.group_id === m.group_id);
 			const nextBooking = groupBookings.find(b => new Date(b.start_at) > now);
-			return memberCard({
+			return passCard({
 				name: groupName,
 				since: m.approved_at ? new Date(m.approved_at).toLocaleDateString("pt-PT") : "—",
 				expires: m.expires_at ? new Date(m.expires_at).toLocaleDateString("pt-PT") : null,
@@ -590,35 +591,35 @@ async function loadMemberships(container, user, membershipsPromise) {
 		}).join("");
 }
 
-function memberCard({ name, since, expires, nextGame, bookings, locked }) {
+function passCard({ name, since, expires, nextGame, bookings, locked }) {
 	return `
-		<div class="membership-card${locked ? " locked" : ""}">
+		<div class="ticket${locked ? " locked" : ""}">
 			${locked ? PADLOCK_HTML : ""}
-			<div class="membership-hole"></div>
+			<div class="ticket-hole"></div>
 			${BADGE_RIBBON_SVG}
-			<p class="membership-player">${name}</p>
-			<div class="membership-date-row">
-				<p class="membership-date">${MSG_MEMBER_SINCE(since)}</p>
-				<span class="game-xp">${MSG_GAME_XP(XP_PER_MEMBERSHIP)}</span>
+			<p class="ticket-title">${name}</p>
+			<div class="ticket-date-row">
+				<p class="ticket-date">${MSG_MEMBER_SINCE(since)}</p>
+				<span class="game-xp">${MSG_GAME_XP(XP_PER_PASS)}</span>
 			</div>
 			<div class="divider"></div>
-			<div class="membership-data">
-				<p class="membership-date">${expires ? `<img src="images/icon_trash.svg" class="link-icon" alt=""> ${expires}` : MSG_NO_EXPIRY}</p>
-				<p class="membership-date"><img src="images/icon_calendar_tennis.svg" class="link-icon" alt="">${nextGame ?? MSG_NO_NEXT_GAME}</p>
-				<p class="membership-date"><img src="images/icon_history.svg" class="link-icon" alt="">${MSG_BOOKING_COUNT(bookings)}</p>
+			<div class="ticket-data">
+				<p class="ticket-date">${expires ? `<img src="images/icon_trash.svg" class="link-icon" alt=""> ${expires}` : MSG_NO_EXPIRY}</p>
+				<p class="ticket-date"><img src="images/icon_calendar_tennis.svg" class="link-icon" alt="">${nextGame ?? MSG_NO_NEXT_GAME}</p>
+				<p class="ticket-date"><img src="images/icon_history.svg" class="link-icon" alt="">${MSG_BOOKING_COUNT(bookings)}</p>
 			</div>
 		</div>
 	`;
 }
 
 // THE VISITOR'S EXAMPLE PASS. DATES ARE 30/02, A DAY THAT DOESN'T EXIST, SO IT READS AS AN EXAMPLE
-function dummyMemberCard() {
-	return memberCard({ name: MSG_DUMMY_PASS, since: "30/02", expires: null, nextGame: "SAB, 30/02, 18:00-19:00", bookings: 1, locked: true });
+function dummyPassCard() {
+	return passCard({ name: MSG_DUMMY_PASS, since: "30/02", expires: null, nextGame: "SAB, 30/02, 18:00-19:00", bookings: 1, locked: true });
 }
 
 // VISITORS SEE THEIR DEVICE'S WALK-IN HISTORY INSTEAD OF BEING BOUNCED TO THE LOGIN PAGE — SOMEONE WHO
 // ONLY EVER PLAYS WALK-INS STILL HAS A HISTORY WORTH SHOWING, AND LOGGING IN CLAIMS IT (SEE claimDeviceWalkIns)
-// SAME TOGGLE AS THE LOGGED-IN PROFILE SO VISITORS SEE WHAT AN ACCOUNT ADDS; THE PANES THEY CAN'T USE HOLD THE LOGIN BUTTON
+// SAME TOGGLE AS A REGISTERED PLAYER'S PROFILE SO VISITORS SEE WHAT AN ACCOUNT ADDS; THE PANES THEY CAN'T USE HOLD THE LOGIN BUTTON
 function showVisitor() {
 	const loginBtn = `<button data-action="login" class="margin-top-20"><img src="images/icon_login.svg" class="link-icon" alt="">${MSG_VISITOR_LOGIN}</button>`;
 	app.innerHTML = `
@@ -637,9 +638,9 @@ function showVisitor() {
 			<p class="card-sub margin-top-10" style="font-size: .7em">${MSG_VISITOR_PROGRESS}</p>
 			<div class="bookings-list margin-top-10"></div>
 		</div>
-		<div data-pane-body="memberships" hidden>
+		<div data-pane-body="passes" hidden>
 			<p class="card-sub margin-top-10" style="font-size: .7em">${MSG_VISITOR_PASSES}</p>
-			<div class="bookings-list margin-top-10">${dummyMemberCard()}</div>
+			<div class="bookings-list margin-top-10">${dummyPassCard()}</div>
 		</div>
 		<div data-pane-body="info" hidden>${loginBtn}</div>
 	`;
@@ -660,7 +661,7 @@ const FOLDER_TABS_HTML = `
 	<div class="folder-tabs">
 		<button class="folder-tab active" data-pane="progress" aria-label="${MSG_VIEW_PROGRESS}"><img src="images/icon_medal.svg" alt=""><span>Progresso</span></button>
 		<button class="folder-tab" data-pane="history" aria-label="${MSG_HISTORY_TITLE}"><img src="images/icon_history.svg" alt=""><span>Histórico</span></button>
-		<button class="folder-tab" data-pane="memberships" aria-label="${MSG_VIEW_MEMBERSHIPS}"><img src="images/icon_id.svg" alt=""><span>Passes</span></button>
+		<button class="folder-tab" data-pane="passes" aria-label="${MSG_VIEW_PASSES}"><img src="images/icon_id.svg" alt=""><span>Passes</span></button>
 		<button class="folder-tab" data-pane="info" aria-label="${MSG_VIEW_INFO}"><img src="images/icon_gear.svg" alt=""><span>Dados</span></button>
 	</div>
 `;
@@ -681,7 +682,7 @@ const PROFILE_FIELDS = [
 	{ field: "nif", label: "NIF", type: "number", autocomplete: "off" },
 ];
 
-// RENDERS THE PLAYER PROFILE: A TOGGLE BETWEEN FOUR PANES — PAST GAMES, PROGRESS, MEMBERSHIPS, AND INFO
+// RENDERS THE PLAYER PROFILE: A TOGGLE BETWEEN FOUR PANES — PAST GAMES, PROGRESS, PASSES, AND INFO
 // (GREETING, EMAIL READ-ONLY SINCE IT'S THE LOGIN, EDITABLE FIELDS + LOGOUT)
 function showProfile(user, profile) {
 	document.body.classList.remove("onboarding");
@@ -709,7 +710,7 @@ function showProfile(user, profile) {
 		<div data-pane-body="progress">
 			<div class="bookings-list margin-top-20"></div>
 		</div>
-		<div data-pane-body="memberships" hidden>
+		<div data-pane-body="passes" hidden>
 			<div class="bookings-list margin-top-20"></div>
 		</div>
 	`;
@@ -717,7 +718,7 @@ function showProfile(user, profile) {
 	const games = fetchHistory(user);
 	loadHistory(app.querySelector('[data-pane-body="history"] .bookings-list'), games);
 	loadProgress(app.querySelector('[data-pane-body="progress"] .bookings-list'), games, undefined, fetchPassAwards(user));
-	loadMemberships(app.querySelector('[data-pane-body="memberships"] .bookings-list'), user, fetchMemberships(user));
+	loadPasses(app.querySelector('[data-pane-body="passes"] .bookings-list'), user, fetchPasses(user));
 
 	wireFolderTabs();
 
@@ -766,6 +767,12 @@ function showProfile(user, profile) {
 }
 
 // USE onAuthStateChange SO WE RECEIVE THE SESSION ONLY AFTER ANY PENDING TOKEN REFRESH RESOLVES.
+function showLinkFailed() {
+	setPigAppearance(app, MSG_LINK_FAILED);
+	app.insertAdjacentHTML("beforeend", `<button id="new-link-btn" class="margin-top-20"><img src="images/icon_login.svg" class="link-icon" alt="">Pedir novo link</button>`);
+	document.getElementById("new-link-btn").addEventListener("click", () => { location.href = "login.html"; });
+}
+
 // getSession() CAN RETURN null DURING A REFRESH, CAUSING A REDIRECT LOOP WITH login.html.
 // THE loaded FLAG PREVENTS loadProfile FROM BEING CALLED TWICE (e.g. INITIAL_SESSION + TOKEN_REFRESHED).
 let loaded = false;
@@ -778,7 +785,13 @@ db.auth.onAuthStateChange((event, session) => {
 	} else if (event === 'SIGNED_OUT') {
 		location.href = 'login.html';
 	} else if (event === 'INITIAL_SESSION' && !location.hash.includes('access_token')) {
-		// INITIAL_SESSION WITH NO SESSION AND NO MAGIC LINK TOKEN → GENUINELY NOT LOGGED IN
+		// A MAGIC LINK THAT FAILED (EXPIRED, ALREADY USED — EMAIL APPS THAT PREVIEW LINKS CAN USE THEM UP) ARRIVES WITH AN
+		// error INSTEAD OF A TOKEN. SAY SO RATHER THAN QUIETLY SHOWING THE VISITOR PROFILE, WHICH READS AS "LOGIN IS BROKEN"
+		if (/[#&?]error=/.test(location.hash + location.search)) {
+			showLinkFailed();
+			return;
+		}
+		// INITIAL_SESSION WITH NO SESSION AND NO MAGIC LINK TOKEN → A VISITOR
 		showVisitor();
 	}
 });

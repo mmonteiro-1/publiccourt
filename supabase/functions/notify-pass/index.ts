@@ -16,26 +16,26 @@ Deno.serve(async (req) => {
 
   try {
 
-  console.log("notify-membership invoked");
-  const { membershipId } = await req.json();
-  console.log("membershipId:", membershipId);
+  console.log("notify-pass invoked");
+  const { passId } = await req.json();
+  console.log("passId:", passId);
 
   console.log("url ok:", !!SUPABASE_URL, "key ok:", !!SUPABASE_SERVICE_KEY);
   const db = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
   console.log("db created");
 
-  const { data: membership, error: membershipError } = await db
-    .from("memberships")
+  const { data: pass, error: passError } = await db
+    .from("passes")
     .select("status, denied_reason, player_id, group_id, court_id")
-    .eq("id", membershipId)
+    .eq("id", passId)
     .single();
-  console.log("membership:", membership, "error:", membershipError);
+  console.log("pass:", pass, "error:", passError);
 
-  if (!membership) {
-    return new Response(JSON.stringify({ error: "Membership not found" }), { status: 404 });
+  if (!pass) {
+    return new Response(JSON.stringify({ error: "Pass not found" }), { status: 404 });
   }
 
-  const { data: userData, error: userError } = await db.auth.admin.getUserById(membership.player_id);
+  const { data: userData, error: userError } = await db.auth.admin.getUserById(pass.player_id);
   console.log("userData:", userData, "userError:", userError);
   if (userError || !userData?.user) {
     console.error("getUserById failed:", userError);
@@ -43,27 +43,27 @@ Deno.serve(async (req) => {
   }
   const user = userData.user;
 
-  const { data: profile } = await db.from("profiles").select("name").eq("id", membership.player_id).single();
+  const { data: profile } = await db.from("profiles").select("name").eq("id", pass.player_id).single();
 
   let courtNames = "";
-  if (membership.group_id) {
-    const { data: courts } = await db.from("courts").select("name").eq("group_id", membership.group_id).eq("active", true);
+  if (pass.group_id) {
+    const { data: courts } = await db.from("courts").select("name").eq("group_id", pass.group_id).eq("active", true);
     courtNames = courts?.map((c: { name: string }) => c.name).join(", ") || "";
-  } else if (membership.court_id) {
-    const { data: court } = await db.from("courts").select("name").eq("id", membership.court_id).single();
+  } else if (pass.court_id) {
+    const { data: court } = await db.from("courts").select("name").eq("id", pass.court_id).single();
     courtNames = court?.name || "";
   }
 
   const name = profile?.name || "Jogador";
-  const isApproved = membership.status === "approved";
+  const isApproved = pass.status === "approved";
 
   const subject = isApproved
-    ? `Membership aprovado — ${courtNames}`
-    : `Membership recusado — ${courtNames}`;
+    ? `Passe aprovado — ${courtNames}`
+    : `Passe recusado — ${courtNames}`;
 
   const text = isApproved
-    ? `Olá, ${name}!\n\nO teu membership para ${courtNames} foi aprovado. Já podes reservar o campo.\n\nCampo Livre`
-    : `Olá, ${name}!\n\nO teu membership para ${courtNames} foi recusado.${membership.denied_reason ? `\n\nMotivo: ${membership.denied_reason}` : ""}\n\nPodes solicitar novamente na página do campo.\n\nCampo Livre`;
+    ? `Olá, ${name}!\n\nO teu passe para ${courtNames} foi aprovado. Já podes reservar o campo.\n\nCampo Livre`
+    : `Olá, ${name}!\n\nO teu passe para ${courtNames} foi recusado.${pass.denied_reason ? `\n\nMotivo: ${pass.denied_reason}` : ""}\n\nPodes solicitar novamente na página do campo.\n\nCampo Livre`;
 
   const res = await fetch("https://api.resend.com/emails", {
     method: "POST",

@@ -117,7 +117,7 @@ function updateMarkerStatus() {
 }
 
 // RENDER A SINGLE COURT CARD, AVAILABLE OR IN USE
-function renderCourtCard(court, res, isOwner = false) {
+function renderCourtCard(court, res, isMine = false) {
 	const sub = court.description ? `<p class="card-sub">${court.description}</p>` : "";
 
 	if (court.unavailable) {
@@ -146,7 +146,7 @@ function renderCourtCard(court, res, isOwner = false) {
           </div>
         </div>
         <p class="card-status inuse">${court.name}</p>
-        ${isOwner ? `<p class="card-sub">Meu jogo</p>` : sub}
+        ${isMine ? `<p class="card-sub">Meu jogo</p>` : sub}
       </a>
     `;
 	}

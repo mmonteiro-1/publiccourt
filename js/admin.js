@@ -1,8 +1,8 @@
 import { renderSlotPicker } from './slot-picker.js';
 
 const app = document.getElementById("app");
-// IN-MEMORY CACHE OF ALL OWNER DATA; POPULATED ONCE ON LOAD, PATCHED IN-PLACE AFTER SAVES
-let ownerData = null;
+// IN-MEMORY CACHE OF ALL ADMIN DATA; POPULATED ONCE ON LOAD, PATCHED IN-PLACE AFTER SAVES
+let adminData = null;
 
 // PIG APPEARANCES
 const MSG_NO_PENDING = "Sem solicitações pendentes";
@@ -10,7 +10,7 @@ const MSG_NO_MEMBERS = "Nenhum membro ativo infelizmente.";
 const MSG_NO_UPCOMING = "Sem reservas agendadas";
 const MSG_NO_PAST = "Sem jogos passados";
 
-// MEMBERSHIP AND BOOKING CARDS
+// PASS AND BOOKING CARDS
 const MSG_MEMBER_SINCE = date => `Membro desde ${date}`;
 const MSG_NO_EXPIRY = "Sem data de expiração";
 const MSG_NO_NEXT_GAME = "Sem jogos agendados";
@@ -20,7 +20,7 @@ const MSG_CANCEL_WARNING = name => `Esta ação não pode ser revertida. ${name}
 
 const BADGE_RIBBON_SVG = `<svg viewBox="0 -26.5 172 110.5" aria-hidden="true"><path d="M-62.5 -26.5H114.9L157 84H-9.8Q-23 84 -27.4 71.6Z"/><path d="M140 44H172L161.6 71.6Q157 84 151.8 71.9Z" fill="#b08900"/></svg>`;
 
-const MEMBERSHIP_DURATION_OPTIONS = [
+const PASS_DURATION_OPTIONS = [
 	{ label: "Sem validade", months: "" },
 	{ label: "1 mês", months: 1 },
 	{ label: "3 meses", months: 3 },
@@ -43,23 +43,23 @@ const MIN_GAME_DURATION_OPTIONS = [
 
 // SWITCH BETWEEN THE PENDING / MEMBERS / RULES TABS; HIDES ALL VIEWS THEN SHOWS THE ONE REQUESTED
 function showView(view) {
-	document.querySelectorAll(".owner-view").forEach(el => el.hidden = true);
+	document.querySelectorAll(".admin-view").forEach(el => el.hidden = true);
 	const active = document.getElementById(`view-${view}`);
 	active.hidden = false;
-	document.querySelectorAll(".owner-nav-btn").forEach(btn => {
+	document.querySelectorAll(".admin-nav-btn").forEach(btn => {
 		btn.classList.toggle("active", btn.dataset.view === view);
 	});
 }
 
-// LOAD ALL OWNER DATA IN ONE BATCH; REDIRECTS TO PROFILE IF THE USER OWNS NO GROUPS
+// LOAD ALL ADMIN DATA IN ONE BATCH; REDIRECTS TO PROFILE IF THE USER OWNS NO GROUPS
 async function loadDashboard(user) {
-	const { data: ownedGroups } = await db.from("court_groups").select("id, membership_duration_months, slot_duration_minutes, min_game_duration_minutes, price_per_slot_cents").eq("owner_id", user.id);
-	if (!ownedGroups || ownedGroups.length === 0) {
+	const { data: adminGroups } = await db.from("court_groups").select("id, pass_duration_months, slot_duration_minutes, min_game_duration_minutes, price_per_slot_cents").eq("admin_id", user.id);
+	if (!adminGroups || adminGroups.length === 0) {
 		location.href = "profile.html";
 		return;
 	}
 
-	const groupIds = ownedGroups.map(g => g.id);
+	const groupIds = adminGroups.map(g => g.id);
 
 	// FROM MIDNIGHT SO THE SLOT PICKER STILL SHOWS TODAY'S IN-PROGRESS AND PAST GAMES, LIKE THE PLAYER'S
 	const todayStart = new Date();
@@ -73,11 +73,11 @@ async function loadDashboard(user) {
 		{ data: upcomingBookings },
 		{ data: allTimeBookings },
 	] = await Promise.all([
-		db.from("memberships")
+		db.from("passes")
 			.select("id, player_id, group_id, court_id, created_at")
 			.eq("status", "pending")
 			.in("group_id", groupIds),
-		db.from("memberships")
+		db.from("passes")
 			.select("id, player_id, group_id, court_id, approved_at, expires_at")
 			.eq("status", "approved")
 			.in("group_id", groupIds),
@@ -139,9 +139,9 @@ async function loadDashboard(user) {
 		bookingCountByPlayer[b.player_id] = (bookingCountByPlayer[b.player_id] || 0) + 1;
 	});
 
-	ownerData = {
+	adminData = {
 		user,
-		ownedGroups,
+		adminGroups,
 		pending: pending || [],
 		approved: approved || [],
 		courts: courts || [],
@@ -157,7 +157,7 @@ async function loadDashboard(user) {
 	};
 
 	document.getElementById("loading-msg").hidden = true;
-	document.querySelector(".owner-nav").hidden = false;
+	document.querySelector(".admin-nav").hidden = false;
 
 	renderPendingView();
 	renderMembersView();
@@ -166,7 +166,7 @@ async function loadDashboard(user) {
 	renderProfileView();
 	showView("bookings");
 
-	document.querySelectorAll(".owner-nav-btn").forEach(btn => {
+	document.querySelectorAll(".admin-nav-btn").forEach(btn => {
 		btn.addEventListener("click", () => showView(btn.dataset.view));
 	});
 	// PROFILE MOVED FROM THE NAV TO THE HEADER SKULL; NO NAV BUTTON IS ACTIVE WHILE IT'S OPEN
@@ -176,10 +176,10 @@ async function loadDashboard(user) {
 	});
 }
 
-// RENDER THE LIST OF PENDING MEMBERSHIP REQUESTS WITH APPROVE / DENY ACTIONS
+// RENDER THE LIST OF PENDING PASS REQUESTS WITH APPROVE / DENY ACTIONS
 function renderPendingView() {
 	const container = document.getElementById("view-pending");
-	const { pending, profiles, courtsByGroup } = ownerData;
+	const { pending, profiles, courtsByGroup } = adminData;
 
 	if (pending.length === 0) {
 		setPigAppearance(container, MSG_NO_PENDING);
@@ -191,21 +191,21 @@ function renderPendingView() {
 		const playerName = profile?.name || "Jogador desconhecido";
 		const courtNames = (courtsByGroup[m.group_id] || []).join(", ");
 		const date = new Date(m.created_at).toLocaleDateString("pt-PT");
-		const phoneLine = profile?.phone ? `<p class="membership-courts"><img src="images/icon_phone.svg" class="link-icon" alt="">${profile.phone}</p>` : "";
-		const nifLine = profile?.nif ? `<p class="membership-courts"><img src="images/icon_id.svg" class="link-icon" alt="">NIF ${profile.nif}</p>` : "";
+		const phoneLine = profile?.phone ? `<p class="ticket-line"><img src="images/icon_phone.svg" class="link-icon" alt="">${profile.phone}</p>` : "";
+		const nifLine = profile?.nif ? `<p class="ticket-line"><img src="images/icon_id.svg" class="link-icon" alt="">NIF ${profile.nif}</p>` : "";
 		return `
-			<div class="membership-card" data-id="${m.id}">
-				<div class="membership-hole"></div>
+			<div class="ticket" data-id="${m.id}">
+				<div class="ticket-hole"></div>
 				${BADGE_RIBBON_SVG}
-				<p class="membership-player">${playerName}</p>
-				<p class="membership-courts"><img src="images/icon_court.svg" class="link-icon" alt="">${courtNames}</p>
+				<p class="ticket-title">${playerName}</p>
+				<p class="ticket-line"><img src="images/icon_court.svg" class="link-icon" alt="">${courtNames}</p>
 				<div class="divider"></div>
-				<div class="membership-data">
-					<p class="membership-date"><img src="images/icon_calendar_pen.svg" class="link-icon" alt="">${date}</p>
+				<div class="ticket-data">
+					<p class="ticket-date"><img src="images/icon_calendar_pen.svg" class="link-icon" alt="">${date}</p>
 					${phoneLine}
 					${nifLine}
 				</div>
-				<div class="membership-actions">
+				<div class="ticket-actions">
 					<button class="approve-btn" data-id="${m.id}"><img src="images/icon_handshake.svg" class="link-icon" alt="">Aprovar</button>
 					<button class="button-shallow deny-btn" data-id="${m.id}"><img src="images/icon_military.svg" class="link-icon" alt="">Recusar</button>
 				</div>
@@ -218,7 +218,7 @@ function renderPendingView() {
 	}).join("");
 
 	container.querySelectorAll(".approve-btn").forEach(btn => {
-		btn.addEventListener("click", () => approveMembership(btn.dataset.id));
+		btn.addEventListener("click", () => approvePass(btn.dataset.id));
 	});
 
 	// DENY SHOWS A REASON INPUT INLINE RATHER THAN A SEPARATE PAGE
@@ -226,15 +226,15 @@ function renderPendingView() {
 		btn.addEventListener("click", () => {
 			document.getElementById(`deny-form-${btn.dataset.id}`).hidden = false;
 			btn.hidden = true;
-			// ONCE THE OWNER STARTS DENYING, APPROVE IS NO LONGER A CHOICE ON THIS CARD
-			btn.closest(".membership-card").querySelector(".approve-btn").hidden = true;
+			// ONCE THE ADMIN STARTS DENYING, APPROVE IS NO LONGER A CHOICE ON THIS CARD
+			btn.closest(".ticket").querySelector(".approve-btn").hidden = true;
 		});
 	});
 
 	container.querySelectorAll(".confirm-deny-btn").forEach(btn => {
 		btn.addEventListener("click", () => {
 			const reason = document.getElementById(`deny-reason-${btn.dataset.id}`).value.trim();
-			denyMembership(btn.dataset.id, reason);
+			denyPass(btn.dataset.id, reason);
 		});
 	});
 }
@@ -242,7 +242,7 @@ function renderPendingView() {
 // RENDER THE LIST OF APPROVED MEMBERS, SORTED MOST-RECENTLY-APPROVED FIRST
 function renderMembersView() {
 	const container = document.getElementById("view-members");
-	const { approved, profiles, courtsByGroup } = ownerData;
+	const { approved, profiles, courtsByGroup } = adminData;
 
 	if (approved.length === 0) {
 		setPigAppearance(container, MSG_NO_MEMBERS);
@@ -250,7 +250,7 @@ function renderMembersView() {
 	}
 
 	const sorted = [...approved].sort((a, b) => new Date(b.approved_at) - new Date(a.approved_at));
-	const { nextBookingByPlayer } = ownerData;
+	const { nextBookingByPlayer } = adminData;
 
 	container.innerHTML = sorted.map(m => {
 		const playerName = profiles[m.player_id]?.name || "Jogador desconhecido";
@@ -258,27 +258,27 @@ function renderMembersView() {
 		const approvedDate = m.approved_at ? new Date(m.approved_at).toLocaleDateString("pt-PT") : "—";
 		const expiresDate = m.expires_at ? new Date(m.expires_at).toLocaleDateString("pt-PT") : null;
 		const nextBooking = nextBookingByPlayer[m.player_id];
-		const bookingCount = ownerData.bookingCountByPlayer[m.player_id] || 0;
+		const bookingCount = adminData.bookingCountByPlayer[m.player_id] || 0;
 		const nextGameLabel = nextBooking ? gameLabel(nextBooking.start_at, nextBooking.end_at) : MSG_NO_NEXT_GAME;
 		return `
-			<div class="membership-card" data-id="${m.id}">
-				<div class="membership-hole"></div>
+			<div class="ticket" data-id="${m.id}">
+				<div class="ticket-hole"></div>
 				${BADGE_RIBBON_SVG}
-				<p class="membership-player">${playerName}</p>
-				<div class="membership-date-row">
-					<p class="membership-date">${MSG_MEMBER_SINCE(approvedDate)}</p>
+				<p class="ticket-title">${playerName}</p>
+				<div class="ticket-date-row">
+					<p class="ticket-date">${MSG_MEMBER_SINCE(approvedDate)}</p>
 					<a class="revoke-btn uppercase" style="color: var(--orange)" data-id="${m.id}" href="#">Revogar</a>
 				</div>
 				<div class="divider"></div>
-				<div class="membership-data">
-					<p class="membership-courts"><img src="images/icon_court.svg" class="link-icon" alt="">${courtNames}</p>
-					<p class="membership-date">${expiresDate ? `<img src="images/icon_trash.svg" class="link-icon" alt=""> ${expiresDate}` : MSG_NO_EXPIRY}</p>
-					<p class="membership-date"><img src="images/icon_calendar_tennis.svg" class="link-icon" alt="">${nextGameLabel}</p>
-					<p class="membership-date"><img src="images/icon_history.svg" class="link-icon" alt="">${bookingCount} ${bookingCount === 1 ? "reserva" : "reservas"}</p>
+				<div class="ticket-data">
+					<p class="ticket-line"><img src="images/icon_court.svg" class="link-icon" alt="">${courtNames}</p>
+					<p class="ticket-date">${expiresDate ? `<img src="images/icon_trash.svg" class="link-icon" alt=""> ${expiresDate}` : MSG_NO_EXPIRY}</p>
+					<p class="ticket-date"><img src="images/icon_calendar_tennis.svg" class="link-icon" alt="">${nextGameLabel}</p>
+					<p class="ticket-date"><img src="images/icon_history.svg" class="link-icon" alt="">${bookingCount} ${bookingCount === 1 ? "reserva" : "reservas"}</p>
 				</div>
 				<div class="revoke-confirm" id="revoke-confirm-${m.id}" hidden>
 					<p class="margin-top-10 margin-bottom-10">${MSG_REVOKE_WARNING(playerName)}</p>
-					<div class="membership-actions">
+					<div class="ticket-actions">
 						<button class="confirm-revoke-btn" data-id="${m.id}"><img src="images/icon_death.svg" class="link-icon margin-left-5" alt="">Revogar</button>
 						<button class="button-shallow cancel-revoke-btn" data-id="${m.id}">Cancelar</button>
 					</div>
@@ -298,12 +298,12 @@ function renderMembersView() {
 	container.querySelectorAll(".cancel-revoke-btn").forEach(btn => {
 		btn.addEventListener("click", () => {
 			document.getElementById(`revoke-confirm-${btn.dataset.id}`).hidden = true;
-			btn.closest(".membership-card").querySelector(".revoke-btn").hidden = false;
+			btn.closest(".ticket").querySelector(".revoke-btn").hidden = false;
 		});
 	});
 
 	container.querySelectorAll(".confirm-revoke-btn").forEach(btn => {
-		btn.addEventListener("click", () => revokeMembership(btn.dataset.id));
+		btn.addEventListener("click", () => revokePass(btn.dataset.id));
 	});
 }
 
@@ -314,14 +314,14 @@ let bookingsMode = "upcoming";
 // ACROSS ALL OWNED GROUPS. PAST = CONFIRMED GAMES THAT HAVE STARTED, SO ONE UNDERWAY COUNTS AS PAST.
 function renderBookingsView() {
 	const container = document.getElementById("view-bookings");
-	const { profiles, courtsById } = ownerData;
+	const { profiles, courtsById } = adminData;
 	const isPast = bookingsMode === "past";
 	const now = new Date();
 	const list = isPast
-		? ownerData.allTimeBookings
+		? adminData.allTimeBookings
 			.filter(b => b.status === "confirmed" && new Date(b.start_at) <= now)
 			.sort((a, b) => new Date(b.start_at) - new Date(a.start_at))
-		: ownerData.bookings;
+		: adminData.bookings;
 
 	container.innerHTML = `
 		<div class="folder-tabs">
@@ -346,7 +346,7 @@ function renderBookingsView() {
 	}
 
 	listEl.innerHTML = list.map(b => {
-		// RLS ONLY LETS OWNERS READ PROFILES OF CURRENT MEMBERS, SO A MISSING NAME MEANS THEY WERE REVOKED
+		// RLS ONLY LETS ADMINS READ PROFILES OF CURRENT MEMBERS, SO A MISSING NAME MEANS THEY WERE REVOKED
 		const playerName = profiles[b.player_id]?.name || "Ex-membro";
 		const courtName = courtsById[b.court_id] || "Campo desconhecido";
 		// PAST GAMES CAN'T BE CANCELLED (RLS BLOCKS IT ONCE start_at HAS PASSED), SO THEY GET NO CANCEL FLOW
@@ -354,20 +354,20 @@ function renderBookingsView() {
 		const cancelConfirm = isPast ? "" : `
 			<div class="cancel-booking-confirm" id="cancel-booking-confirm-${b.id}" hidden>
 				<p class="margin-top-10 margin-bottom-10">${MSG_CANCEL_WARNING(playerName)}</p>
-				<div class="membership-actions">
+				<div class="ticket-actions">
 					<button class="confirm-cancel-booking-btn" data-id="${b.id}"><img src="images/icon_death.svg" class="link-icon" alt="">Cancelar</button>
 					<button class="button-shallow back-cancel-booking-btn" data-id="${b.id}">Voltar</button>
 				</div>
 			</div>`;
 		return `
-			<div class="membership-card" data-id="${b.id}">
-				<div class="membership-player-row">
-					<p class="membership-player">${playerName}</p>
+			<div class="ticket" data-id="${b.id}">
+				<div class="ticket-title-row">
+					<p class="ticket-title">${playerName}</p>
 				</div>
-				<p class="membership-courts"><img src="images/icon_court.svg" class="link-icon" alt="">${courtName}</p>
+				<p class="ticket-line"><img src="images/icon_court.svg" class="link-icon" alt="">${courtName}</p>
 				<div class="divider ticket-divider"></div>
-				<div class="membership-date-row">
-					<p class="membership-date"><img src="images/${isPast ? "icon_history" : "icon_calendar_tennis"}.svg" class="link-icon" alt="">${gameLabel(b.start_at, b.end_at)}</p>
+				<div class="ticket-date-row">
+					<p class="ticket-date"><img src="images/${isPast ? "icon_history" : "icon_calendar_tennis"}.svg" class="link-icon" alt="">${gameLabel(b.start_at, b.end_at)}</p>
 					${cancelAnchor}
 				</div>
 				${cancelConfirm}
@@ -386,7 +386,7 @@ function renderBookingsView() {
 	container.querySelectorAll(".back-cancel-booking-btn").forEach(btn => {
 		btn.addEventListener("click", () => {
 			document.getElementById(`cancel-booking-confirm-${btn.dataset.id}`).hidden = true;
-			btn.closest(".membership-card").querySelector(".cancel-booking-anchor").hidden = false;
+			btn.closest(".ticket").querySelector(".cancel-booking-anchor").hidden = false;
 		});
 	});
 
@@ -397,12 +397,12 @@ function renderBookingsView() {
 
 // ONLY NOT-YET-STARTED BOOKINGS HAVE AN UPCOMING CARD, SO A TAP ON AN IN-PROGRESS OR PAST SLOT STAYS PUT
 function showBookingCard(bookingId) {
-	// THE PICKER ONLY LINKS TO UPCOMING GAMES, SO SWITCH BACK IF THE OWNER LEFT THE TAB ON "PAST"
-	if (bookingsMode !== "upcoming" && ownerData.bookings.some(b => b.id === bookingId)) {
+	// THE PICKER ONLY LINKS TO UPCOMING GAMES, SO SWITCH BACK IF THE ADMIN LEFT THE TAB ON "PAST"
+	if (bookingsMode !== "upcoming" && adminData.bookings.some(b => b.id === bookingId)) {
 		bookingsMode = "upcoming";
 		renderBookingsView();
 	}
-	const card = document.querySelector(`#view-bookings .membership-card[data-id="${bookingId}"]`);
+	const card = document.querySelector(`#view-bookings .ticket[data-id="${bookingId}"]`);
 	if (!card) return;
 	showView("bookings");
 	card.scrollIntoView({ block: "start" });
@@ -421,7 +421,7 @@ function showBookingCard(bookingId) {
 
 // SETS status TO cancelled AND REMOVES THE CARD; RLS ONLY ALLOWS THIS WHILE start_at IS STILL IN THE FUTURE
 async function cancelBooking(id) {
-	const card = document.querySelector(`#view-bookings .membership-card[data-id="${id}"]`);
+	const card = document.querySelector(`#view-bookings .ticket[data-id="${id}"]`);
 	const btn = card.querySelector(".confirm-cancel-booking-btn");
 	btn.disabled = true;
 	btn.textContent = "A cancelar...";
@@ -435,15 +435,15 @@ async function cancelBooking(id) {
 	}
 
 	// PATCH THE CACHE TOO — THE UPCOMING/PAST TOGGLE RE-RENDERS FROM IT AND WOULD BRING THE CARD BACK
-	ownerData.bookings = ownerData.bookings.filter(b => b.id !== id);
-	ownerData.todayBookings = ownerData.todayBookings.filter(b => b.id !== id);
-	ownerData.allTimeBookings.forEach(b => { if (b.id === id) b.status = "cancelled"; });
+	adminData.bookings = adminData.bookings.filter(b => b.id !== id);
+	adminData.todayBookings = adminData.todayBookings.filter(b => b.id !== id);
+	adminData.allTimeBookings.forEach(b => { if (b.id === id) b.status = "cancelled"; });
 	card.remove();
 }
 
-// DELETE THE MEMBERSHIP ROW AND REMOVE ITS CARD FROM THE DOM
-async function revokeMembership(id) {
-	const card = document.querySelector(`#view-members .membership-card[data-id="${id}"]`);
+// DELETE THE PASS ROW AND REMOVE ITS CARD FROM THE DOM
+async function revokePass(id) {
+	const card = document.querySelector(`#view-members .ticket[data-id="${id}"]`);
 	const btn = card.querySelector(".confirm-revoke-btn");
 	btn.disabled = true;
 	btn.textContent = "A revogar...";
@@ -452,28 +452,28 @@ async function revokeMembership(id) {
 		btn.innerHTML = '<img src="images/icon_death.svg" class="link-icon margin-left-5" alt="">Revogar';
 	};
 
-	// CANCEL THEIR UPCOMING GAMES FIRST: IF THIS FAILS THE MEMBERSHIP IS STILL INTACT, NOT HALF-REVOKED.
+	// CANCEL THEIR UPCOMING GAMES FIRST: IF THIS FAILS THE PASS IS STILL INTACT, NOT HALF-REVOKED.
 	// GAMES ALREADY UNDERWAY OR PLAYED STAY AS THEY ARE (RLS BLOCKS CANCELLING THOSE ANYWAY)
-	const membership = ownerData.approved.find(m => m.id === id);
-	const scope = membership.group_id ? { column: "group_id", value: membership.group_id } : { column: "court_id", value: membership.court_id };
+	const pass = adminData.approved.find(m => m.id === id);
+	const scope = pass.group_id ? { column: "group_id", value: pass.group_id } : { column: "court_id", value: pass.court_id };
 	const { data: cancelled, error: cancelError } = await db.from("bookings")
 		.update({ status: "cancelled" })
-		.eq("player_id", membership.player_id)
+		.eq("player_id", pass.player_id)
 		.eq(scope.column, scope.value)
 		.eq("status", "confirmed")
 		.gt("start_at", new Date().toISOString())
 		.select("id");
 	if (cancelError) { restoreBtn(); return; }
 
-	const { error } = await db.from("memberships").delete().eq("id", id);
+	const { error } = await db.from("passes").delete().eq("id", id);
 	if (error) { restoreBtn(); return; }
 
 	// PATCH THE CACHE SO THE BOOKINGS TAB, SLOT PICKERS AND STATS DROP THE CANCELLED GAMES WITHOUT A RELOAD
 	const cancelledIds = new Set((cancelled || []).map(b => b.id));
-	ownerData.approved = ownerData.approved.filter(m => m.id !== id);
-	ownerData.bookings = ownerData.bookings.filter(b => !cancelledIds.has(b.id));
-	ownerData.todayBookings = ownerData.todayBookings.filter(b => !cancelledIds.has(b.id));
-	ownerData.allTimeBookings.forEach(b => { if (cancelledIds.has(b.id)) b.status = "cancelled"; });
+	adminData.approved = adminData.approved.filter(m => m.id !== id);
+	adminData.bookings = adminData.bookings.filter(b => !cancelledIds.has(b.id));
+	adminData.todayBookings = adminData.todayBookings.filter(b => !cancelledIds.has(b.id));
+	adminData.allTimeBookings.forEach(b => { if (cancelledIds.has(b.id)) b.status = "cancelled"; });
 	renderBookingsView();
 	renderRulesView();
 
@@ -498,7 +498,7 @@ function makeTimeInput(field, value) {
 // LUNCH BREAK INPUTS: ONE PAIR FOR WEEKDAYS (REPRESENTATIVE: DAY 1) AND ONE FOR WEEKENDS (DAY 6).
 // THE SAME PAUSE IS APPLIED TO ALL DAYS IN EACH GROUP WHEN SAVING.
 function renderPauseSection(groupId) {
-	const hours = ownerData.openingHoursByGroup[groupId] || {};
+	const hours = adminData.openingHoursByGroup[groupId] || {};
 	const wd = hours[1] || {};
 	const we = hours[6] || {};
 	const wdStart = wd.pause_start ? wd.pause_start.slice(0, 5) : "";
@@ -533,7 +533,7 @@ function renderPauseSection(groupId) {
 
 // RENDERS ONE ROW PER DAY WITH AN OPEN/CLOSED TOGGLE AND TIME INPUTS
 function renderOpeningHoursSection(groupId) {
-	const hours = ownerData.openingHoursByGroup[groupId] || {};
+	const hours = adminData.openingHoursByGroup[groupId] || {};
 	return WEEKDAYS.map((dayName, dayIndex) => {
 		const h = hours[dayIndex] || {};
 		const isClosed = h.closed ?? false;
@@ -558,13 +558,13 @@ function renderOpeningHoursSection(groupId) {
 	}).join("");
 }
 
-// RENDER THE OWNER PROFILE: EMAIL, NAME FROM PROFILES IF AVAILABLE, AND LOGOUT
+// RENDER THE ADMIN PROFILE: EMAIL, NAME FROM PROFILES IF AVAILABLE, AND LOGOUT
 function renderProfileView() {
 	const container = document.getElementById("view-profile");
-	const { user } = ownerData;
+	const { user } = adminData;
 	container.innerHTML = `
-		<p class="membership-player">${user.email}</p>
-		<div class="membership-actions">
+		<p class="ticket-title">${user.email}</p>
+		<div class="ticket-actions">
 			<button id="logout-btn">Sair</button>
 		</div>
 	`;
@@ -581,7 +581,7 @@ function renderGroupStats(group) {
 	const nextMonthStart = new Date(now.getFullYear(), now.getMonth() + 1, 1);
 	const inMonth = start => { const s = new Date(start); return s >= monthStart && s < nextMonthStart; };
 
-	const groupBookings = ownerData.allTimeBookings.filter(b => b.group_id === group.id);
+	const groupBookings = adminData.allTimeBookings.filter(b => b.group_id === group.id);
 	const confirmed = groupBookings.filter(b => b.status === "confirmed");
 	const monthConfirmed = confirmed.filter(b => inMonth(b.start_at));
 	const monthPlayers = new Set(monthConfirmed.map(b => b.player_id));
@@ -617,9 +617,9 @@ function renderGroupStats(group) {
 // RENDERS THE RULES FORM FOR EACH OWNED GROUP; SAVE BUTTON IS DISABLED UNTIL AN INPUT CHANGES
 function renderRulesView() {
 	const container = document.getElementById("view-rules");
-	const { ownedGroups, courtsByGroup } = ownerData;
+	const { adminGroups, courtsByGroup } = adminData;
 
-	container.innerHTML = ownedGroups.map(group => {
+	container.innerHTML = adminGroups.map(group => {
 		const courtNames = (courtsByGroup[group.id] || []).join(", ");
 		const priceEuros = group.price_per_slot_cents != null ? (group.price_per_slot_cents / 100).toFixed(2) : "";
 
@@ -632,7 +632,7 @@ function renderRulesView() {
 				<div class="court-rules-body">
 
 				${renderGroupStats(group)}
-				<div id="owner-slot-picker-${group.id}"></div>
+				<div id="admin-slot-picker-${group.id}"></div>
 				<div class="divider"></div>
 
 				<div class="court-rules-grid">
@@ -650,7 +650,7 @@ function renderRulesView() {
 					</div>
 					<div>
 						<p class="court-rules-label">Validade do passe</p>
-						${makeSelect(MEMBERSHIP_DURATION_OPTIONS, group.membership_duration_months ?? "", "form-input rule-input", { field: "membership_duration_months" })}
+						${makeSelect(PASS_DURATION_OPTIONS, group.pass_duration_months ?? "", "form-input rule-input", { field: "pass_duration_months" })}
 					</div>
 				</div>
 				<div class="divider"></div>
@@ -668,16 +668,16 @@ function renderRulesView() {
 		`;
 	}).join("");
 
-	// OWNER SLOT PICKER PER GROUP — SAME COMPONENT AS THE PLAYER'S, READ-ONLY (NO TAPPING, NO ACTIONS)
-	ownedGroups.forEach(group => {
-		const openingHours = Object.values(ownerData.openingHoursByGroup[group.id] || {});
-		const bookings = ownerData.todayBookings
+	// ADMIN SLOT PICKER PER GROUP — SAME COMPONENT AS THE PLAYER'S, READ-ONLY (NO TAPPING, NO ACTIONS)
+	adminGroups.forEach(group => {
+		const openingHours = Object.values(adminData.openingHoursByGroup[group.id] || {});
+		const bookings = adminData.todayBookings
 			.filter(b => b.group_id === group.id)
-			.map(b => ({ ...b, player_name: ownerData.profiles[b.player_id]?.name || "Jogador desconhecido" }));
+			.map(b => ({ ...b, player_name: adminData.profiles[b.player_id]?.name || "Jogador desconhecido" }));
 		// COURTS IN A GROUP SHARE A SITE, SO THE FIRST ONE'S COORDINATES STAND IN FOR THE WHOLE GROUP'S FORECAST
-		const groupCourt = ownerData.courts.find(c => c.group_id === group.id);
-		const pickerEl = document.getElementById(`owner-slot-picker-${group.id}`);
-		const courtCount = ownerData.courts.filter(c => c.group_id === group.id).length;
+		const groupCourt = adminData.courts.find(c => c.group_id === group.id);
+		const pickerEl = document.getElementById(`admin-slot-picker-${group.id}`);
+		const courtCount = adminData.courts.filter(c => c.group_id === group.id).length;
 		renderSlotPicker(pickerEl, group, openingHours, null, bookings, null, false, null, true, groupCourt, courtCount);
 		// DELEGATED ON THE CONTAINER — THE PICKER REBUILDS ITS CELLS ON EVERY DAY SWITCH
 		pickerEl.addEventListener("click", e => {
@@ -722,7 +722,7 @@ function renderRulesView() {
 	enhanceSelects(container);
 }
 
-// SAVES COURT RULES AND OPENING HOURS IN PARALLEL; PATCHES ownerData IN MEMORY TO AVOID A RE-FETCH
+// SAVES COURT RULES AND OPENING HOURS IN PARALLEL; PATCHES adminData IN MEMORY TO AVOID A RE-FETCH
 async function saveRules(groupId, card, saveBtn) {
 	saveBtn.disabled = true;
 	saveBtn.textContent = "A guardar...";
@@ -777,58 +777,58 @@ async function saveRules(groupId, card, saveBtn) {
 		return;
 	}
 
-	const group = ownerData.ownedGroups.find(g => g.id == groupId);
+	const group = adminData.adminGroups.find(g => g.id == groupId);
 	if (group) Object.assign(group, updates);
 	hoursRows.forEach(r => {
-		if (!ownerData.openingHoursByGroup[groupId]) ownerData.openingHoursByGroup[groupId] = {};
-		ownerData.openingHoursByGroup[groupId][r.day_of_week] = r;
+		if (!adminData.openingHoursByGroup[groupId]) adminData.openingHoursByGroup[groupId] = {};
+		adminData.openingHoursByGroup[groupId][r.day_of_week] = r;
 	});
 	saveBtn.textContent = "Guardado";
 }
 
-// APPROVE A MEMBERSHIP; CALCULATES expiry FROM THE GROUP'S membership_duration_months IF SET
-async function approveMembership(id) {
-	const card = document.querySelector(`#view-pending .membership-card[data-id="${id}"]`);
+// APPROVE A PASS; CALCULATES expiry FROM THE GROUP'S pass_duration_months IF SET
+async function approvePass(id) {
+	const card = document.querySelector(`#view-pending .ticket[data-id="${id}"]`);
 	const btn = card.querySelector(".approve-btn");
 	btn.disabled = true;
 	btn.textContent = "A aprovar...";
 
-	const membership = ownerData.pending.find(m => m.id === id);
-	const group = ownerData.ownedGroups.find(g => g.id === membership?.group_id);
+	const pass = adminData.pending.find(m => m.id === id);
+	const group = adminData.adminGroups.find(g => g.id === pass?.group_id);
 
 	const approvedAt = new Date().toISOString();
 	let expiresAt = null;
-	if (group?.membership_duration_months) {
+	if (group?.pass_duration_months) {
 		const d = new Date(approvedAt);
-		d.setMonth(d.getMonth() + group.membership_duration_months);
+		d.setMonth(d.getMonth() + group.pass_duration_months);
 		expiresAt = d.toISOString();
 	}
 
-	const { error } = await db.from("memberships")
+	const { error } = await db.from("passes")
 		.update({ status: "approved", approved_at: approvedAt, expires_at: expiresAt })
 		.eq("id", id);
 
 	if (error) { btn.disabled = false; btn.innerHTML = '<img src="images/icon_handshake.svg" class="link-icon" alt="">Aprovar'; return; }
 
 	// FIRE THE NOTIFICATION EDGE FUNCTION AFTER THE DB WRITE SUCCEEDS
-	await db.functions.invoke("notify-membership", { body: { membershipId: id } });
+	await db.functions.invoke("notify-pass", { body: { passId: id } });
 	card.remove();
 }
 
-// DENY A MEMBERSHIP AND OPTIONALLY RECORD THE REASON; FIRES NOTIFICATION EDGE FUNCTION
-async function denyMembership(id, reason) {
-	const card = document.querySelector(`#view-pending .membership-card[data-id="${id}"]`);
+// DENY A PASS AND OPTIONALLY RECORD THE REASON; FIRES NOTIFICATION EDGE FUNCTION
+async function denyPass(id, reason) {
+	const card = document.querySelector(`#view-pending .ticket[data-id="${id}"]`);
 	const btn = card.querySelector(".confirm-deny-btn");
 	btn.disabled = true;
 	btn.textContent = "A recusar...";
 
-	const { error } = await db.from("memberships")
+	const { error } = await db.from("passes")
 		.update({ status: "denied", denied_reason: reason || null })
 		.eq("id", id);
 
 	if (error) { btn.disabled = false; btn.innerHTML = '<img src="images/icon_military.svg" class="link-icon" alt="">Confirmar recusa'; return; }
 
-	await db.functions.invoke("notify-membership", { body: { membershipId: id } });
+	await db.functions.invoke("notify-pass", { body: { passId: id } });
 	card.remove();
 }
 
