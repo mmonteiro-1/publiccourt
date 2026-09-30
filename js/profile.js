@@ -32,9 +32,6 @@ const MSG_PROGRESS_EMPTY = "O teu progresso aparece aqui depois do primeiro jogo
 const MSG_STAT_STREAK = n => `${n} ${n === 1 ? "semana" : "semanas seguidas"}`;
 const MSG_STAT_GAMES_VALUE = n => `${n} ${n === 1 ? "jogo" : "jogos"}`;
 const MSG_STAT_GAMES_HINT = "Nos últimos 6 meses";
-// PT-PT GROUPING ("26 500") KEEPS THE INFLATED NUMBERS READABLE
-const MSG_XP = xp => `${xp.toLocaleString("pt-PT")} XP`;
-const MSG_GAME_XP = xp => `+${MSG_XP(xp)}`;
 const MSG_XP_LEVEL = n => `Nível ${n}`;
 // TITLES ARE RANKS THAT GROW WITH THE NUMBER — A FIXED TOP TITLE WOULD READ AS MOCKERY OVER ONE GAME.
 // EVERY LEVEL SPANS THE SAME step (GAMES IN THE LAST 6 MONTHS / WEEKS IN A ROW), SO THE BAR SPLITS INTO EQUAL SEGMENTS.
@@ -55,10 +52,6 @@ const MSG_STAT_COURTS = n => `${n} ${n === 1 ? "campo" : "campos diferentes"}`;
 const MSG_STAT_COURTS_HINT = n => `Já ${n === 1 ? "recebeu" : "receberam"} os teus jogos`;
 const MSG_VIEW_PASSES = "Os teus passes";
 const MSG_NO_PASSES = "Não és membro de nenhum campo, infelizmente. Bora mudar isso com o teu primeiro passe!";
-const MSG_MEMBER_SINCE = date => `Membro desde ${date}`;
-const MSG_NO_EXPIRY = "Sem data de expiração";
-const MSG_NO_NEXT_GAME = "Sem jogos agendados";
-const MSG_BOOKING_COUNT = n => `${n} ${n === 1 ? "reserva" : "reservas"}`;
 const MSG_PASS_REQUESTED = date => `Pedido a ${date}`;
 const MSG_PASS_PENDING = "Solicitação enviada. Aguarda aprovação dos administradores do campo.";
 const MSG_PASS_DENIED = reason => reason ? `Solicitação recusada. Motivo: ${reason}` : "Solicitação recusada.";
@@ -260,8 +253,6 @@ async function fetchHistory(user) {
 // TAKES THE fetchHistory PROMISE SO THE PROGRESS VIEW CAN SHARE ONE FETCH
 // WITH NO GAMES YET, ONE FADED EXAMPLE CARD SHOWS HOW THE LIST WORKS. A FIRST GAME, SO ITS +1000 XP IS EXACTLY WHAT
 // THE PLAYER'S OWN FIRST GAME WILL EARN. REALLY DATED YESTERDAY, SO THE XP AND STREAK MATHS TREAT IT AS A RECENT PAST GAME
-// WRAPPED SO THE HOLE ISN'T A DIRECT CHILD OF THE CARD, WHICH WOULD TURN IT INTO THE LANYARD SLOT
-const PADLOCK_HTML = `<div class="padlock"><div class="ticket-hole"></div><img src="images/icon_padlock_color_cut.svg" alt=""></div>`;
 
 function dummyGame() {
 	const start = new Date();
@@ -376,8 +367,6 @@ function levelStars(scale, value) {
 // EACH DISTINCT COURT, AND EACH WEEK THAT EXTENDS A STREAK (A WEEK WITH A GAME RIGHT AFTER ANOTHER ONE — A LONE WEEK IS ALREADY PAID BY ITS GAMES)
 // INFLATED ×10 ON PURPOSE — BIG NUMBERS FEEL MORE REWARDING; THE LEVEL ENDS ARE ×10 TOO, SO DIFFICULTY IS UNCHANGED
 const XP_PER_INCREMENT = 500;
-// A PASS IS A BIGGER STEP THAN A GAME: IT MEANS THE PLAYER WAS VETTED AND APPROVED BY A COURT'S ADMIN
-const XP_PER_PASS = 3000;
 
 // THE SAME XP SPLIT PER GAME, OLDEST FIRST, SO EACH HISTORY CARD SHOWS WHAT IT EARNED AND THE CARDS ADD UP TO THE TOTAL:
 // A COURT'S BONUS GOES TO ITS FIRST GAME, A STREAK WEEK'S TO THE WEEK'S FIRST GAME
@@ -533,15 +522,6 @@ async function loadProgress(container, gamesPromise, teaserPromise, passAwardsPr
 	].join("");
 }
 
-// LANYARD STRAP DIPPING INTO THE BADGE SLOT: THE FRONT STRAP, THEN THE FOLD (THE STRAP'S BACK, SEEN AS IT TURNS INTO
-// THE SLOT), SHIFTED 4px/4px IN CSS. ITS DARK YELLOW IS HARDCODED ON PURPOSE — THERE'S NO VARIABLE FOR IT.
-// INLINE, NOT AN <img>, SO CSS CAN FILL THE STRAP WITH THE COLOUR VARIABLES.
-// THE VIEWBOX STARTS AT y -26.5 (= 10px AT THE RENDERED 65px WIDTH) SO THE STRAP RISES 10px ABOVE THE CARD; ITS TOP
-// EDGE KEEPS THE SAME SLANT. THE STRAP IS WIDENED ~20px (53 UNITS) ON ITS LEFT ONLY, SO THE FOLD STILL MEETS THE RIGHT EDGE;
-// BOTH PUSH THE LEFT CORNER OUTSIDE THE VIEWBOX (x -62.5), HENCE overflow: visible IN CSS.
-// THE STRAP'S BOTTOM-LEFT CORNER AND THE FOLD'S TIP ARE ROUNDED ~5px (13 UNITS): EACH CURVE STARTS 13 UNITS BEFORE THE CORNER
-// ALONG ONE EDGE AND ENDS 13 AFTER IT. THE STRAP'S BOTTOM-RIGHT STAYS SHARP
-const BADGE_RIBBON_SVG = `<svg viewBox="0 -26.5 172 110.5" aria-hidden="true"><path d="M-62.5 -26.5H114.9L157 84H-9.8Q-23 84 -27.4 71.6Z"/><path d="M140 44H172L161.6 71.6Q157 84 151.8 71.9Z" fill="#b08900"/></svg>`;
 
 // PASSES EVER APPROVED, FOR XP. NOT THE CURRENT PASSES: REVOKING DELETES THE ROW, AND XP NEVER DROPS.
 // pass_awards IS FILLED BY A TRIGGER ON passes, ONE ROW PER SCOPE EVER, SO A RE-APPROVAL ISN'T PAID TWICE
@@ -623,26 +603,6 @@ function requestCard(name, request, requested, courtId) {
 	`;
 }
 
-function passCard({ name, since, expires, nextGame, bookings, locked }) {
-	return `
-		<div class="ticket${locked ? " locked" : ""}">
-			${locked ? PADLOCK_HTML : ""}
-			<div class="ticket-hole"></div>
-			${BADGE_RIBBON_SVG}
-			<p class="ticket-title">${name}</p>
-			<div class="ticket-date-row">
-				<p class="ticket-date">${MSG_MEMBER_SINCE(since)}</p>
-				<span class="game-xp">${MSG_GAME_XP(XP_PER_PASS)}</span>
-			</div>
-			<div class="divider"></div>
-			<div class="ticket-data">
-				<p class="ticket-date">${expires ? `<img src="images/icon_trash.svg" class="link-icon" alt=""> ${expires}` : MSG_NO_EXPIRY}</p>
-				<p class="ticket-date"><img src="images/icon_calendar_tennis.svg" class="link-icon" alt="">${nextGame ?? MSG_NO_NEXT_GAME}</p>
-				<p class="ticket-date"><img src="images/icon_history.svg" class="link-icon" alt="">${MSG_BOOKING_COUNT(bookings)}</p>
-			</div>
-		</div>
-	`;
-}
 
 // THE VISITOR'S EXAMPLE PASS. DATES ARE 30/02, A DAY THAT DOESN'T EXIST, SO IT READS AS AN EXAMPLE
 function dummyPassCard() {

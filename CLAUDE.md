@@ -25,7 +25,9 @@ js/utils.js           — shared helpers: setPigAppearance, gameLabel, formatTim
 js/secondary-card.js  — secondary info card (rules, hours, city)
 js/slot-picker.js     — booking slot selection UI
 js/success.js         — every success screen: copy, SUCCESS presets, showSuccess() renderer (countdown + reload)
-js/tear-reveal.js     — showTearReveal({ label, onDone }): full-screen tear-strip "parcel" over the page; drag to tear, box splits, page revealed
+js/tear-reveal.js     — showTearReveal({ label, onDone }): full-screen tear-strip "parcel" over the page; drag to tear, box splits, page revealed — the wrapper for surprises
+js/reveals.js         — surprises: REVEALS presets, showReveal() (scene layer + parcel), checkSurprises() run on load (court list, court page, profile)
+js/pass-card.js       — passCard() + its copy and constants: the one pass ticket, shared by the profile and the pass-approved surprise
 js/weather.js         — Open-Meteo daily forecast → one icon per day (rain/sunny/part_cloudy/cloudy), 3h localStorage cache
 js/config.js          — Supabase credentials + db client
 css/styles.css        — single global stylesheet
@@ -93,6 +95,10 @@ One concept, one word per layer. **Code** is what identifiers, comments, docs an
 | Teaser | teaser | — | The line inside a visitor's trading card ("Já tens N XP à tua espera") |
 | Claim | claim | — | Adopting a device's unclaimed walk-ins on login |
 | Pig appearance | pig appearance | — | The pig with a message (`setPigAppearance`) |
+| Parcel | parcel, tear strip | encomenda | The sealed full-screen overlay the player tears open (`showTearReveal`). Only ever wraps a surprise |
+| Surprise | surprise | — | A rare, important moment (pass approved, level up…) played once: a parcel, then its scene. See "Surprises" |
+| Scene | scene | — | What a surprise reveals: a full-screen layer of its own, independent of the page underneath (`REVEALS` presets) |
+| Revealed | revealed | — | A surprise the player has torn open — a `revealed_surprises` row (`kind` + `ref`); it never plays again for that event |
 
 **Migration (complete)** — code, copy and database now follow the glossary. How it was done, one phase at a time, each tested before the next:
 1. ~~Glossary~~ (this section)
@@ -141,6 +147,12 @@ One concept, one word per layer. **Code** is what identifiers, comments, docs an
 - Filled only by the `award_pass` trigger (`security definer`) after insert or status update on `passes` when `status = 'approved'`; existing approved passes were backfilled
 - Unique index `pass_awards_once` on `(player_id, coalesce(group_id, 0), coalesce(court_id, 0))` — one award per scope ever; the trigger's `on conflict do nothing` skips re-approvals
 - RLS: players SELECT own only; nobody inserts, updates or deletes directly
+
+**revealed_surprises** — `player_id uuid, kind text, ref text, revealed_at timestamptz`
+- One row per surprise a player has torn open, of any kind (see "Surprises"). Primary key `(player_id, kind, ref)`; `player_id` defaults to `auth.uid()`
+- `kind` says what happened, `ref` which one: `pass_approved` → the `passes.id`; `level_up` → the level number; `diamond` → the skill
+- Backfilled with every pass approved before the feature, so no existing member gets a parcel for an old pass
+- RLS: players read and insert their own only. Faking a row only skips their own surprise
 
 **profiles** — `id uuid, name text, phone text, nif text, created_at timestamptz`
 - `id` = `auth.users.id`; created on first onboarding
@@ -361,6 +373,32 @@ Seasons and time-limited events give the ranking a rhythm: something new to chas
   - Complexity: events are a multiplier on top of the season points, with a scope (all players, a city, a group, a court) and a date range. One small table (`events`: scope, starts_at, ends_at, multiplier, rule), not new logic per event
 - **First step:** after the weekly league, one season in one court group with a single double-points weekend. That's enough to see whether players notice and play more before building an event calendar.
 
+### Surprises — tear-strip reveals for important moments
+
+Decided, being built. The tear strip (`tear-reveal.js`) is a promise that something special is inside. If it revealed whatever page happened to be underneath — a random court page, a pass sitting on the profile — the promise falls flat and players learn to ignore it. So a parcel always reveals a **scene** made for that moment, never the page.
+
+- **A scene is its own layer**, between the page and the parcel. Tearing reveals the scene; the page stays hidden behind it. So the check can run on any page (court list, court page, profile) with no redirects
+- **One preset per kind of surprise** in a new `js/reveals.js`, like `SUCCESS` in `success.js`: `showReveal(REVEALS.passApproved({ … }))`. A new important event means a new preset and scene, never an inline one
+- **Every scene ends in one next step** (e.g. "Reservar agora" to the group's court). A surprise that ends in a dead end wastes the moment. Always (decided) — the pass-approved scene hides its "Reservar agora" only until the button's placement is found
+- **Detected on the next app open**, not in real time: one small query per page load. There are no push notifications, and players rarely watch at the moment an admin acts. Realtime (Supabase websocket) can come later on top if instant ever matters
+- **Played once per event:** marked revealed only after the strip is torn, so a parcel left unopened waits for the next visit. Recorded generically in `revealed_surprises` (`kind` + `ref`), not per feature — level ups and diamonds have no database row, they're computed in JS. For a pass the `ref` is the `passes.id`, not the group, so a pass revoked and later re-approved is a new row and plays again
+- **Keep it rare**, or it stops being special. Deserve a parcel: pass approved, level up, first diamond on a skill, end of a season (later). Don't: booking confirmed, walk-in started — those have their success screens
+- **Tone:** the pig's voice carries it; no confetti (see "Tone" under Player progress)
+- **Motion:** plain CSS 3D, cheap on phones; a simpler version for players who ask their phone for reduced motion
+
+**First scene — pass approved: the pig lifts the prize.** A pig hand rises from the bottom of the screen and lifts the pass up like a champion lifting a medal, with excitement. It's Campo Livre's own voice — the cheeky pig, excited *for* the player — where a turning card was a generic effect. The same hand can lift every future prize (a level badge, a diamond, a season trophy), so one drawing becomes the signature of all surprises, and it's the natural first job for the Rive todo. Later: holding it by the lanyard like a medal ribbon, the badge swinging below the fist (left out for now, too complex); +3000 XP count-up and a level-up line; one pig line.
+
+**Built so far:** "Passe aprovado" + "Já és membro. Bora jogar?" high on the screen ("Reservar agora" hidden for now — `next: null` in the preset, the original line kept in a comment), then the pass lifted by the pig hand (`images/pig_hand.svg`, `.prize-arm`) below them, and "Agora não" as a fixed `.info-link` without its pink bar, so the hand shows behind it. A preset gives its `text` and `prize` separately and `showReveal` lays them out, so every scene keeps that order; the scene starts from the top rather than centring, leaving the lower screen for the prize and hand.
+
+**The prize lift** (`.prize-lift` / `.prize-bob` / `.prize-arm` in `styles.css`, markup in `REVEALS.passApproved`):
+- Beats, timed from the burst (`onBurst` in `tear-reveal.js`, the instant the box bursts — not `onDone`, which waits for the peanuts to fade): 0.25s wait → a spring: 0.6s rise from just below the screen (`--lift-from`, measured in `showReveal` on the prize itself: its top edge starts on the screen's bottom edge and enters the moment it moves — a fixed 100vh wasted the start below the screen) that slows into a 30px overshoot, dips 5px below its spot and comes to rest by 2.15s — one swing only; a 45 / 10 / 5px spring floated like a hand on water. Every turnaround eases — an ease-in into the peak stopped as if it hit a ceiling. The idle already runs from the peak (0.85s), on its own layer and properties, so it layers over the spring instead of waiting for it: heavy breathing (a quick 4px inhale up, a slower exhale down, every 1.4s, on `translate`) plus a slow rock (±1.5deg every 4.5s, on `rotate`, pivoting on an imaginary elbow 300px below the card, so it swings sideways and tilts at once). Separate properties so the two don't fight; the two lengths never line up the same way twice, so it reads as alive. The lift itself is vertical only — sideways shakes during it were tried and dropped
+- Two layers because each animates `transform`: `.prize-lift` runs the one-off lift, `.prize-bob` inside it the breathing. Only `transform` animates, so it runs on the GPU
+- Held below the screen until the box bursts (`.opened` on the scene), so the lift plays while the player is looking. Already in place and still under `prefers-reduced-motion: reduce`
+- The arm overlaps the card's bottom edge in front of it, as if gripping, and runs off the bottom of the screen — the scene clips instead of scrolling (`overflow: hidden`), and "Reservar agora" sits above the arm (`z-index`) so the arm can't take its taps
+- A loose prize, not a badge: the lanyard strap is hidden inside `.prize-bob`
+- **Drawing the pig hand:** SVG in the pig's style (same pink, black outline); the forearm entering from the bottom edge with a closed fist at the top; ideally two layers — the back of the fist behind the prize and the fingers in front, so it reads as gripping rather than stuck on; fist about a third of the card's width (card max 400px, so ~120–140px across)
+- **Tried and dropped: a 3D turning card** (plain CSS `rotateY`, thickness, two faces). It worked and was cheap, but read as a bit cheesy
+
 ### Court suggestions in the passes view
 
 Future exploration, not planned yet. The player's passes view is a natural place to suggest and advertise courts, with prices and promos. The player is already thinking about which courts they belong to, so "courts you could join" reads as help rather than an ad.
@@ -462,7 +500,7 @@ Supabase Auth is already included — magic link is a built-in provider, no extr
 - **No buttons on the previews:** the progress view has none, and the blank history has none either — an "Encontrar campo" under the dummy card made the card itself look clickable. The only button is "Fazer login" under a visitor's real history
 - **The history proves the number:** each card shows the XP it earned, so the teaser total can be traced game by game. The single dummy card shows +1000, matching the blank visitor's promise
 - **The dummy progress is the dummy first game** (the same "Tua primeira partida" as the history card), so the XP is 1000 and every level is 1, for every visitor. On top of it, `loadProgress`'s teaser mode pins the trading card's four ratings at 1 and the skill cards' numbers at 0 — an empty starting point. The trading card gets its own character, `XP_VISITOR_INFO` ("Raquete emprestada"), so it never passes for a real level-1 player's "Apanha-bolas"; the teaser sits inside it, under the XP bar
-- **The XP bar loops forever** (`.locked .xp-bar div`, `fill-width`): 1.5s growing from empty to 50% with an aggressive ease-in, 5s holding, 1.5s back down. It animates `width` directly — animating `--fill` itself needs `@property` and jumped instead of moving
+- **The XP bar loops forever** (`.locked .xp-bar div`, `fill-grow`): 1.5s growing from empty to 50% with an aggressive ease-in, 5s holding, 1.5s back down. It scales the fill with `transform: scaleX()` from its left edge, which runs on the GPU — animating `width` forced a layout on every frame, forever, and animating `--fill` itself needs `@property` and jumped. **Rule for any looping or long animation: only `transform` and `opacity`**
 
 **Redirect URL allowlist:** Supabase only returns magic links to URLs listed in Authentication → URL Configuration → Redirect URLs; anything else falls back to the Site URL. Site URL is `https://publiccourt.vercel.app`. The list (`*` matches anything except `.` and `/`):
 
@@ -517,7 +555,20 @@ Sessions are kept alive indefinitely for active users. Supabase auto-refreshes t
   - [ ] Email notification to player when revoked — send before deleting the row so we still have their email
   - [ ] Allow admin to set pass duration per member on approval (override the group default)
   - [ ] In-app notification card for pass status changes (accept, deny, revoke) — dedicated card UI, not just inline state on court page
-  - [ ] Tear-strip reveal (tear-to-open) for important notifications: the notification arrives sealed like an Amazon-style parcel, and as the player drags up they pull the tear strip away to open it (the tear follows the finger; releasing early snaps it back)
+  - [x] Tear-strip reveal (tear-to-open) for important notifications: the notification arrives sealed like an Amazon-style parcel, and as the player drags up they pull the tear strip away to open it (the tear follows the finger; releasing early snaps it back) — built as `tear-reveal.js`, now the wrapper for surprises
+  - [ ] Surprises (see "Surprises — tear-strip reveals for important moments" under High Level Thoughts)
+    - [x] SQL: generic `revealed_surprises` table, backfilled with every pass approved before the feature
+    - [x] Label on the parcel: always the same, "Recebeste encomenda. Tu sabes o que fazer." (the `tear-reveal.js` default) for every surprise — the parcel never hints at what's inside
+    - [ ] Find a placement for the pass-approved scene's "Reservar agora" and bring it back (every scene ends in a next step)
+    - [ ] Pass-approved scene as a static mockup first (stage, spotlight, turning pass, XP count-up, level-up line, pig, "Reservar agora") — judge the look before wiring it
+      - [x] ~~Simplest 3D card~~ — built, then dropped as a bit cheesy
+      - [x] Prize lift with a placeholder arm: lift, excited shakes, idle bob (see "The prize lift")
+      - [x] Draw the pig hand (see "Drawing the pig hand") and swap it in for `.prize-arm` — `images/pig_hand.svg`, two groups on one artboard: `#hand` (forearm, cuff, palm, fingers) drawn behind the prize and `#thumb` in front, each as its own `<svg><use href="images/pig_hand.svg#…">` with the same viewBox and `.prize-arm` box, so they stack exactly. Page order is the layering (hand, prize, thumb), no `z-index`. `<use>` ignores ancestors' transforms, so each group carries the whole transform itself (the export's two wrappers folded into one) — keep that when re-exporting. The prize sits 40px deeper into the grip — done by lifting the hand (`calc(-11% - 40px)` on `.prize-arm`), not by nudging the card down, which moved the whole prize lower on screen — and is solid white (`.prize-bob > .ticket { background: var(--white) }`) — the ticket's `--muted` let the hand behind it show through
+    - [x] `js/reveals.js`: `REVEALS` presets + `showReveal()` renderer (scene layer, then the parcel on top). Proof of concept: the scene is the pass ticket exactly as the profile draws it (`passCard`, moved to `js/pass-card.js`), "Reservar agora" to the group's first court, and "Agora não"
+    - [x] Check on open: court list, court page and profile compare the player's approved passes with their `pass_approved` rows in `revealed_surprises`; tearing inserts the row
+    - [ ] Level-up and diamond surprises need a baseline: the first time their check runs, record the player's current level and diamonds silently, so nobody gets a parcel for something done months ago
+    - [x] Reduced-motion version of the scene — the prize sits already in place, still, under `prefers-reduced-motion: reduce`
+    - [ ] Next surprises, one at a time: level up, first diamond on a skill; later end of a season
 - [ ] Support multiple admins per court group (receptionists)
   - [ ] Create `court_group_members (group_id UUID, user_id UUID)` table
   - [ ] Migrate existing `court_groups.owner_id` rows into `court_group_members`

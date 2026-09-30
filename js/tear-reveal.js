@@ -1,11 +1,11 @@
 // TEAR-STRIP REVEAL: A FULL-SCREEN "PARCEL" ON TOP OF EVERYTHING, PACKED WITH STYROFOAM PEANUTS. THE PLAYER DRAGS THE TEAR
 // STRIP UP FROM THE BOTTOM; ONCE TORN, THE STRIP FLIES OFF, THE BOX VANISHES AS THE PACKING BURSTS OUT AT THE VIEWER OVER
-// THE PAGE BEHIND IT, AND ONCE THE PEANUTS HAVE FADED THE OVERLAY REMOVES ITSELF. USAGE: showTearReveal() OR showTearReveal({ label: "…", onDone: () => … }).
+// THE PAGE BEHIND IT, AND ONCE THE PEANUTS HAVE FADED THE OVERLAY REMOVES ITSELF. USAGE: showTearReveal() OR showTearReveal({ label: "…", onBurst: () => …, onDone: () => … }). onBurst FIRES THE INSTANT THE BOX BURSTS (FOR WHAT'S REVEALED TO START MOVING), onDone ONCE THE OVERLAY IS GONE.
 // STYLES: THE "TEAR-STRIP REVEAL" BLOCK IN styles.css
 
 const MSG_TEAR_LABEL = "Recebeste encomenda. Tu sabes o que fazer.";
 
-function showTearReveal({ label = MSG_TEAR_LABEL, onDone } = {}) {
+function showTearReveal({ label = MSG_TEAR_LABEL, onBurst, onDone } = {}) {
 	const overlay = document.createElement("div");
 	overlay.className = "tear-reveal";
 	overlay.setAttribute("aria-hidden", "true");
@@ -234,6 +234,7 @@ function showTearReveal({ label = MSG_TEAR_LABEL, onDone } = {}) {
 			tab.remove();
 			setTimeout(() => {
 				burst();
+				onBurst?.();
 				setTimeout(() => {
 					overlay.remove();
 					onDone?.();
