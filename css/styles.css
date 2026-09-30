@@ -2360,9 +2360,9 @@ input[type="time"]::-webkit-date-and-time-value {
 /* THE PIG LIFTING THE PRIZE LIKE A CHAMPION — THE PASS-APPROVED SURPRISE. PLACEHOLDER ARM UNTIL THE PIG HAND IS DRAWN.
    TWO LAYERS BECAUSE EACH ANIMATES transform: .prize-lift DOES THE ONE-OFF LIFT, .prize-bob THE ENDLESS BREATHING.
    ONLY transform-TYPE PROPERTIES ANIMATE, SO IT RUNS ON THE GPU. TIMED FROM THE BURST (.opened, SEE BELOW):
-   0.25s WAIT → 0.6s RISE PAST ITS SPOT → A SPRING BACK INTO IT, WITH THE IDLE ALREADY RUNNING FROM THE PEAK (0.85s) */
+   0.25s WAIT → 0.4s RISE STRAIGHT INTO ITS SPOT, NO OVERSHOOT, WITH THE IDLE TAKING OVER THE MOMENT IT ARRIVES (0.65s) */
 .prize-lift {
-	animation: prize-lift 3.1s 0.25s both;
+	animation: prize-lift 0.4s 0.25s both;
 }
 
 /* THE IDLE IS TWO MOTIONS AT ONCE, ON SEPARATE PROPERTIES SO THEY DON'T FIGHT: BREATHING ON translate, AND A SLOW ROCK ON rotate.
@@ -2371,7 +2371,7 @@ input[type="time"]::-webkit-date-and-time-value {
 .prize-bob {
 	position: relative;
 	transform-origin: 50% calc(100% + 300px);
-	animation: prize-breathe 1.4s 0.85s infinite, prize-rock 4.5s 0.85s ease-in-out infinite;
+	animation: prize-breathe 1.4s 0.65s infinite, prize-rock 4.5s 0.65s ease-in-out infinite;
 }
 
 /* A LOOSE PRIZE, NOT A BADGE ON A NECK: NO LANYARD STRAP (THE SVG AFTER THE SLOT) */
@@ -2401,37 +2401,50 @@ input[type="time"]::-webkit-date-and-time-value {
 	background: var(--white);
 }
 
-/* VERTICAL ONLY, LIKE A SPRING: SHOOTS UP FROM BELOW THE SCREEN, SLOWS INTO A 30px OVERSHOOT, DIPS 5px BELOW ITS SPOT, THEN
-   COMES TO REST. EVERY TURNAROUND EASES (NO SEGMENT ARRIVES AT FULL SPEED), SO IT NEVER STOPS AS IF IT HIT A CEILING — AN EASE-IN
-   INTO THE PEAK DID EXACTLY THAT. KEPT TO ONE SWING: A 45 / 10 / 5px SPRING FLOATED LIKE A HAND ON WATER.
-   OVER THE 3.1s: PEAK AT 0.6s (19%), DIP AT 1.1s (35%), AT REST BY 1.9s (60%) */
+/* VERTICAL ONLY: SHOOTS UP FROM BELOW THE SCREEN AND STOPS AT ITS SPOT — NO OVERSHOOT, NO SPRING BACK. A GENTLE START, THEN
+   A SOFT STOP SO IT NEVER HITS A CEILING; THE BREATHING PICKS UP FROM THERE */
 @keyframes prize-lift {
-	/* --lift-from (SET BY reveals.js) PUTS THE PRIZE'S TOP EDGE ON THE SCREEN'S BOTTOM EDGE; 100vh IS ONLY THE FALLBACK.
-	   FAST OFF THE MARK, SOFT INTO THE PEAK — A SPRING LETTING GO */
-	0% { transform: translateY(var(--lift-from, 100vh)); animation-timing-function: cubic-bezier(0.3, 0.6, 0.4, 1); }
-	19% { transform: translateY(-30px); animation-timing-function: ease-in-out; }
-	35% { transform: translateY(5px); animation-timing-function: ease-in-out; }
-	60%, 100% { transform: translateY(0); }
+	/* --lift-from (SET BY reveals.js) PUTS THE PRIZE'S TOP EDGE ON THE SCREEN'S BOTTOM EDGE; 100vh IS ONLY THE FALLBACK */
+	0% { transform: translateY(var(--lift-from, 100vh)); animation-timing-function: cubic-bezier(0.45, 0.6, 0.4, 1); }
+	100% { transform: translateY(0); }
 }
 
-/* HEAVY BREATHING: A QUICK SHALLOW INHALE UP, A SLOWER EXHALE DOWN, ROUND AND ROUND — SUBTLE, 4px (OFF THE 5px GRID ON PURPOSE: 5px BOBBED A TOUCH TOO MUCH) */
+/* HEAVY BREATHING: A QUICK SHALLOW INHALE UP, A SLOWER EXHALE DOWN, ROUND AND ROUND — SUBTLE, 3px (OFF THE 5px GRID ON PURPOSE: 5px AND 4px BOBBED TOO MUCH) */
 @keyframes prize-breathe {
 	0% { translate: 0 0; animation-timing-function: ease-out; }
-	35% { translate: 0 -4px; animation-timing-function: ease-in-out; }
+	35% { translate: 0 -3px; animation-timing-function: ease-in-out; }
 	100% { translate: 0 0; }
 }
 
-/* THE ROCK: A LITTLE TO ONE SIDE, BACK THROUGH THE MIDDLE, A LITTLE TO THE OTHER — 1.5deg ON A 300px ELBOW ≈ 8px OF SWING */
+/* THE ROCK: A LITTLE TO ONE SIDE, BACK THROUGH THE MIDDLE, A LITTLE TO THE OTHER — 0.5deg ON A 300px ELBOW ≈ 3px OF SWING */
 @keyframes prize-rock {
 	0%, 100% { rotate: 0deg; }
-	25% { rotate: 1.5deg; }
-	75% { rotate: -1.5deg; }
+	25% { rotate: 0.5deg; }
+	75% { rotate: -0.5deg; }
 }
 
 /* HELD BELOW THE SCREEN UNTIL THE BOX BURSTS (reveals.js ADDS .opened FROM tear-reveal's onBurst); THE DELAYS ABOVE COUNT FROM THEN */
 .reveal-scene:not(.opened) .prize-lift,
 .reveal-scene:not(.opened) .prize-bob {
 	animation-play-state: paused;
+}
+
+/* THE FALLING PEANUTS (rainPeanuts IN reveals.js). z-index: -1 INSIDE THE SCENE'S OWN STACKING CONTEXT (IT HAS A z-index) PUTS
+   THE SMALL ONES OVER THE PINK BUT UNDER THE TEXT, THE PRIZE AND THE HAND; THE BIG ONES GO OVER EVERYTHING, BUTTONS INCLUDED (1),
+   AND LET TAPS THROUGH */
+.reveal-rain {
+	position: absolute;
+	inset: 0;
+	z-index: -1;
+	pointer-events: none;
+}
+
+.reveal-rain.in-front {
+	z-index: 2;
+}
+
+.reveal-rain .tear-peanut {
+	top: 0;
 }
 
 /* A PRIZE ALREADY IN PLACE, STILL, FOR PLAYERS WHO ASK THEIR PHONE FOR LESS MOTION */
@@ -2492,13 +2505,15 @@ input[type="time"]::-webkit-date-and-time-value {
 	background: none;
 }
 
-/* ONE STYROFOAM PEANUT: A WHITE PILL; THE INSET SHADE ALONG ITS BOTTOM GIVES IT SOME VOLUME */
+/* ONE STYROFOAM PEANUT: A WHITE BAR WITH SOFT BUTT CAPS (SLIGHTLY ROUNDED CORNERS, NOT A FULL PILL); THE INSET SHADE ALONG ITS
+   BOTTOM GIVES IT SOME VOLUME. NO TEXTURE: AN SVG NOISE GRAIN, AND EVEN A FEW RADIAL GRADIENTS, MADE iOS WEBKIT DROP FRAMES AS
+   THE BURST'S PEANUTS GREW IN PERSPECTIVE, AND THE BURST SKIPPED AHEAD AS IF SPED UP */
 .tear-peanut {
 	position: absolute;
 	width: 105px;
 	height: 45px;
 	border: 2px solid var(--black);
-	border-radius: 100px;
+	border-radius: 15px;
 	background: var(--white);
 	box-shadow: inset 0 -15px 0 var(--muted-black);
 }

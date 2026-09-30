@@ -65,9 +65,39 @@ function showReveal({ kind, ref, text, prize, next }, { record = true } = {}) {
 	// .opened STARTS THE SCENE'S MOTION THE INSTANT THE BOX BURSTS — BUILT UNDER THE SEALED PARCEL, IT WOULD OTHERWISE HAVE BEEN
 	// PLAYING FOR AS LONG AS THE PLAYER TOOK TO TEAR THE STRIP. THE SCENE'S OWN CSS DELAYS TIME EACH BEAT FROM THAT MOMENT
 	showTearReveal({
-		onBurst: () => layer.classList.add("opened"),
+		onBurst: () => {
+			layer.classList.add("opened");
+			rainPeanuts(layer);
+		},
 		onDone: async () => { if (record) await db.from("revealed_surprises").insert({ kind, ref }); },
 	});
+}
+
+// THE LAST OF THE PACKING: ONCE THE HAND IS UP AND THE BURST HAS CLEARED (1s), PEANUTS FALL FROM ABOVE THE SCREEN TO BELOW IT —
+// THE SAME PILL AS THE BURST (.tear-peanut). TWO LAYERS FOR DEPTH: 30 SMALL ONES BEHIND THE HAND, 10 BIG ONES IN FRONT OF IT.
+// EASED IN LIKE GRAVITY, STAGGERED SO THEY DON'T LAND AS A ROW. fill: "both" KEEPS EACH ONE ABOVE THE SCREEN DURING ITS DELAY;
+// EACH IS REMOVED ONCE IT HAS FALLEN OUT OF SIGHT
+function rainPeanuts(layer) {
+	if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+	const rand = (min, max) => min + Math.random() * (max - min);
+	const drop = (count, minScale, maxScale, where) => {
+		const rain = layer.appendChild(document.createElement("div"));
+		rain.className = `reveal-rain ${where}`;
+		for (let i = 0; i < count; i++) {
+			const peanut = rain.appendChild(document.createElement("div"));
+			peanut.className = "tear-peanut";
+			// ONE PER SLICE OF THE WIDTH, JITTERED, SO THEY SPREAD ACROSS THE SCREEN INSTEAD OF CLUMPING
+			peanut.style.left = `${(i + rand(0, 1)) * innerWidth / count}px`;
+			const scale = rand(minScale, maxScale), turn = rand(0, 180);
+			const at = (y, spin) => `translate(-50%, ${y}px) rotate(${turn + spin}deg) scale(${scale})`;
+			peanut.animate(
+				[{ transform: at(-100, 0) }, { transform: at(innerHeight + 100, rand(-180, 180)) }],
+				{ duration: rand(1200, 1800), delay: 1000 + rand(0, 600), easing: "cubic-bezier(0.4, 0, 0.8, 0.6)", fill: "both" },
+			).finished.then(() => peanut.remove());
+		}
+	};
+	drop(30, 0.3, 0.5, "behind");
+	drop(10, 0.8, 1, "in-front");
 }
 
 // DEBUG: PLAYS A SURPRISE WITH DUMMY DATA, ON DEMAND — ADD ?surprise TO ANY PAGE THAT LOADS THIS FILE (?surprise=passApproved
