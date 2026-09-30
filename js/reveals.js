@@ -4,8 +4,7 @@
 // IS TORN, SO A PARCEL LEFT UNOPENED WAITS FOR THE NEXT VISIT. SEE "SURPRISES" IN CLAUDE.md.
 // NEEDS config.js, utils.js, tear-reveal.js AND pass-card.js LOADED FIRST; RUNS ITS OWN CHECK ON LOAD
 
-const MSG_REVEAL_PASS_HEADER = "Passe aprovado";
-const MSG_REVEAL_PASS_SUB = "Já és membro. Bora jogar?";
+const MSG_REVEAL_PASS_HEADER = "O teu passe foi aprovado";
 
 const REVEALS = {
 	// THE PIG LIFTS THE PASS TICKET — EXACTLY AS THE PROFILE DRAWS IT — LIKE A CHAMPION. A PRESET GIVES ITS text AND ITS prize
@@ -15,21 +14,20 @@ const REVEALS = {
 		ref: passId,
 		text: `
 			<p class="info-heading">${MSG_REVEAL_PASS_HEADER}</p>
-			<p class="info-sub1 margin-top-10">${MSG_REVEAL_PASS_SUB}</p>
 		`,
 		prize: `
 			<div class="prize-lift">
 				<div class="prize-bob">
 					<!-- THE PRIZE SITS BETWEEN THE TWO HALVES OF ONE DRAWING: THE HAND BEHIND IT, THE THUMB IN FRONT. THE ORDER IN THE
-					     PAGE IS THE LAYERING, SO NO z-index -->
-					<svg class="prize-arm" viewBox="0 0 1527 3291" aria-hidden="true"><use href="images/pig_hand.svg#hand"/></svg>
+					     PAGE IS THE LAYERING, SO NO z-index. BUMP ?v= WHENEVER pig_hand.svg CHANGES — BROWSERS CACHE IT HARD -->
+					<svg class="prize-arm" viewBox="0 0 1527 3291" aria-hidden="true"><use href="images/pig_hand.svg?v=3#hand"/></svg>
 					${passCard(card)}
-					<svg class="prize-arm" viewBox="0 0 1527 3291" aria-hidden="true"><use href="images/pig_hand.svg#thumb"/></svg>
+					<svg class="prize-arm" viewBox="0 0 1527 3291" aria-hidden="true"><use href="images/pig_hand.svg?v=3#thumb"/></svg>
 				</div>
 			</div>
 		`,
-		// "Reservar agora" IS HIDDEN FOR NOW; TO BRING IT BACK: courtId ? { label: "Reservar agora", href: `court?court=${courtId}` } : null
-		next: null,
+		// TO THE GROUP'S FIRST COURT, WHERE THE NEW MEMBER CAN BOOK RIGHT AWAY; NO BUTTON IF THE GROUP HAS NO ACTIVE COURT
+		next: courtId ? { label: "Reserva o teu primeiro jogo", icon: "icon_court", href: `court?court=${courtId}` } : null,
 	}),
 };
 
@@ -40,9 +38,9 @@ function showReveal({ kind, ref, text, prize, next }, { record = true } = {}) {
 	layer.className = "reveal-scene";
 	layer.innerHTML = `
 		<div class="reveal-stage">${text}</div>
-		${next ? `<button data-action="reveal-next" class="margin-top-20">${next.label}</button>` : ""}
-		<div class="reveal-stage margin-top-20">${prize}</div>
-		<a href="#" data-action="reveal-close" class="info-link">Agora não</a>
+		${next ? `<button data-action="reveal-next" class="margin-top-10"><img src="images/${next.icon}.svg" class="link-icon" alt="">${next.label}</button>` : ""}
+		<div class="reveal-stage margin-top-30">${prize}</div>
+		<a href="#" data-action="reveal-close" class="info-link">Pra já não</a>
 	`;
 	document.body.appendChild(layer);
 	// A LIFTED PRIZE STARTS JUST OUT OF SIGHT — ITS TOP EDGE ON THE SCREEN'S BOTTOM EDGE — SO IT ENTERS THE MOMENT IT MOVES.
@@ -102,7 +100,7 @@ function rainPeanuts(layer) {
 
 // DEBUG: PLAYS A SURPRISE WITH DUMMY DATA, ON DEMAND — ADD ?surprise TO ANY PAGE THAT LOADS THIS FILE (?surprise=passApproved
 // TO PICK ONE), OR CALL debugSurprise() FROM THE CONSOLE. NEVER RECORDED, SO IT REPLAYS EVERY TIME AND REAL SURPRISES STAY
-// UNTOUCHED. DUMMY DATES ARE 30/02, A DAY THAT DOESN'T EXIST. "Reservar agora" GOES TO THE FIRST BOOKABLE COURT, SO THE NEXT
+// UNTOUCHED. DUMMY DATES ARE 30/02, A DAY THAT DOESN'T EXIST. "Reserva o teu primeiro jogo" GOES TO THE FIRST BOOKABLE COURT, SO THE NEXT
 // STEP CAN BE TRIED TOO
 const DEBUG_SURPRISES = {
 	passApproved: async () => {

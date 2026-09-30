@@ -9,28 +9,32 @@ const MSG_DATA_DISCLAIMER = "O login só é necessário caso queiras reservar um
 const MSG_HISTORY_TITLE = "Teus jogos passados";
 const MSG_VIEW_INFO = "Dados pessoais";
 const MSG_HISTORY_EMPTY = "Teu histórico de jogos ficará guardado aqui.";
-const MSG_VISITOR_HISTORY_EMPTY = "Teu histórico de jogos ficará guardado aqui. Faz login para assegurares que não perdes o progresso.";
+// "FAZ LOGIN" IN THE VISITOR COPY IS A LINK TO login.html, SO THE ASK IS ONE TAP AWAY WHEREVER IT'S READ
+const MSG_LOGIN_LINK = `<a href="login.html">Faz login</a>`;
+const MSG_VISITOR_HISTORY_EMPTY = `Teu histórico de jogos ficará guardado aqui. ${MSG_LOGIN_LINK} para assegurares que não perdes o progresso.`;
 const MSG_COURT_UNKNOWN = "Campo desconhecido";
 const MSG_GAME_TITLE = court => `Partida em ${court}`;
 const MSG_GAME_DURATION = mins => `${mins} min`;
 const MSG_KIND_WALKIN = "Jogo público";
 const MSG_KIND_BOOKING = "Jogo reservado";
-const MSG_VISITOR_INTRO = "Estes são os jogos começados neste dispositivo. Faz login para os guardares na tua conta e os veres em qualquer lado.";
+const MSG_VISITOR_INTRO = `Estes são os jogos começados neste dispositivo. ${MSG_LOGIN_LINK} para os guardares na tua conta e os veres em qualquer lado.`;
 const MSG_VISITOR_LOGIN = "Fazer login";
 const MSG_LINK_FAILED = "Este link de login já não funciona. Cada link só serve uma vez e expira ao fim de algum tempo. Pede um novo e abre-o logo.";
 const MSG_DUMMY_TITLE = "Minha primeira partida";
 const MSG_DUMMY_PASS = "Meu primeiro passe";
-const MSG_VISITOR_PROGRESS = "Vais ver o teu ténis progredir aqui. Usa o Campo Livre quando jogares para acumular XP. Faz login para não perderes o progresso.";
-const MSG_VISITOR_PASSES = "Passes são permissões para jogares em campos privados. É necessário login e envio de informações aos administradores do campo.";
+const MSG_VISITOR_PROGRESS = `Vais ver o teu ténis progredir aqui. Usa o Campo Livre quando jogares para acumular XP. ${MSG_LOGIN_LINK} para não perderes o progresso.`;
+const MSG_VISITOR_INFO = "Dá o próximo passo no ténis: acompanha a tua evolução e joga em campos privados.";
+const MSG_VISITOR_PASSES = `Passes são permissões para jogares em campos privados. É necessário <a href="login.html">login</a> e envio de informações aos administradores do campo.`;
 // LOSS AVERSION FOR A VISITOR WITH WALK-INS; A CONCRETE NEXT STEP FOR A BLANK ONE, WHO HAS NOTHING TO LOSE YET
-const MSG_TEASER_XP = xp => `Já tens ${MSG_XP(xp)} à tua espera. Faz login para não os perderes.`;
+const MSG_TEASER_XP = xp => `Já tens ${MSG_XP(xp)} à tua espera. ${MSG_LOGIN_LINK} para não os perderes.`;
 const MSG_TEASER_FIRST = xp => `O teu primeiro jogo vai valer logo ${MSG_XP(xp)}.`;
 
 // "ATIVIDADE", NEVER "SAÚDE" — SEE "ACTIVITY, NEVER HEALTH" IN CLAUDE.md
 const MSG_VIEW_PROGRESS = "Progresso";
 const MSG_PROGRESS_EMPTY = "O teu progresso aparece aqui depois do primeiro jogo.";
 const MSG_STAT_STREAK = n => `${n} ${n === 1 ? "semana" : "semanas seguidas"}`;
-const MSG_STAT_GAMES_VALUE = n => `${n} ${n === 1 ? "jogo" : "jogos"}`;
+// "NENHUMA" FOR ZERO: SPACE GROTESK'S ROUND 0 READ AS AN "o" ("o jogos"), AND IT HAS NO SLASHED ZERO
+const MSG_STAT_GAMES_VALUE = n => n === 0 ? "Nenhuma partida" : `${n} ${n === 1 ? "partida" : "partidas"}`;
 const MSG_STAT_GAMES_HINT = "Nos últimos 6 meses";
 const MSG_XP_LEVEL = n => `Nível ${n}`;
 // TITLES ARE RANKS THAT GROW WITH THE NUMBER — A FIXED TOP TITLE WOULD READ AS MOCKERY OVER ONE GAME.
@@ -46,10 +50,10 @@ const LEVELS_TERRITORY = levelScale(1, ["Gato de apartamento", "Turista", "Presi
 const MSG_TITLE_TERRITORY = "Território";
 const LEVELS_TARIMBA = levelScale(10, ["Ainda com etiqueta", "Já tem calos", "Mobília do clube", "Património do ténis"]);
 const MSG_STAT_HOURS = n => `${n} ${n === 1 ? "hora" : "horas"}`;
-const MSG_STAT_HOURS_HINT = "Em campo, desde o primeiro jogo";
-const MSG_STAT_STREAK_HINT = "Com pelo menos um jogo";
+const MSG_STAT_HOURS_HINT = "Em campo, desde a primeira partida";
+const MSG_STAT_STREAK_HINT = "Com pelo menos uma partida";
 const MSG_STAT_COURTS = n => `${n} ${n === 1 ? "campo" : "campos diferentes"}`;
-const MSG_STAT_COURTS_HINT = n => `Já ${n === 1 ? "recebeu" : "receberam"} os teus jogos`;
+const MSG_STAT_COURTS_HINT = n => `Já ${n === 1 ? "recebeu" : "receberam"} as tuas partidas`;
 const MSG_VIEW_PASSES = "Os teus passes";
 const MSG_NO_PASSES = "Não és membro de nenhum campo, infelizmente. Bora mudar isso com o teu primeiro passe!";
 const MSG_PASS_REQUESTED = date => `Pedido a ${date}`;
@@ -584,7 +588,7 @@ async function loadPasses(container, user, passesPromise) {
 		}).join("");
 }
 
-// A PENDING OR REFUSED REQUEST: THE PASS'S BADGE SLOT BUT NO STRAP, SO ONLY A REAL PASS LOOKS LIKE SOMETHING YOU HOLD.
+// A PENDING OR REFUSED REQUEST: THE SAME TICKET AND BADGE SLOT AS A PASS.
 // A REFUSAL LINKS TO THE COURT PAGE, WHICH ALREADY HANDLES ASKING AGAIN (court-bookable.js)
 function requestCard(name, request, requested, courtId) {
 	const pending = request.status === "pending";
@@ -634,7 +638,10 @@ function showVisitor() {
 			<p class="card-sub margin-top-10" style="font-size: .7em">${MSG_VISITOR_PASSES}</p>
 			<div class="bookings-list margin-top-10">${dummyPassCard()}</div>
 		</div>
-		<div data-pane-body="info" hidden>${loginBtn}</div>
+		<div data-pane-body="info" hidden>
+			<p class="card-sub margin-top-10" style="font-size: .7em">${MSG_VISITOR_INFO}</p>
+			${loginBtn}
+		</div>
 	`;
 
 	const games = fetchHistory(null);

@@ -94,6 +94,7 @@ body {
 .margin-top-5 { margin-top: 5px; }
 .margin-top-10 { margin-top: 10px; }
 .margin-top-20 { margin-top: 20px; }
+.margin-top-30 { margin-top: 30px; }
 
 .margin-bottom-10 { margin-bottom: 10px; }
 .margin-bottom-20 { margin-bottom: 20px; }
@@ -646,6 +647,11 @@ button .link-icon {
 	color: var(--white);
 }
 
+/* THE PROFILE'S "FAZ LOGIN" LINKS STAY BLACK, LIKE EVERY OTHER LINK ON THE PAGE */
+.page-profile .card-sub a {
+	color: var(--black);
+}
+
 .card-sub b {
 	color: var(--white);
 }
@@ -983,14 +989,18 @@ input[type="time"]::-webkit-date-and-time-value {
 	padding-left: 40px;
 }
 
-/* PINK = THE PAGE, SO THE ACTIVE TAB READS AS PART OF THE SHEET BELOW IT */
+/* PINK = THE PAGE, SO THE ACTIVE TAB READS AS PART OF THE SHEET BELOW IT.
+   THE SHADOW DROPS 4px LIKE EVERY OTHER CARD'S: THE ACTIVE TAB STANDS TALLER THAN ITS NEIGHBOURS, SO ITS SHADOW STARTS 4px DOWN
+   AND FALLS ACROSS THE NEXT TAB. THE clip-path CUTS THE 4px IT WOULD CAST BELOW THE TAB, ONTO THE SHEET, AND LEAVES ROOM ON
+   THE RIGHT FOR THE SHADOW ITSELF */
 .folder-tab.active {
 	background: var(--pink);
 	flex: none;
 	padding: 1px 20px 1px 20px;
 	padding-right: 20px;
 	border-bottom-color: transparent;
-	box-shadow: 4px 0 0 var(--black);
+	box-shadow: 4px 4px 0 var(--black);
+	clip-path: inset(0 -5px 0 0);
 	box-sizing: content-box;
 }
 
@@ -1362,50 +1372,21 @@ input[type="time"]::-webkit-date-and-time-value {
 	box-shadow: inset 4px 4px 0 var(--black);
 }
 
-/* LANYARD BADGE (PLAYER'S MEMBERSHIPS): A HOLE THAT'S A DIRECT CHILD OF THE CARD BECOMES A PILL SLOT, TOP CENTRE,
-   WITH A STRAP (THE SVG RIGHT AFTER IT) DIPPING INTO IT. SAME BORDER AND INSET SHADOW AS THE ROUND HOLE */
+/* BADGE SLOT (PASSES, REQUESTS, ADMIN MEMBER CARDS): A HOLE THAT'S A DIRECT CHILD OF THE CARD BECOMES A SMALL PILL SLOT, TOP
+   CENTRE. SAME HEIGHT, BORDER AND INSET SHADOW AS THE ROUND HOLE. THE TOP PADDING CLEARS IT: 10px ABOVE + 25px SLOT + 10px BELOW */
 .ticket:has(> .ticket-hole) {
 	position: relative;
-	padding-top: 50px;
+	padding-top: 45px;
 }
 
 .ticket > .ticket-hole {
 	position: absolute;
-	top: 15px;
+	top: 10px;
 	left: 50%;
 	transform: translateX(-50%);
-	/* FIXED, NOT A %, SO IT NEVER SHRINKS NARROWER THAN THE ~75px STRAP + FOLD THAT DIP INTO IT */
-	width: 120px;
+	width: 80px;
 	height: 25px;
 	border-radius: 100px;
-}
-
-/* 65px WIDE SO THE FOLD'S TOP LINES UP WITH THE SLOT'S TOP EDGE. top: -12px = THE 2px CARD BORDER + THE 10px THE STRAP
-   RISES ABOVE THE CARD, AS IF IT COMES FROM THE PLAYER'S NECK. left IS OFFSET SO THE STRAP SITS SLIGHTLY LEFT OF CENTRE */
-.ticket > .ticket-hole + svg {
-	position: absolute;
-	top: -12px;
-	left: calc(50% - 25px);
-	width: 65px;
-	height: auto;
-	overflow: visible;
-}
-
-/* non-scaling-stroke KEEPS THE BORDER AT A TRUE 2px, SAME AS THE CARD'S, WHATEVER THE SVG'S SCALE */
-.ticket-hole + svg path {
-	stroke: var(--black);
-	stroke-width: 2px;
-	stroke-linejoin: round;
-	vector-effect: non-scaling-stroke;
-}
-
-/* ONLY THE STRAP — THE FOLD CARRIES ITS OWN fill ATTRIBUTE, WHICH A CSS fill WOULD OVERRIDE */
-.ticket-hole + svg path:first-child {
-	fill: var(--yellow);
-}
-
-.ticket-hole + svg path:last-child {
-	transform: translate(4px, 6px);
 }
 
 /* A STATS CARD'S LEVEL TITLE, STARS IN A ROW AFTER IT */
@@ -1589,7 +1570,7 @@ input[type="time"]::-webkit-date-and-time-value {
 .trading-card-name {
 	margin: 5px 0;
 	text-align: center;
-	font-size: 1.8em;
+	font-size: 1.5em;
 	font-weight: 700;
 	text-transform: uppercase;
 }
@@ -2324,7 +2305,7 @@ input[type="time"]::-webkit-date-and-time-value {
 	flex-direction: column;
 	align-items: center;
 	/* FROM THE TOP, NOT CENTRED: TEXT AND BUTTON SIT HIGH SO THE LOWER PART OF THE SCREEN IS LEFT FOR THE PRIZE AND THE HAND.
-	   THE BOTTOM PADDING CLEARS THE FIXED "AGORA NÃO" .info-link BAR */
+	   THE BOTTOM PADDING CLEARS THE FIXED "PRA JÁ NÃO" .info-link BAR */
 	justify-content: flex-start;
 	padding: 60px 20px 70px;
 	background: var(--pink);
@@ -2352,7 +2333,7 @@ input[type="time"]::-webkit-date-and-time-value {
 	max-width: 400px;
 }
 
-/* "AGORA NÃO" KEEPS THE FIXED .info-link POSITION BUT NOT ITS PINK BAR, SO THE HAND SHOWS BEHIND IT */
+/* "PRA JÁ NÃO" KEEPS THE FIXED .info-link POSITION BUT NOT ITS PINK BAR, SO THE HAND SHOWS BEHIND IT */
 .reveal-scene .info-link {
 	background: none;
 }
@@ -2374,10 +2355,6 @@ input[type="time"]::-webkit-date-and-time-value {
 	animation: prize-breathe 1.4s 0.65s infinite, prize-rock 4.5s 0.65s ease-in-out infinite;
 }
 
-/* A LOOSE PRIZE, NOT A BADGE ON A NECK: NO LANYARD STRAP (THE SVG AFTER THE SLOT) */
-.prize-bob .ticket-hole + svg {
-	display: none;
-}
 
 /* THE PIG'S HAND (images/pig_hand.svg), DRAWN TWICE FROM ONE FILE AND STACKED EXACTLY: #hand (FOREARM, PALM, FINGERS) BEHIND
    THE CARD AND #thumb IN FRONT, SO IT GRIPS THE CARD'S BOTTOM EDGE BETWEEN THEM. BOTH TAKE THIS SAME BOX. 220px WIDE SO THE FIST IS ABOUT A THIRD OF THE CARD. THE TRANSLATE IS TUNED TO THE ARTWORK: THE FIST SITS AT ~46% OF THE
@@ -2391,6 +2368,8 @@ input[type="time"]::-webkit-date-and-time-value {
 	width: 220px;
 	/* THE DRAWING'S OWN SHAPE (ITS viewBox) — AN INLINE <svg> DOESN'T RELIABLY TAKE ITS HEIGHT FROM height: auto */
 	aspect-ratio: 1527 / 3291;
+	/* LETS THE FOREARM'S EXTENSION BELOW THE viewBox (SEE pig_hand.svg) SHOW, SO IT ALWAYS REACHES THE SCREEN'S BOTTOM EDGE */
+	overflow: visible;
 	/* THE EXTRA -40px LIFTS THE HAND UP THE CARD, SO THE CARD SITS 40px DEEPER IN THE GRIP WHILE STAYING AT ITS OWN SPOT ON SCREEN
 	   (NUDGING THE CARD DOWN INSTEAD MOVED THE WHOLE PRIZE LOWER) */
 	transform: translate(-46%, calc(-11% - 40px));

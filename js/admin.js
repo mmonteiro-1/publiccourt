@@ -18,8 +18,6 @@ const MSG_DENY_REASON = "Motivo da recusa (opcional)";
 const MSG_REVOKE_WARNING = name => `Esta ação não pode ser revertida. As reservas futuras de ${name} serão canceladas e ${name} será comunicado por email.`;
 const MSG_CANCEL_WARNING = name => `Esta ação não pode ser revertida. ${name} será notificado.`;
 
-const BADGE_RIBBON_SVG = `<svg viewBox="0 -26.5 172 110.5" aria-hidden="true"><path d="M-62.5 -26.5H114.9L157 84H-9.8Q-23 84 -27.4 71.6Z"/><path d="M140 44H172L161.6 71.6Q157 84 151.8 71.9Z" fill="#b08900"/></svg>`;
-
 const PASS_DURATION_OPTIONS = [
 	{ label: "Sem validade", months: "" },
 	{ label: "1 mês", months: 1 },
@@ -196,7 +194,6 @@ function renderPendingView() {
 		return `
 			<div class="ticket" data-id="${m.id}">
 				<div class="ticket-hole"></div>
-				${BADGE_RIBBON_SVG}
 				<p class="ticket-title">${playerName}</p>
 				<p class="ticket-line"><img src="images/icon_court.svg" class="link-icon" alt="">${courtNames}</p>
 				<div class="divider"></div>
@@ -264,7 +261,6 @@ function renderMembersView() {
 		return `
 			<div class="ticket" data-id="${m.id}">
 				<div class="ticket-hole"></div>
-				${BADGE_RIBBON_SVG}
 				<p class="ticket-title">${playerName}</p>
 				<div class="ticket-date-row">
 					<p class="ticket-date">${MSG_MEMBER_SINCE(approvedDate)}</p>
