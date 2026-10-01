@@ -34,10 +34,10 @@ Requests from the animation side (Claude app) to the code side (VS Code). The an
 | 9 | Supersticioso | Ajeita a fita, limpa os punhos e bate a bola sete vezes antes de cada serviço. Em equipa que ganha não se mexe. |
 | 10 | Roger Manel Federer | Joga de olhos fechados e ainda dá conselhos a quem não pediu. Diz a lenda que já lhe pediram um autógrafo. |
 
-  - Visitors are level 1: the visitor's locked card shows the level 1 character instead of `XP_VISITOR_INFO`, which can go once nothing uses it
+  - ~~Visitors are level 1: the visitor's locked card shows the level 1 character instead of `XP_VISITOR_INFO`, which can go once nothing uses it~~ — **changed by Matheus:** the visitor keeps a character of their own, a "visitor" level below level 1, so the first login is already an upgrade. `XP_VISITOR_INFO` stays. A new visitor character (name, flavour text, animation) is coming soon — animation side: update `character-arc.md` ("Visitors are level 1" under Decided) and propose it here
   - `XP_LEVEL_IMAGES` stays as it is for now — the animations will replace it later
 - **Hold before shipping:** levels 1, 3, 7 and 10 mention real brands or a real person (Vans, Lacoste, Mercadona, Roger Federer). Matheus is checking whether that's OK — confirm with him before pushing these to production
-- **Done when:** every level shows its own name and flavour text on the trading card, and a visitor sees the level 1 character
+- **Done when:** every level shows its own name and flavour text on the trading card (the visitor card is unchanged until its new character arrives)
 - [ ] Done
 
 ## Closed

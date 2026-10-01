@@ -32,6 +32,7 @@ js/weather.js         — Open-Meteo daily forecast → one icon per day (rain/s
 js/config.js          — Supabase credentials + db client
 css/styles.css        — single global stylesheet
 images/               — SVG icons (icon_*.svg) + flags + pig mascot
+pig-animations/       — trading-card pig animation plan (briefs, character sheet, arc), written from Cowork; never loaded by the app. Its requests for app changes are in claude-communication.md
 ```
 
 ## Current Work
