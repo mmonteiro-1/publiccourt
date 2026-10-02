@@ -17,7 +17,7 @@ One pig character per XP level, shown on the trading card. Each card is one joke
 
 | Lvl | Name | Flavour text | Animation seed |
 |---|---|---|---|
-| 1 | **Raquete emprestada** | Aparece para jogar com a raquete do primo e sapatilhas da Vans. Ainda tá a descobrir se é destro ou canhoto. | Passes the racket from hoof to hoof, looks at each side, shrugs, swaps back. |
+| 1 | **Raquete emprestada** | Aparece para jogar com a raquete do primo e sapatilhas da Vans. Ainda tá a descobrir se é destro ou canhoto. | Passes the racket to his other hoof and stares at it, confused; shrugs; passes it back and settles in the start pose. |
 | 2 | **Pega de frigideira** | Segura a raquete como quem vai estrelar um ovo. Acerta na bola uma vez em cada cinco, e às vezes é com a cabeça. | Holds the racket flat like a frying pan, tosses the ball, swings, misses; the ball bonks the headband. |
 | 3 | **Influenciador de campo** | Se não há post, não há ténis. Os followers acreditam que tem patrocínio da Lacoste. | Holds a phone out at hoof's length, strikes a stiff "pro" pose with the racket, a flash, checks the phone, frowns, tilts his face slightly and poses again. |
 | 4 | **O Aquecedor** | Faz quarenta minutos de aquecimento e joga dez. Diz que o segredo está na preparação. | Stiff windmill arms, side tilts, a tiny bounce on the spot — all very serious. Never touches the racket. |

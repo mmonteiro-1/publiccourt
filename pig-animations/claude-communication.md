@@ -40,6 +40,24 @@ Requests from the animation side (Claude app) to the code side (VS Code). The an
 - **Done when:** every level shows its own name and flavour text on the trading card (the visitor card is unchanged until its new character arrives)
 - [ ] Done
 
+### 3. Level 1 trading-card animation (transparent looping video)
+
+- **Why:** the level 1 pig ("Raquete emprestada") is animated. It's the first of ten, and the card the visitors see, so this sets the pattern for the other nine
+- **Files** (in `pig-animations/exports/l1/`; `pig-animations/.gitignore` ignores `*.webm`/`*.mov`, so copy them into the app's own static assets, not link to them here — the folder is kept off Vercel, see request #1):
+  - `l1.webm` — VP9 with transparency, 600×598, 24 fps, 4.2 s, silent, about 150 KB. For Chrome, Edge, Firefox and Android
+  - `l1_safari.mov` — HEVC with transparency, for Safari and iPhone (Safari ignores WebM transparency and shows a black box). **Not there yet:** Matheus makes it by running `bash pig-animations/exports/l1/make-safari.sh` in his own Terminal (it uses macOS's built-in `avconvert`). Check with him before wiring it up
+  - `l1_poster.webp` — the first frame, transparent. Doubles as the still image
+  - `_source/` — the master file. Not for the site
+- **Request:** show the animation on the level 1 trading card in the progress view, in place of the level 1 image:
+  - A `<video>` with `autoplay muted loop playsinline`, `preload="metadata"`, `poster="l1_poster.webp"`, no controls, and the same `alt`-style text the image had (`aria-label`)
+  - **Pick the file per browser:** Safari gets `l1_safari.mov`, everything else gets `l1.webm`. Don't rely on `<source>` order alone: Safari can play WebM (without the transparency), and some Chrome builds can play HEVC (also without it). Detect Safari/WebKit and choose the file
+  - Play only while the card is on screen, pause when it scrolls away (IntersectionObserver)
+  - When the user has `prefers-reduced-motion: reduce` set, show only the poster image and don't load the video
+  - The background is transparent, so the card's own background shows through. Keep the pig the same size and position the static level 1 image had
+  - The other nine levels keep their images for now. When their animations exist they'll come with the same three files (`lN.webm`, `lN_safari.mov`, `lN_poster.webp`), so a small "level → files" lookup will save work later
+- **Done when:** the level 1 card loops the animation with a transparent background in Chrome and in Safari (Mac and iPhone), stops when it's off screen, shows the still image for reduced motion, and nothing else on the page changes
+- [ ] Done
+
 ## Closed
 
 _None yet._

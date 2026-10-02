@@ -4,20 +4,34 @@ The rig's parts, in layer order (back → front). The visual version is `pig_34_
 
 In the 3/4 view the pig faces the viewer's left, so his **front** limbs are on the viewer's right (they overlap the body and sit lower) and his **back** limbs on the viewer's left.
 
-| Layer | Part | Contains | Pivot | Hidden shape to draw | Moves in idles |
-|---|---|---|---|---|---|
-| 1 | `tail` | small curl | tail base | base under the body | wiggle, lags the body |
-| 2 | `back-hand` | wristband + hoof | C — wristband centre | — | small flicks |
-| 3 | `back-arm` | arm wedge | A — shoulder | root continues under the body | swings, raises |
-| 4 | `back-leg` | stub + ankle band + hoof, one piece | E — hip | root continues up under the body | rarely — feet planted |
-| 5 | `body` | head and body bean, forehead included | L — on the ground between the feet | — | breathing, squash and stretch, lean |
-| 6 | `ear-left`, `ear-right` | ear | I, J — ear base | bases under the head | flop after the face moves |
-| 7 | `front-leg` | stub + ankle band + hoof, one piece | F — hip | root continues up under the body | rarely — feet planted |
-| 8 | `face` | eye whites, pupils, highlights, snout, nostrils | K — under the snout | — | small tilt and nudge, ±5°; blinks, glances |
-| 9 | `headband` | headband | moves with `face` | — | — |
-| 10 | `front-arm` | arm wedge | B — shoulder | root drawn over the body, rounded | swings, raises |
-| 11 | `front-hand` | wristband + hoof | D — wristband centre | — | clamps the racket |
-| 12 | `racket`, `ball` | props (later) | grip / centre | — | — |
+The master file is **`pig_master.svg`**. Ids below are its layer names, exactly.
+
+| Layer | Group / shape | Contains | Pivot | Moves in idles |
+|---|---|---|---|---|
+| 1 | `tail` | curl (single path) | tail base | wiggle, lags the body |
+| 2 | `legback` | `legbackbody`, `anklebandback` | E — hip | rarely — feet planted |
+| 3 | `armback` | `upperarmback` + `hoofback` group (`hoofshapeback`, `wristbandback`) | A — shoulder, cap centre; C — wristband centre for `hoofback` | swings, raises |
+| 4 | `body` | head and body bean (single path) | L — on the ground between the feet | breathing, squash and stretch, lean |
+| 5 | `earback`, `earfront` | `ear…fill`, `ear…outline`, `earcrease…` | I, J — ear base | flop after the face moves |
+| 6 | `face` | `headband`; `eyefront` and `eyeback` (eyeball + `clippedpupil…` with the pupil, clipped to the eyeball); `snoot` (`snootbody`, `snootcavity1`, `snootcavity2`) | K — under the snout | small tilt and nudge, ±5°; blinks (squash an eye group), glances (move a pupil) |
+| 7 | `armfront` | `upperarmfrontfill`, `upperarmfrontoutline` + `hooffront` group (`hoofshapefront`, `wristbandfront`) | B — shoulder, cap centre; D — wristband centre for `hooffront` | swings, raises |
+| 8 | `legfront` | `legfrontfill`, `legfrontoutline`, `anklebandfront` | F — hip | rarely — feet planted |
+| 9 | `racket`, `ball` | props (later) | grip / centre | — |
+
+Every group also holds its own black outline shape. The hand groups sit inside their arm groups, so a hand follows its arm and can still tilt on its own at the wrist.
+
+**Limb roots (the dotted ellipses on the cut map):** not separate shapes. Each limb's own shape continues past the cut into its ellipse and ends in a rounded cap centred on its pivot — same colour as the limb. The back leg and back arm sit behind the body, so their roots are hidden. The front arm, front leg and ears sit in front: each is a fill shape with no outline plus an outline-only path on top (open where the part meets the body), so the join blends into the body in the same pink. Both live in the part's group and move together. The back arm also needs the rounded cap, because it comes in front of the body in level 1.
+
+## Measured pivots (pig_master.svg)
+
+Artboard coordinates, checked with a rotation test from −15° to +95°:
+
+| Pivot | Part | Point |
+|---|---|---|
+| A | back arm (`armback`) | ≈ `(450, 650)` — centre of the cap |
+| B | front arm (`armfront`) | ≈ `(740, 655)` — centre of the cap |
+
+The rest are still to measure.
 
 ## Drawing spec
 
@@ -30,7 +44,7 @@ Every file — the master pig, swaps (trainer legs, alternate faces), props and 
 | **Centre line** | `x = 600` — the pig stands centred on it |
 | **Pig size** | about `750` px tall, top of the ears to the ground |
 | **Headroom** | ~300 px above the pig and room at the sides, for the racket overhead, the ball toss, the phone held out |
-| **Outlines** | drawn as filled black shapes (not strokes), about `12` px thick by eye. **One outline per part**, grouped with that part's fills — never a shared outline across parts |
+| **Outlines** | drawn as filled black shapes (not strokes), `7` px thick. **One outline per part**, grouped with that part's fills — never a shared outline across parts |
 | **Props and swaps** | drawn in place on the same artboard, where they sit in the master pose (racket in the front hoof, trainer legs exactly over the hoofed legs) |
 
 Square because the card art is a plain image at 90% of the card's width, so the image ratio sets the card's height — one ratio for all ten levels keeps every card the same height.
@@ -43,7 +57,7 @@ Square because the card art is a plain image at 90% of the card's width, so the 
 
 - Every part is a closed shape with a pink fill and its own black outline shape, grouped together — no shared outline across parts
 - The body bean is complete under every cut: shoulders rounded off, bottom closed under the legs
-- Back limbs are layered behind the body, front limbs in front
+- The back leg and back arm are layered behind the body; the front arm, front leg and ears are in front, with open outlines where they meet the body
 - Pupils are their own black shapes (in the trace they're part of the outline shape)
 - No tail shows in this view: add a small curl peeking out behind the body
 - Layer names exactly as in the table — they become the SVG ids VS Code uses

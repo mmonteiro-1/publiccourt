@@ -4,7 +4,7 @@ Knowledge for the pig's short idle animations. Separate from the app's root `CLA
 
 ## Who does what
 
-- **This folder** holds the animation plan: briefs, the character sheet, references, the pipeline, plus `playground/` — standalone prototype pages for reviewing motion. Written and maintained from the Claude app (Cowork)
+- **This folder** holds the animation plan: briefs, the character sheet, references, the pipeline, plus the video generation (`video/`) and the finished web files (`exports/`). Written and maintained from the Claude app (Cowork)
 - **The app code** — the production rig, the player, wiring into pages — is built from VS Code, following these specs. Nothing in this folder is loaded by the app, and the app's files are never edited from here
 
 ## Goal
@@ -68,7 +68,8 @@ Every action follows the same structure, taken from the reference videos in `ref
 - `pipeline.md` — the steps from pig SVG to animation on the page
 - `character-sheet/` — parts breakdown, pivots, layer order, hidden overlaps
 - `briefs/` — one `.md` per action (key poses, timing, loop point)
-- `playground/` — prototype pages (rig playground, roster preview) for judging motion before it reaches the app
+- `video/` — AI video generation: `generate.sh` (run in Matheus's Terminal with his fal key), `prompts/<level>.json`, `start-frames/<level>.png` (his drawn first and last frame), `takes/` (new raw takes land here). Videos are git-ignored
+- `exports/<level>/` — the finished web files per level: `<level>.webm` (transparent, Chrome/Firefox/Android), `<level>_safari.mov` (transparent HEVC, made on the Mac with `make-safari.sh`), `<level>_poster.webp` (still frame), `_source/` (`<level>_take.mp4` the raw AI take + `<level>_take_prompt.json` the prompt that made it, `<level>_choppy.mp4` the choppy edit on green, `<level>_alpha_prores.mov` the transparent master)
 - `references/` — small reference images only. Heavy files (PSD, video) stay out of git; link them instead
 
 ## Rules for briefs

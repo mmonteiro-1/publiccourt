@@ -17,6 +17,8 @@ From the pig SVG to a looping idle on the page. Steps 1–4 happen here (plannin
 - [x] Character sheet v0 — parts, pivots, overlaps (`character-sheet/`)
 - [x] Cut map on the 3/4 trace (`character-sheet/pig_34_cuts.png`)
 - [x] Drawing spec locked — artboard, ground line, outlines (`character-sheet/parts.md`)
-- [ ] Neutral master drawing, in parts (+ level 1 trainer legs)
+- [x] Neutral master drawing, in parts — `character-sheet/pig_master.svg`, rig-tested
+- [ ] Level 1 trainer legs (swap pieces)
 - [x] Character arc locked (`character-arc.md`)
+- [x] Level 1 video — Kling take → choppy edit → transparent web files (`exports/l1/`), handed to VS Code (request #3)
 - [ ] Briefs — 01 written as the template, 02–10 to do
