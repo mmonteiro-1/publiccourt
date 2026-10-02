@@ -3,3 +3,8 @@
 *.mov
 *.webm
 *.ai
+
+# WEB-READY EXPORT FILES ARE TRACKED (exports/<level>/*.webm AND *.mov ONLY — NOT _source/)
+# * DOES NOT MATCH /, SO exports/*/*.webm ONLY MATCHES DIRECT CHILDREN, NOT _source/
+!exports/*/*.webm
+!exports/*/*.mov
