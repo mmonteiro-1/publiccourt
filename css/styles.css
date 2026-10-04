@@ -1484,23 +1484,6 @@ input[type="time"]::-webkit-date-and-time-value {
 	font-size: 1em;
 }
 
-/* THE VISITOR'S PREVIEW, LOOPING FOREVER: THE XP FILL GROWS FROM EMPTY TO ITS VALUE (1.5s), HOLDS THERE (5s), THEN RUNS
-   BACK DOWN (1.5s) INSTEAD OF SNAPPING TO EMPTY. THE FILL KEEPS ITS REAL width AND IS SCALED FROM ITS LEFT EDGE: transform
-   RUNS ON THE GPU, WHEREAS ANIMATING width FORCED A LAYOUT ON EVERY FRAME, FOREVER. (ANIMATING --fill ITSELF NEEDS @property
-   AND JUMPED.) THE LABEL COPY'S CLIP IS LEFT ALONE: ON THE XP BAR BOTH COPIES ARE BLACK. AGGRESSIVE EASE-IN, APPLIED PER
-   SEGMENT. min-width: 0 LETS IT START TRULY EMPTY — THE 20px SLIVER IS ONLY FOR STATIC BARS */
-.locked .xp-bar div {
-	min-width: 0;
-	transform-origin: left;
-	animation: fill-grow 8s cubic-bezier(0.7, 0, 0.85, 0) 0.3s infinite backwards;
-}
-
-@keyframes fill-grow {
-	0%, 100% { transform: scaleX(0); }
-	/* 1.5s OF 8s = 18.75% */
-	18.75%, 81.25% { transform: scaleX(1); }
-}
-
 /* BLACK READS BETTER THAN WHITE ON THE YELLOW FILL */
 .xp-bar p + p {
 	color: var(--black);
@@ -1556,15 +1539,23 @@ input[type="time"]::-webkit-date-and-time-value {
 	height: 100%;
 	border: 2px solid var(--black);
 	border-radius: 10px;
-	background: url("../images/ball_boy_bg.jpg") center / contain;
+	background: var(--yellow);
 }
 
 /* position: relative PUTS IT OVER THE FRAME (LATER IN THE MARKUP, SO IT PAINTS ON TOP) */
-.trading-card-art img {
+.trading-card-art img,
+.trading-card-art video {
 	position: relative;
 	display: block;
 	width: 90%;
 	margin: 0 auto;
+}
+
+/* THE VIDEO'S FRAME HAS TRANSPARENT MARGIN AROUND THE PIG, SO IT FILLS THE WHOLE WIDTH. THE .webp IS ITS POSTER, SHOWN
+   ALONE FOR REDUCED MOTION, SO IT MATCHES */
+.trading-card-art video,
+.trading-card-art img[src$=".webp"] {
+	width: 100%;
 }
 
 .trading-card-name {

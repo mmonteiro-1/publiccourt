@@ -503,7 +503,7 @@ Supabase Auth is already included — magic link is a built-in provider, no extr
 - **No buttons on the previews:** the progress view has none, and the blank history has none either — an "Encontrar campo" under the dummy card made the card itself look clickable. The only button is "Fazer login" under a visitor's real history
 - **The history proves the number:** each card shows the XP it earned, so the teaser total can be traced game by game. The single dummy card shows +1000, matching the blank visitor's promise
 - **The dummy progress is the dummy first game** (the same "Minha primeira partida" as the history card), so the XP is 1000 and every level is 1, for every visitor. On top of it, `loadProgress`'s teaser mode pins the trading card's four ratings at 1 and the skill cards' numbers at 0 — an empty starting point. The trading card gets its own character, `XP_VISITOR_INFO` ("Raquete emprestada"), so it never passes for a real level-1 player's "Apanha-bolas"; the teaser sits inside it, under the XP bar
-- **The XP bar loops forever** (`.locked .xp-bar div`, `fill-grow`): 1.5s growing from empty to 50% with an aggressive ease-in, 5s holding, 1.5s back down. It scales the fill with `transform: scaleX()` from its left edge, which runs on the GPU — animating `width` forced a layout on every frame, forever, and animating `--fill` itself needs `@property` and jumped. **Rule for any looping or long animation: only `transform` and `opacity`**
+- **The XP bar is static** — a looping fill (`fill-grow`) was tried and removed. It had taught one rule that still holds: animating `width` forced a layout on every frame, and animating `--fill` needs `@property` and jumped. **Rule for any looping or long animation: only `transform` and `opacity`**
 
 **Redirect URL allowlist:** Supabase only returns magic links to URLs listed in Authentication → URL Configuration → Redirect URLs; anything else falls back to the Site URL. Site URL is `https://publiccourt.vercel.app`. The list (`*` matches anything except `.` and `/`):
 
@@ -628,7 +628,7 @@ Sessions are kept alive indefinitely for active users. Supabase auto-refreshes t
     - [ ] Visitor teaser (see "Visitor teaser" under Authentication)
       - [x] Visitor history shows unclaimed walk-ins only (`player_id IS NULL`)
       - [x] XP gained on each history card, players and visitors (`gamesXp`)
-      - [x] Progress: dummy trading card + skill cards from the dummy first game, teaser inside the trading card, looping XP bar
+      - [x] Progress: dummy trading card + skill cards from the dummy first game, teaser inside the trading card
       - [x] Passes: dummy pass ("Meu primeiro passe", 30/02) with the padlock, and the passes explainer above it
       - [ ] Dados: locked dummy version for visitors
       - [ ] Padlocks on the progress cards? Their `overflow: hidden` and top banners clip and cover the history card's padlock
