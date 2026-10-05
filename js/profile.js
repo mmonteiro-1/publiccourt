@@ -394,11 +394,7 @@ function sumXp(games) {
 	return games.reduce((sum, game) => sum + game.xp, 0);
 }
 
-// LEVEL n NEEDS 1500 + 500n XP (2000, 2500 … 6500), SO EACH IS A BIT HARDER. REACHING AN END IS A LEVEL-UP: 0–1999 IS LEVEL 1, 2000–4499 LEVEL 2
-const XP_LEVEL_ENDS = [];
-for (let n = 1, total = 0; n <= 10; n++) XP_LEVEL_ENDS.push(total += 1500 + 500 * n);
-
-// RELATIVE, UNLIKE THE SKILL BARS: THE FILL ONLY COVERS THE CURRENT LEVEL. PAST THE LAST LEVEL IT STAYS FULL
+// THE LEVELS THEMSELVES (XP_LEVEL_ENDS, xpLevel) ARE IN utils.js, SHARED WITH THE HEADER'S LEVEL RING
 // CHARACTER ART PER XP LEVEL (INDEX 0 = LEVEL 1), GETTING MORE "PRO" AS THE PLAYER LEVELS UP.
 // PLACEHOLDERS FOR NOW — ONE ENTRY PER LEVEL SO EACH CAN GET ITS OWN IMAGE LATER WITHOUT TOUCHING THE LOGIC
 const XP_LEVEL_IMAGES = [
@@ -420,11 +416,8 @@ const XP_VISITOR_INFO = { title: "Raquete emprestada", description: "Aparece par
 // THE FOUR SKILL RATINGS, THEN THE XP BAR. A teaser MAKES IT THE VISITOR'S LOCKED PREVIEW: ITS OWN CHARACTER, THE FILL
 // GROWING IN (.locked), AND THE TEASER UNDER THE BAR
 function xpCard(xp, diamonds, skills, teaser) {
-	const found = XP_LEVEL_ENDS.findIndex(end => xp < end);
-	const index = found === -1 ? XP_LEVEL_ENDS.length - 1 : found;
-	const from = index ? XP_LEVEL_ENDS[index - 1] : 0;
-	const to = XP_LEVEL_ENDS[index];
-	const fill = Math.min((xp - from) / (to - from), 1) * 100;
+	const { level, fill } = xpLevel(xp);
+	const index = level - 1;
 	const info = teaser ? XP_VISITOR_INFO : XP_LEVEL_INFO[index] ?? XP_LEVEL_INFO[0];
 	return `
 		<div class="trading-card${teaser ? " locked" : ""}">

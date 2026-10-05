@@ -377,19 +377,20 @@ Being built — XP in the database, the opt-out, `season_ranking` and the rankin
 
 Built in the ranking tab (`loadRanking` in `profile.js`, `.scoreboard` in `styles.css`), basics only. See "Brutomorphism" under Rules.
 
-- **One big sign:** green (Wimbledon), the season on a darkened header ("Época de Inverno", the dates underneath), columns Pos · Jogador · XP. Every digit and every name is its own **plaque** sunk into the board (inset shadow), sitting in its own **slot** — a dark hole that shows once the plaque is pulled out. Place padded to 2 plaques, XP to 4 (more if a number needs them). One CSS grid, so the columns line up
+- **One big sign:** green (Wimbledon), the season name on a darkened header ("Época de Inverno"; the dates live in "Entende o ranking"), columns Pos · Jogador · XP. The top is an arched cap with sharp corners (a wide `clip-path` ellipse, outlined by two layers), the foot square, no drop shadow; it stands between two green poles capped with spheres, self-shaded only. At least 10 rows, padded with blank ones. Every digit and every name is its own **plaque** sunk into the board (inset shadow), sitting in its own **slot** — a dark hole that shows once the plaque is pulled out. Place padded to 2 plaques, XP to 4 (more if a number needs them). One CSS grid, so the columns line up
 - **The player's row is all white** — place, name and XP plaques. A jump in places is a blank row of plaques, like the empty lines on a real board
 - **Rows are fixed, plaques move:** the place digits belong to the row (row 2 always says 2) and never animate. Only names and XP change
 - **Swapping a plaque** (`plaque-out` / `plaque-in`, chained in JS because one keyframe can't change the text halfway): someone behind the board pulls the right side back first (a hinge on the left edge: 10° for names, 25° with a closer perspective for the narrow digits, `--hinge`), slides it right out of the slot, relabels it, and slides it back. `transform` only; off under reduced motion
 - **An update** (`updateRows`): every shown row is handed its final content and only the plaques that differ move. **Names first, as a swap:** the player's plaque is pulled first, then the other; with both slots empty they're exchanged (the white follows the player's name); the player's goes back in first, then the other. **Then the numbers:** both rows at once, each left to right, 1s per digit. Moving the name before its number means each row's digits change once, straight to their final value — an overtake from 5650 to 6000 past a 5890 is 2 names and 5 digits
-- **The line under the board** describes the board as it was while the plaques move; once they're done: `MSG_RANKING_GAINED` ("Ganhaste 150 XP desde a última vez.") or `MSG_RANKING_OVERTAKE` ("Ganhaste 350 XP e passaste R. Barbosa. Sobe, sobe!"), followed by where the player stands now (`rankingLine`)
-- **Each change plays once, on any device:** `ranking_views` keeps the board as the player last saw it this season. The next visit compares it with the live ranking and animates the difference, then saves the new board — only after it has played, so a board never opened still plays next time. A first look this season just shows. Who passed whom is told apart by `ref`, never the display name
-- **"Entende o ranking"** under the board unfolds every way to earn points (`POINTS_RULES`, display only — keep in step with `games_xp`), the season reset, and the opt-out with a link to Dados
+- **The line above the board** (like every pane's description) tells the news straight away, without waiting for the plaques: `MSG_RANKING_OVERTAKE` ("Máquina! Ganhaste 350 XP e agora vês R. Barbosa pelo retrovisor."), `MSG_RANKING_GAINED` or `MSG_RANKING_DROPPED` ("Tragédia anunciada: caíste de posição. Não deixes ficar barato."), then where the player stands now (`rankingLine`: "2 jogitos e deixas R. Barbosa para trás.", first, tied, zero, or the opt-out line linking to Dados)
+- **Only good news animates:** a player who dropped a place gets the new board straight away, and it's saved so the drop never replays
+- **Each change plays once, on any device:** `ranking_views` keeps the board as the player last saw it this season. The next visit compares it with the live ranking and animates the difference, then saves the new board — only after it has played (or straight away after a drop), so a board never opened still plays next time. A first look this season just shows. Who passed whom is told apart by `ref`, never the display name
+- **"Entende o ranking"** under the board is the admin's collapsible rules card, closed by default: every way to earn points (`POINTS_RULES`, display only — keep in step with `games_xp`), the season reset, both seasons' dates, and the opt-out with a link to Dados
 
 **Testing the dummy overtake** (fake numbers, nothing saved):
 1. Be logged in as a player set to **Participar** in Dados, with at least one other ranked player (alone, you're 1st and there's nobody to pass)
 2. Open `profile.html?board=overtake` (e.g. `http://localhost:8080/profile.html?board=overtake`)
-3. Open the **Ranking** tab — the update only starts once the board is on screen. You're put 3rd with 5650 under a 5890: after 1s the two names swap, then both rows' numbers change, and the line ends "…e passaste … Sobe, sobe!"
+3. Open the **Ranking** tab — the update only starts once the board is on screen. You're put 3rd with 5650 under a 5890: after 1s the two names swap, then both rows' numbers change, and the line reads "Máquina! … pelo retrovisor."
 4. `?board=gain` instead plays a gain without moving (5650 → 5800, "Ganhaste 150 XP desde a última vez."). Reload to replay
 
 **Feeds matchmaking later** (see "Player matchmaking"): ranking neighbours play about as much as each other — a natural "people like you" — and Consistência / Território say who plays regularly and who likes new courts. But activity isn't skill: a keen beginner and a rare expert can have the same XP, so matchmaking still needs a skill signal (self-declared level, post-game results). Where and when people play is the most useful match signal and the most private, so matching happens on the server and only ever says "found someone", never the other player's routine. Keeping the XP in the database and the season snapshots is what makes this possible later.
@@ -677,9 +678,17 @@ Sessions are kept alive indefinitely for active users. Supabase auto-refreshes t
       - [ ] A follow-up action for them: "Bora mudar isso com o teu primeiro passe!" promises a next step but nothing is tappable. Something that leads to a private court where they can ask for a pass. Keep it off the dummy ticket, which must not look clickable (see "No buttons on the previews")
   - [ ] Upcoming game alerts (billing alerts once billing exists)
   - [x] Replace the placeholder skull icon (`icon_avatar.svg`)
-  - [ ] Keep the profile from being forgotten behind the avatar icon — surface it where the player already is, and say when something changed
+  - [ ] Keep the profile from being forgotten behind the avatar icon — surface it where the player already is, and say when something changed. Visitors are the bigger problem: a registered player already knows the profile exists, a visitor doesn't, and it's what turns them into an account. Both sets below stay — visitors first
+    - **Visitors**
+    - [ ] Right after a walk-in: "Bom jogo" and "Obrigado" tell a visitor what's waiting — "+1000 XP à tua espera. Faz login para não os perderes." (the profile teaser's loss aversion, at the moment they've just played; a line, not a button — the screens reload on a countdown)
+    - [x] The level-1 ring loop is the grab (decided): every visitor, seasoned or blank, sees the same level-1 ring filling to 5 o'clock and back — never their real unclaimed progress. Tapping it lands on their profile, where the teaser explains it
+    - [ ] A dot on the visitor's ring while they have unclaimed XP — a standing "something is yours here"
+    - [ ] A one-time card on the court list for a seasoned visitor: "Já tens 1 500 XP à tua espera" + a link to the profile. Shown once, then dropped, so it never nags
+    - **Registered players**
     - [ ] Success screens show what the game earned: "+500 XP · faltam 1500 para o nível 4" on "Bom jogo", "Obrigado" and "Jogo reservado" (a line, not a button — the screens reload on a countdown)
     - [ ] The avatar shows the level instead of a generic head: a small level badge or an XP ring that fills with play, plus a dot when something is unseen (level up, new diamond, refused pass)
+      - [x] Level ring: on the court list and court page, a logged-in player's avatar becomes a ring that fills black over a muted-black track through the current level (15° minimum, round caps), the level number inside (`showHeaderLevel` / `xpLevel` in `utils.js`, `.level-ring`). A visitor gets level 1 with the old XP-bar loop: filling to 5 o'clock (150°) and back forever, done as a rotating cover with two dots for the round ends, so it stays `transform`-only
+      - [ ] The unseen dot (ranking changed, refused pass; later level up, new diamond)
     - [ ] Streak nudge as a second card underneath the court card, only when the streak is at risk (late in the week, no game yet): "Consistência: 3 semanas seguidas — joga esta semana para não perderes", tapping through to the progress view. Wait for the rain freeze, or a rainy week feels unfair
     - [ ] Level-up and diamond surprises end on "Ver progresso" (see the surprises todo)
 - [ ] The install nudge's "Saiba como" (`court.html`, links to `info.html#panel-download`) takes the player away from the court page — show the how-to without leaving it
@@ -711,7 +720,11 @@ Sessions are kept alive indefinitely for active users. Supabase auto-refreshes t
   - [x] Opt-out: `profiles.hide_from_ranking`, a Participar / Recusar toggle in Dados
     - [ ] Style the toggle better (now the court list's `.view-toggle` with text buttons, `.profile-form .view-toggle-btn`)
   - [x] Ranking function: `season_ranking` in `supabase/sql/ranking.sql` — season points, "R. Barbosa" names, shared places, Tarimba tie-break, `is_me` instead of ids
-  - [ ] Ranking tab: second of five profile tabs (`icon_ranking`, `loadRanking`), drawn as a brutomorphic golf-tournament sign (`.scoreboard`, one `.plaque` per digit and name) — basics only for now
+  - [x] Ranking tab: second of five profile tabs (`icon_ranking`, `loadRanking`), drawn as a brutomorphic golf-tournament sign (`.scoreboard`, one `.plaque` per digit and name) — see "The board" under Leaderboards
+    - [x] Plaque swaps and board updates: names first, then digits; only what changed moves (`updateRows`)
+    - [x] Each change plays once, on any device (`ranking_views`); a dropped place shows straight away, no animation
+    - [x] Pig-voice lines for gains, overtakes, drops, chasing, first, zero and opt-out (`MSG_RANKING_*`)
+    - [x] "Entende o ranking" as the admin's collapsible rules card
     - [ ] Customise the ranking's look per season: Época de Verão vs Época de Inverno
   - [ ] Leaderboard teaser
   - [ ] Rain freeze (see "Rain freeze" under Player progress): a rainy week doesn't break the streak — Consistência, and the +500 streak-week XP in `games_xp`. Needs past weather stored in the database (`weather.js` only fetches forecasts, in the browser), so the SQL can tell which weeks were rainy
