@@ -18,8 +18,9 @@ court.html / js/court-stage.js    — court detail + walk-in flow
                 js/court-bookable.js  — bookable court flow (active)
 admin.html / js/admin.js          — admin dashboard (members, rules, hours)
 login.html / js/login.js
-profile.html / js/profile.js     — post-login router, onboarding, profile views (history, stats, passes, info)
-                js/ranking.js     — the profile's ranking tab: board, plaque updates, "Entende o ranking" (loaded after profile.js)
+profile.html / js/profile.js     — post-login router, onboarding, profile views (history, passes, info)
+                js/player_progress.js — the profile's progress tab: skill levels, streaks, diamonds, trading card (loaded before profile.js)
+                js/ranking.js     — the profile's ranking tab: board, plaque updates, "Entende o ranking" (loaded before profile.js)
 info.html
 
 js/utils.js           — shared helpers: setPigAppearance, gameLabel, formatTime, minutesLeft, getDeviceId, cityHtml
@@ -222,7 +223,7 @@ Used exclusively inside edge functions. Not called from the frontend.
 - Supabase anon key is intentionally public (RLS handles access control)
 - Double-tap zoom is off app-wide via `touch-action: manipulation` on `html` (pinch zoom still works)
 - **Zero counts are words:** Space Grotesk's round 0 reads as an "o" ("0 jogos" → "o jogos"), and the font has no slashed zero (`font-variant-numeric: slashed-zero` does nothing). Counts in copy say "Nenhuma partida" / "Nenhuma reserva" instead. Bare numbers (skill ratings) can't be fixed this way
-- **"Faz login" is always a link** to `login.html` in visitor copy (`MSG_LOGIN_LINK` in `profile.js`; the passes explainer links its "login" too). `.card-sub` links are white app-wide (court page siblings), so `.page-profile .card-sub a` turns them black on the profile
+- **"Faz login" is always a link** to `login.html` in visitor copy (`MSG_LOGIN_LINK` in `utils.js`; the passes explainer links its "login" too). `.card-sub` links are white app-wide (court page siblings), so `.page-profile .card-sub a` turns them black on the profile
 
 ## High Level Thoughts
 
@@ -242,7 +243,7 @@ When a court's burocracia level requires document verification, documents are ne
 
 ### Activity stats — a reason to use Campo Livre beyond booking
 
-**First set implemented** (profile progress view, see Todo): games in the last 6 months (replaced hours in the last 30 days; the comparison with the previous period was dropped), weekly streak, distinct courts played ("Território", replaced the favourite court card). Cities collected was dropped. A rolling window rather than a calendar period, so the total doesn't reset to zero on a fixed date and knock the player down a level. All three carry a level title, stars and a segmented progress bar (`LEVELS_GAMES` / `LEVELS_STREAK` / `LEVELS_TERRITORY` in `profile.js`). The rest below is still exploration.
+**First set implemented** (profile progress view, see Todo): games in the last 6 months (replaced hours in the last 30 days; the comparison with the previous period was dropped), weekly streak, distinct courts played ("Território", replaced the favourite court card). Cities collected was dropped. A rolling window rather than a calendar period, so the total doesn't reset to zero on a fixed date and knock the player down a level. All three carry a level title, stars and a segmented progress bar (`LEVELS_GAMES` / `LEVELS_STREAK` / `LEVELS_TERRITORY` in `player_progress.js`). The rest below is still exploration.
 
 The chosen levels are listed under "Player progress" below, since they're the first piece of that progress layer.
 
@@ -278,7 +279,7 @@ Builds on activity stats. Short, interactive questions after each game collect t
   - Tone: too much confetti feels childish. The pig's cheeky voice ("batotas", "porreiríssimo") should carry it, not badges everywhere
 - **Where to start:** only the post-game card (duration, singles/doubles, result) stored on the game row, with no points or levels. It pays off alone by making stats more accurate, and it shows whether players actually answer before a progression system is built on top. Since stats are behind the login wall, answering is also the natural moment to prompt visitors to make an account ("guarda o teu progresso")
 
-**Levels already implemented** (progress view, `LEVELS_GAMES` / `LEVELS_STREAK` / `LEVELS_TERRITORY` in `profile.js`). Titles are ranks that grow with the number, so a low value never gets a mocking title. Each bar runs from 0 to its max in four equal segments, one per level, with the level title written inside. Each scale is defined as a step plus its titles (`levelScale(step, titles)`): every level spans the same step, so the segments are always equal. Games step: 5. Streak step: 2 weeks. Four stars next to the card title, filled up to the current level.
+**Levels already implemented** (progress view, `LEVELS_GAMES` / `LEVELS_STREAK` / `LEVELS_TERRITORY` in `player_progress.js`). Titles are ranks that grow with the number, so a low value never gets a mocking title. Each bar runs from 0 to its max in four equal segments, one per level, with the level title written inside. Each scale is defined as a step plus its titles (`levelScale(step, titles)`): every level spans the same step, so the segments are always equal. Games step: 5. Streak step: 2 weeks. Four stars next to the card title, filled up to the current level.
 
 | Games in the last 6 months ("Momentum") | Title |
 |---|---|
@@ -316,13 +317,13 @@ Bar max: 4 courts. Unlike the other two, one court is already level 1, so the le
 
 Bar max: 40h. Lifetime, like XP, so it never drops. It fills the gap Momentum leaves (a 2h match weighs four times a 30 min hit). Declared hours, not measured: a walk-in counts what the player chose unless ended early. Named after "ter tarimba" (experience from years on the job); "Rodagem", "Estrada" and "Veterania" were the alternatives, "Resistência" was ruled out as physical/health-adjacent.
 
-**Diamonds** (`icon_diamond_color.svg`): one per skill whose bar was ever full (20 games in 6 months / 40h / 8 weeks / 4 courts), kept forever. So the rolling skills check their best value ever, not the current one (`peakRecentGames`, `longestStreak` in `profile.js`). Shown after the value on each skill card that earned one, and as the total next to the level in the trading card's banner (always shown, 0 included).
+**Diamonds** (`icon_diamond_color.svg`): one per skill whose bar was ever full (20 games in 6 months / 40h / 8 weeks / 4 courts), kept forever. So the rolling skills check their best value ever, not the current one (`peakRecentGames`, `longestStreak` in `player_progress.js`). Shown after the value on each skill card that earned one, and as the total next to the level in the trading card's banner (always shown, 0 included).
 
 **Next skill candidate — Desportivismo:** walk-ins closed by hand with "Terminar jogo atual" (`manual_finished_at`), counting only games over 10 min. Rewards freeing the court for the next player, which keeps the live status honest. Chosen over a plain "signals sent" count, which would just duplicate Momentum. Not built yet.
 
 The game thresholds are a first guess, to be tuned once real play is known.
 
-**XP** (computed in the database by `games_xp` / `player_xp`, read through `my_games_xp` / `my_xp`; drawn by `xpCard` in `profile.js`), shown on the **trading card** above the skill cards — its own `.trading-card*` classes (not `.ticket`), so it can evolve on its own: "Nível N" in the `.trading-card-level` banner, the pig for the current level as the player art (`.trading-card-art`, `XP_LEVEL_IMAGES`; width 90%, centred with 20px above and below, a plain image for now, not a pig appearance), the character name and flavour text (`XP_LEVEL_INFO`), the four skill ratings, then the XP bar. **Skill ratings** (`.trading-card-skills`, `skillRating`): each skill as a share of its bar max, 0–100, FIFA-card style — one scale for all four, so strengths read at a glance. Big number with the skill icon on the bottom-right corner; no diamonds here, only in the banner and on the skill cards. The rolling skills can drop (current form), while the XP level is permanent; the skill cards below are the breakdown behind each number. The idea is a Magic / Pokémon style character card. XP only ever grows, so it comes from lifetime events, never from the skills' rolling values (Momentum's 6-month count can drop). Every increment is +500 XP (`XP_PER_INCREMENT`):
+**XP** (computed in the database by `games_xp` / `player_xp`, read through `my_games_xp` / `my_xp`; drawn by `xpCard` in `player_progress.js`), shown on the **trading card** above the skill cards — its own `.trading-card*` classes (not `.ticket`), so it can evolve on its own: "Nível N" in the `.trading-card-level` banner, the pig for the current level as the player art (`.trading-card-art`, `XP_LEVEL_IMAGES`; width 90%, centred with 20px above and below, a plain image for now, not a pig appearance), the character name and flavour text (`XP_LEVEL_INFO`), the four skill ratings, then the XP bar. **Skill ratings** (`.trading-card-skills`, `skillRating`): each skill as a share of its bar max, 0–100, FIFA-card style — one scale for all four, so strengths read at a glance. Big number with the skill icon on the bottom-right corner; no diamonds here, only in the banner and on the skill cards. The rolling skills can drop (current form), while the XP level is permanent; the skill cards below are the breakdown behind each number. The idea is a Magic / Pokémon style character card. XP only ever grows, so it comes from lifetime events, never from the skills' rolling values (Momentum's 6-month count can drop). Every increment is +500 XP (`XP_PER_INCREMENT`):
 - each past game
 - each distinct court played
 - each week with a game right after another week with a game (a lone week is already paid by its games)
@@ -657,10 +658,10 @@ Sessions are kept alive indefinitely for active users. Supabase auto-refreshes t
     - [x] Level titles instead of plain labels — see the tables under "Levels already implemented"
     - [x] Território (first named "Movimento", renamed because it read as physical agility rather than variety of courts) replaced the favourite court card ("Segunda casa")
     - [x] Progress bars on all three skills, 0 to max (20 games / 8 weeks / 4 courts) in four equal segments with the level title inside each
-    - [x] Segment titles are black on the empty track and white over the fill: the labels are rendered twice (`barHtml` in `profile.js`), with the white copy on top clipped to the fill width via `clip-path` and a `--fill` variable. The XP bar keeps both copies black, which reads better on its yellow fill
-    - [x] Stars next to the level title: one per level (four each), the current level and those below it filled `--yellow`, so the first level already shows one. Inline SVG (`STAR_SVG` in `profile.js`) so CSS can switch the fill
+    - [x] Segment titles are black on the empty track and white over the fill: the labels are rendered twice (`barHtml` in `player_progress.js`), with the white copy on top clipped to the fill width via `clip-path` and a `--fill` variable. The XP bar keeps both copies black, which reads better on its yellow fill
+    - [x] Stars next to the level title: one per level (four each), the current level and those below it filled `--yellow`, so the first level already shows one. Inline SVG (`STAR_SVG` in `player_progress.js`) so CSS can switch the fill
     - [x] XP bar above the skill cards: +500 XP per game / new court / streak week, levels 1–10 (see "XP")
-    - [x] Character card art linked to the XP level: `XP_LEVEL_IMAGES` in `profile.js`, one entry per level (index 0 = level 1). Placeholders for now: `pig_sitting` (1–3), `pig_reaching` (4–6), `pig_serving` (7–10)
+    - [x] Character card art linked to the XP level: `XP_LEVEL_IMAGES` in `player_progress.js`, one entry per level (index 0 = level 1). Placeholders for now: `pig_sitting` (1–3), `pig_reaching` (4–6), `pig_serving` (7–10)
     - [ ] Draw progressively more "pro" pig images per level (gear, outfit, pose) and swap them into `XP_LEVEL_IMAGES`
     - [ ] Tune the level thresholds (skills and XP) once real play is known
     - [ ] "Entende o progresso": the same collapsible card as "Entende o ranking", under the progress view — how XP is earned, the levels, the four skills and their bars, and diamonds
