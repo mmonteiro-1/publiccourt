@@ -81,7 +81,10 @@ const POINTS_RULES = [
 	["Passe aprovado", XP_PER_PASS],
 ];
 const MSG_POINTS_NOTE = "Partidas de 10 minutos ou menos não contam. Os pontos voltam a zero no início de cada época; o teu XP de progresso geral nunca desce.";
-const MSG_VISITOR_RANKING = `Os jogadores mais ativos de cada época aparecem aqui. ${MSG_LOGIN_LINK} para entrares na corrida.`;
+// IN THE BOARD'S "R. BARBOSA" FORMAT, SO IT READS LIKE A NAME ALREADY ON A PLAQUE
+const MSG_VISITOR_RANK_NAME = "O. Teu Nome";
+// 1000 IS THE FIRST GAME'S XP (+500 FOR THE GAME, +500 FOR THE NEW COURT), THE SAME AS DUMMY_GAME_XP FURTHER DOWN
+const MSG_VISITOR_RANKING = `Os melhores jogadores de cada época aparecem aqui. ${MSG_LOGIN_LINK} para participar. O teu primeiro jogo vale logo ${MSG_XP(1000)}.`;
 const MSG_VIEW_PASSES = "Os teus passes";
 const MSG_NO_PASSES = "Não és membro de nenhum campo, infelizmente. Bora mudar isso com o teu primeiro passe!";
 const MSG_PASS_REQUESTED = date => `Pedido a ${date}`;
@@ -707,15 +710,41 @@ function rankingLine(list) {
 	return MSG_RANKING_CHASE(Math.ceil((above.points - me.points + 1) / 500), above.name);
 }
 
-// THE TOP THREE FOR THE ASPIRATION, THEN THE PLAYER WITH WHOEVER IS JUST ABOVE AND BELOW — NEVER THE WHOLE TABLE
-async function loadRanking(container, user) {
+// THE VISITOR'S LOCKED PREVIEW: EXAMPLE PLAYERS ON THE STANDARD BOARD. season_ranking IS FOR LOGGED-IN PLAYERS ONLY, AND REAL
+// NAMES SHOULDN'T REACH SOMEONE WITHOUT AN ACCOUNT
+const DUMMY_RANKING = [
+	{ name: "R. Barbosa", points: 2230 },
+	{ name: "M. Valadares", points: 2000 },
+	{ name: "J. Costa", points: 1850 },
+	{ name: "A. Quintela", points: 1500 },
+	{ name: "T. Lopes", points: 1350 },
+	{ name: "S. Meireles", points: 1000 },
+	{ name: "C. Ferreira", points: 850 },
+	{ name: "P. Sampaio", points: 500 },
+	{ name: "L. Vilela", points: 350 },
+];
+
+// THE VISITOR SITS AMONG THEM AS "O TEU NOME" — A PLAQUE WAITING FOR THEIRS — WHITE LIKE ANY PLAYER'S OWN ROW. A TEASER, LIKE THE PROGRESS TAB'S DUMMY CARDS: ALWAYS THE
+// EXAMPLE FIRST GAME'S XP, NEVER THE VISITOR'S REAL WALK-INS. AHEAD OF ANYONE ON THE SAME POINTS, AND ONE PLACE PER ROW (NO SHARED PLACES HERE)
+function visitorRanking(xp) {
+	const players = DUMMY_RANKING.map(row => ({ ...row, is_me: false }));
+	const at = players.findIndex(row => row.points <= xp);
+	players.splice(at === -1 ? players.length : at, 0, { name: MSG_VISITOR_RANK_NAME, points: xp, is_me: true });
+	return players.map((row, i) => ({ ...row, place: i + 1 }));
+}
+
+// THE TOP THREE FOR THE ASPIRATION, THEN THE PLAYER WITH WHOEVER IS JUST ABOVE AND BELOW — NEVER THE WHOLE TABLE.
+// preset (THE VISITOR'S EXAMPLE ROWS) SKIPS THE DATABASE ENTIRELY: NO LIVE RANKING, NO SNAPSHOT, NOTHING SAVED OR ANIMATED
+async function loadRanking(container, user, preset) {
 	const season = currentSeason();
-	const { data } = await db.rpc("season_ranking");
+	const { data } = preset ? { data: preset } : await db.rpc("season_ranking");
 	const debug = new URLSearchParams(location.search).get("board");
 	// before IS THE BOARD AS THE PLAYER LAST SAW IT THIS SEASON (ranking_views), after THE LIVE RANKING. NO SNAPSHOT YET (FIRST
 	// LOOK THIS SEASON) MEANS NOTHING TO ANIMATE: THE BOARD JUST SHOWS
 	let before, after;
-	if (debug) {
+	if (preset) {
+		before = after = preset;
+	} else if (debug) {
 		({ before, after } = debugBoards(data ?? [], debug));
 	} else {
 		const { data: seen } = await db.from("ranking_views").select("board").eq("season_start", season.startDate).maybeSingle();
@@ -732,7 +761,8 @@ async function loadRanking(container, user) {
 	const meIndex = after.findIndex(row => row.is_me);
 	const shown = new Set([0, 1, 2]);
 	if (meIndex !== -1) [meIndex - 1, meIndex, meIndex + 1].forEach(i => shown.add(i));
-	const indices = [...shown].filter(i => i >= 0 && i < after.length).sort((a, b) => a - b);
+	// THE VISITOR'S EXAMPLE BOARD SHOWS EVERY ROW: A FULL SIGN SELLS IT BETTER THAN A NEIGHBOURHOOD THEY AREN'T PART OF YET
+	const indices = preset ? after.map((_, i) => i) : [...shown].filter(i => i >= 0 && i < after.length).sort((a, b) => a - b);
 
 	// THE LAYOUT IS THE LIVE ONE: THE ROWS SHOWN NOW, EACH STARTING WITH WHAT THE PLAYER SAW IN THAT ROW LAST TIME (BLANK IF THE
 	// BOARD WAS SHORTER THEN). THE PLACE DIGITS ARE ALWAYS THE LIVE ONES — THEY BELONG TO THE ROW AND NEVER ANIMATE
@@ -784,6 +814,30 @@ async function loadRanking(container, user) {
 	sign.insertAdjacentHTML("beforeend", `<span class="scoreboard-pole"></span><span class="scoreboard-pole"></span>`);
 	container.replaceChildren(sign);
 
+	// THE VISITOR'S OWN PLAQUES ARE SLID INTO THEIR EMPTY SLOTS EVERY TIME THE TAB OPENS — THEIR NAME FIRST, THEN THE XP DIGITS LEFT
+	// TO RIGHT, 0.5s APART — AS IF THE SIGN WERE BEING SET UP FOR THEM. THEY START OUT OF THEIR SLOTS (.plaque-gone), AND GO BACK OUT
+	// BEFORE EACH REPLAY. run DROPS A REPLAY THAT A QUICK TAB SWITCH CUT SHORT. NONE OF IT UNDER REDUCED MOTION
+	if (preset && meIndex !== -1 && !reducedMotion()) {
+		const mine = rowEls[meIndex];
+		const plaques = [mine.name, ...mine.xp.querySelectorAll(".plaque")].filter(plaque => plaque.textContent);
+		const takeOut = () => plaques.forEach(plaque => {
+			plaque.classList.remove("plaque-in");
+			plaque.classList.add("plaque-gone");
+		});
+		takeOut();
+		let run = 0;
+		new IntersectionObserver(entries => {
+			if (!entries[0].isIntersecting) return;
+			const token = ++run;
+			takeOut();
+			plaques.forEach((plaque, n) => wait(500 + n * 500).then(() => {
+				if (token !== run) return;
+				plaque.classList.remove("plaque-gone");
+				playPlaque(plaque, "plaque-in");
+			}));
+		}).observe(board);
+	}
+
 	const line = document.createElement("p");
 	// ABOVE THE BOARD, LIKE EVERY OTHER PANE'S DESCRIPTION: 10px ABOVE IT AND 10px BETWEEN IT AND THE BOARD
 	line.className = "card-sub margin-top-10";
@@ -796,7 +850,10 @@ async function loadRanking(container, user) {
 	const passedBefore = passed?.ref ? before.findIndex(row => row.ref === passed.ref) : -1;
 	const overtook = meIndex !== -1 && passedBefore !== -1 && passedBefore < meBefore;
 	const lead = dropped ? MSG_RANKING_DROPPED : gained > 0 ? (overtook ? MSG_RANKING_OVERTAKE(gained, passed.name) : MSG_RANKING_GAINED(gained)) : "";
-	if (meIndex === -1) {
+	if (preset) {
+		// THE VISITOR'S LINE, WITH ITS LOGIN LINK — NO PLAYER NAMES IN IT, SO IT CAN GO IN AS HTML
+		line.innerHTML = MSG_VISITOR_RANKING;
+	} else if (meIndex === -1) {
 		// OPTED OUT: THE ONE LINE WITH A LINK, AND NO PLAYER NAMES IN IT, SO IT CAN GO IN AS HTML
 		line.innerHTML = MSG_RANKING_OUT;
 		line.querySelector("a").addEventListener("click", event => {
@@ -811,9 +868,9 @@ async function loadRanking(container, user) {
 	container.classList.replace("margin-top-20", "margin-top-10");
 
 	// THE SNAPSHOT IS SAVED ONLY ONCE THE PLAYER HAS SEEN THE UPDATE, SO A BOARD NEVER OPENED STILL PLAYS NEXT TIME. ONLY WHAT
-	// season_ranking ALREADY SHOWED THEM. NEVER IN DEBUG
+	// season_ranking ALREADY SHOWED THEM. NEVER IN DEBUG, AND NEVER FOR THE VISITOR'S EXAMPLE BOARD
 	const save = () => {
-		if (debug) return;
+		if (debug || preset) return;
 		const snapshot = after.map(({ place, name, points, is_me, ref }) => ({ place, name, points, is_me, ref }));
 		// .then() BECAUSE A SUPABASE QUERY IS ONLY SENT WHEN AWAITED OR THEN-ED — NOTHING HERE WAITS ON IT
 		db.from("ranking_views").upsert({ player_id: user.id, season_start: season.startDate, board: snapshot, seen_at: new Date().toISOString() }, { onConflict: "player_id,season_start" }).then(({ error }) => { if (error) console.error(error); });
@@ -892,10 +949,9 @@ function showVisitor() {
 			<p class="card-sub margin-top-10" style="font-size: .7em">${MSG_VISITOR_PROGRESS}</p>
 			<div class="bookings-list margin-top-10"></div>
 		</div>
-		<!-- VISITORS AREN'T RANKED (NO ACCOUNT); THE REAL PREVIEW IS THE "LEADERBOARD TEASER" TODO -->
+		<!-- VISITORS AREN'T RANKED (NO ACCOUNT): THE STANDARD BOARD WITH EXAMPLE PLAYERS AND THE VISITOR AS "O TEU NOME" (visitorRanking), ITS LINE CARRYING THE LOGIN LINK -->
 		<div data-pane-body="ranking" hidden>
-			<p class="card-sub margin-top-10" style="font-size: .7em">${MSG_VISITOR_RANKING}</p>
-			${loginBtn}
+			<div class="bookings-list margin-top-20"></div>
 		</div>
 		<div data-pane-body="passes" hidden>
 			<p class="card-sub margin-top-10" style="font-size: .7em">${MSG_VISITOR_PASSES}</p>
@@ -915,6 +971,7 @@ function showVisitor() {
 	// A VISITOR HAS NO PASSES, SO THEIR GAMES' XP IS ALREADY WHAT player_xp WOULD SAY
 	loadProgress(app.querySelector('[data-pane-body="progress"] .bookings-list'), Promise.resolve([dummyGame()]),
 		games.then(list => list.length ? MSG_TEASER_XP(sumXp(list)) : MSG_TEASER_FIRST(DUMMY_GAME_XP)), Promise.resolve(DUMMY_GAME_XP));
+	loadRanking(app.querySelector('[data-pane-body="ranking"] .bookings-list'), null, visitorRanking(DUMMY_GAME_XP));
 	wireFolderTabs();
 	app.querySelectorAll('[data-action="login"]').forEach(btn => btn.addEventListener("click", () => { location.href = "login.html"; }));
 }

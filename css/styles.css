@@ -1272,6 +1272,11 @@ input[type="time"]::-webkit-date-and-time-value {
 	animation: plaque-in 1s ease-in-out forwards;
 }
 
+/* A PLAQUE WAITING OUT OF ITS SLOT, WHERE plaque-in PICKS IT UP — THE SLOT SHOWS EMPTY */
+.plaque-gone {
+	transform: translateX(110%) rotateY(var(--hinge, 10deg));
+}
+
 @keyframes plaque-out {
 	0% { transform: none; }
 	60% { transform: rotateY(var(--hinge, 10deg)); }

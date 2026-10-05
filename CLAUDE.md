@@ -356,7 +356,7 @@ Unlike the skill bars, the XP bar is relative: the fill only covers the current 
 Being built — XP in the database, the opt-out, `season_ranking` and the ranking tab exist (see the Leaderboards todo); end of season doesn't yet. XP and the skill levels give every player a number, and numbers can be ranked. Comparing yourself with others is the strongest motivator in Duolingo (its leagues) and Strava (segment rankings), and it gives solo progress a reason to come back.
 
 **Decided:**
-- **Rank activity, never results:** XP, games, streak and Território all come from recorded games, so they can be ranked. Self-reported wins and losses can't be (see "Honesty" under Player progress). The leaderboard measures who plays the most, not who plays the best, and the copy should say so
+- **Rank activity, never results:** XP, games, streak and Território all come from recorded games, so they can be ranked. Self-reported wins and losses can't be (see "Honesty" under Player progress). The leaderboard measures who plays the most, not who plays the best, and the copy should say so. One exception: the visitor's teaser board ("Os melhores jogadores de cada época…", `MSG_VISITOR_RANKING`) — it's a pitch to make an account, not a description of the ranking
 - **Six-month seasons, not weeks:** players don't play often enough for a weekly table to mean anything. Fixed seasons, two a year, following the outdoor tennis year: **Época de Verão** (Apr–Sep) and **Época de Inverno** (Oct–Mar, labelled across two years: "Inverno 26/27"), in Lisbon time (`season_start` in `supabase/sql/ranking.sql`), rather than a rolling 6 months: a season *ends*, so it has a winner and results to keep. Aligned with Momentum, which already counts the last 6 months
 - **What's ranked: XP earned in the season** — every increment the trading card counts, earned inside the season: +500 per game, per court never played before, per streak week, and +3000 per pass approved in the season. Season points are always a slice of XP, never a separate scale
 - **Ties:** equal points share the place ("1, 2, 2, 4"); then lifetime **Tarimba** (hours on court) breaks the tie, rewarding loyalty
@@ -683,7 +683,7 @@ Sessions are kept alive indefinitely for active users. Supabase auto-refreshes t
     - [ ] Right after a walk-in: "Bom jogo" and "Obrigado" tell a visitor what's waiting — "+1000 XP à tua espera. Faz login para não os perderes." (the profile teaser's loss aversion, at the moment they've just played; a line, not a button — the screens reload on a countdown)
     - [x] The level-1 ring loop is the grab (decided): every visitor, seasoned or blank, sees the same level-1 ring filling to 5 o'clock and back — never their real unclaimed progress. Tapping it lands on their profile, where the teaser explains it
     - [ ] A dot on the visitor's ring while they have unclaimed XP — a standing "something is yours here"
-    - [ ] A one-time card on the court list for a seasoned visitor: "Já tens 1 500 XP à tua espera" + a link to the profile. Shown once, then dropped, so it never nags
+    - [x] A card on every court page, below the court details (`#visitor-nudge`, `showVisitorNudge` in `court-stage.js`): a seasoned visitor reads "Tens 1 500 XP à tua espera. Anda cá ver", a blank one "Anda cá ver o teu progresso", both linking to the profile. Wears the install nudge's look; closing it snoozes that version for 10 days on the device (`snoozeNudge`), and the install nudge now snoozes the same way
     - **Registered players**
     - [ ] Success screens show what the game earned: "+500 XP · faltam 1500 para o nível 4" on "Bom jogo", "Obrigado" and "Jogo reservado" (a line, not a button — the screens reload on a countdown)
     - [ ] The avatar shows the level instead of a generic head: a small level badge or an XP ring that fills with play, plus a dot when something is unseen (level up, new diamond, refused pass)
@@ -726,7 +726,7 @@ Sessions are kept alive indefinitely for active users. Supabase auto-refreshes t
     - [x] Pig-voice lines for gains, overtakes, drops, chasing, first, zero and opt-out (`MSG_RANKING_*`)
     - [x] "Entende o ranking" as the admin's collapsible rules card
     - [ ] Customise the ranking's look per season: Época de Verão vs Época de Inverno
-  - [ ] Leaderboard teaser
+  - [x] Leaderboard teaser: the visitor's ranking tab shows the standard board with nine example players (`DUMMY_RANKING`) and the visitor as "O. Teu Nome", always 6th with the example first game's 1000 XP (`visitorRanking`) — every row shown, nothing saved. Their plaques slide into empty slots every time the tab opens. The line: "Os melhores jogadores de cada época aparecem aqui. Faz login para participar. O teu primeiro jogo vale logo 1000 XP."
   - [ ] Rain freeze (see "Rain freeze" under Player progress): a rainy week doesn't break the streak — Consistência, and the +500 streak-week XP in `games_xp`. Needs past weather stored in the database (`weather.js` only fetches forecasts, in the browser), so the SQL can tell which weeks were rainy
   - [ ] End of season: `league_results` snapshot + surprise
   - [ ] Privacy policy — the app has none yet; needed before a public ranking with names launches
