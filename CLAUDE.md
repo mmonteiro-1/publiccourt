@@ -31,6 +31,7 @@ js/pass-card.js       — passCard() + its copy and constants: the one pass tick
 js/weather.js         — Open-Meteo daily forecast → one icon per day (rain/sunny/part_cloudy/cloudy), 3h localStorage cache
 js/config.js          — Supabase credentials + db client
 css/styles.css        — single global stylesheet
+supabase/sql/         — the SQL behind the database functions (xp.sql, ranking.sql), run by hand in the SQL editor; the record of what's live
 images/               — SVG icons (icon_*.svg) + flags + pig mascot
 ```
 
@@ -143,7 +144,7 @@ One concept, one word per layer. **Code** is what identifiers, comments, docs an
 - `player_id` → `auth.users.id`, nullable. Set when a logged-in player starts a walk-in; anonymous walk-ins leave it `null` and are identified by `device_id` alone. On login the device's unclaimed walk-ins are adopted (`player_id = auth.uid()` where `device_id` matches and `player_id IS NULL`), so history survives the switch from visitor to account — per device only
 
 **pass_awards** — `player_id uuid, group_id int4, court_id int4, awarded_at timestamptz`
-- One row per pass ever approved, for XP (`fetchPassAwards` in `profile.js`). Survives the pass being revoked, so XP never drops
+- One row per pass ever approved, for XP (counted by the `player_xp` database function). Survives the pass being revoked, so XP never drops
 - Filled only by the `award_pass` trigger (`security definer`) after insert or status update on `passes` when `status = 'approved'`; existing approved passes were backfilled
 - Unique index `pass_awards_once` on `(player_id, coalesce(group_id, 0), coalesce(court_id, 0))` — one award per scope ever; the trigger's `on conflict do nothing` skips re-approvals
 - RLS: players SELECT own only; nobody inserts, updates or deletes directly
@@ -303,14 +304,14 @@ Bar max: 40h. Lifetime, like XP, so it never drops. It fills the gap Momentum le
 
 The game thresholds are a first guess, to be tuned once real play is known.
 
-**XP** (`playerXp` / `xpCard` in `profile.js`), shown on the **trading card** above the skill cards — its own `.trading-card*` classes (not `.ticket`), so it can evolve on its own: "Nível N" in the `.trading-card-level` banner, the pig for the current level as the player art (`.trading-card-art`, `XP_LEVEL_IMAGES`; width 90%, centred with 20px above and below, a plain image for now, not a pig appearance), the character name and flavour text (`XP_LEVEL_INFO`), the four skill ratings, then the XP bar. **Skill ratings** (`.trading-card-skills`, `skillRating`): each skill as a share of its bar max, 0–100, FIFA-card style — one scale for all four, so strengths read at a glance. Big number with the skill icon on the bottom-right corner; no diamonds here, only in the banner and on the skill cards. The rolling skills can drop (current form), while the XP level is permanent; the skill cards below are the breakdown behind each number. The idea is a Magic / Pokémon style character card. XP only ever grows, so it comes from lifetime events, never from the skills' rolling values (Momentum's 6-month count can drop). Every increment is +500 XP (`XP_PER_INCREMENT`):
+**XP** (computed in the database by `games_xp` / `player_xp`, read through `my_games_xp` / `my_xp`; drawn by `xpCard` in `profile.js`), shown on the **trading card** above the skill cards — its own `.trading-card*` classes (not `.ticket`), so it can evolve on its own: "Nível N" in the `.trading-card-level` banner, the pig for the current level as the player art (`.trading-card-art`, `XP_LEVEL_IMAGES`; width 90%, centred with 20px above and below, a plain image for now, not a pig appearance), the character name and flavour text (`XP_LEVEL_INFO`), the four skill ratings, then the XP bar. **Skill ratings** (`.trading-card-skills`, `skillRating`): each skill as a share of its bar max, 0–100, FIFA-card style — one scale for all four, so strengths read at a glance. Big number with the skill icon on the bottom-right corner; no diamonds here, only in the banner and on the skill cards. The rolling skills can drop (current form), while the XP level is permanent; the skill cards below are the breakdown behind each number. The idea is a Magic / Pokémon style character card. XP only ever grows, so it comes from lifetime events, never from the skills' rolling values (Momentum's 6-month count can drop). Every increment is +500 XP (`XP_PER_INCREMENT`):
 - each past game
 - each distinct court played
 - each week with a game right after another week with a game (a lone week is already paid by its games)
 
 Plus **+3000 XP per pass** (`XP_PER_PASS`), shown as "+3000 XP" on each pass card (dummy pass included). A pass is a bigger step than a game: an admin vetted and approved the player. It's counted from `pass_awards`, never from `memberships`: revoking hard-deletes the pass row, and **XP never drops**. One award per scope, ever, so an admin revoking and re-approving can't farm it. The history cards no longer add up to the total for members — accepted, the difference is on the Passes tab.
 
-**XP per game** (`gamesXp`): the same total split across games, oldest first, so each history card shows what it earned ("+1000 XP", right of the court-type row) and the cards add up to the trading card. A court's bonus goes to its first game there, a streak week's bonus to that week's first game — so a card shows +500, +1000 or +1500. `playerXp` is just the sum of `gamesXp`, so the two can't drift apart.
+**XP per game** (the `xp` column of `games_xp`): the same total split across games, oldest first, so each history card shows what it earned ("+1000 XP", right of the court-type row) and the cards add up to the trading card. A court's bonus goes to its first game there, a streak week's bonus to that week's first game — so a card shows +500, +1000 or +1500. `player_xp` is the sum of `games_xp` plus the passes, so the two can't drift apart. The dummy game isn't in the database, so its +1000 is fixed in JS (`DUMMY_GAME_XP`).
 
 Numbers are inflated ×10 on purpose (big numbers, big fun) with the level ends ×10 too, so difficulty is unchanged. Shown with PT-PT grouping ("26 500").
 
@@ -339,20 +340,20 @@ Not built yet — the shape below is decided, the build isn't planned. XP and th
 
 **Decided:**
 - **Rank activity, never results:** XP, games, streak and Território all come from recorded games, so they can be ranked. Self-reported wins and losses can't be (see "Honesty" under Player progress). The leaderboard measures who plays the most, not who plays the best, and the copy should say so
-- **Six-month seasons, not weeks:** players don't play often enough for a weekly table to mean anything. Fixed seasons, two a year (e.g. Jan–Jun and Jul–Dec — possibly a summer and a winter season, to follow the tennis year), rather than a rolling 6 months: a season *ends*, so it has a winner and results to keep. Aligned with Momentum, which already counts the last 6 months
-- **What's ranked: XP earned in the season** — the same increments as the trading card (+500 per game, per court never played before, per streak week). A pass approval's +3000 doesn't count: it isn't play
-- **Ties:** equal points share the place ("1, 2, 2, 4"); then **hours played** breaks the tie (open: the season's hours — fairer to newcomers — or lifetime Tarimba, which rewards loyalty)
+- **Six-month seasons, not weeks:** players don't play often enough for a weekly table to mean anything. Fixed seasons, two a year, following the outdoor tennis year: **Época de Verão** (Apr–Sep) and **Época de Inverno** (Oct–Mar, labelled across two years: "Inverno 26/27"), in Lisbon time (`season_start` in `supabase/sql/ranking.sql`), rather than a rolling 6 months: a season *ends*, so it has a winner and results to keep. Aligned with Momentum, which already counts the last 6 months
+- **What's ranked: XP earned in the season** — every increment the trading card counts, earned inside the season: +500 per game, per court never played before, per streak week, and +3000 per pass approved in the season. Season points are always a slice of XP, never a separate scale
+- **Ties:** equal points share the place ("1, 2, 2, 4"); then lifetime **Tarimba** (hours on court) breaks the tie, rewarding loyalty
 - **One league for everyone** — no court-group, court or city leagues yet; the player base is too small to split. Visitors aren't ranked (they have no account — one more reason to log in); admins are left out
 - **No opt-in; an opt-out instead.** Every registered player is ranked, with a "don't show me in the ranking" switch in Dados and a line in the privacy policy
 - **Names are always "R. Barbosa"** — the first initial and the surname, the only form ever shown, never the full name. Privacy by default, with nothing for the player to configure. Only the name and the score: never the courts, days or times someone plays, which would expose their routine (same concern as matchmaking). A public ranking with names is personal data in the open, so get a quick legal check before launch (see "Activity, never health")
-- **Season results are kept** (a `league_results` table: the final table, saved when a season ends). They become lasting titles on the profile ("Campeão · 1.º semestre 2027", "Top 3") and a surprise: the end-of-season parcel, the pig hand lifting the player's final place
+- **Season results are kept** (a `league_results` table: the final table, saved when a season ends). They become lasting titles on the profile ("Campeão · Verão 2027", "Top 3") and a surprise: the end-of-season parcel, the pig hand lifting the player's final place
 - **Show the neighbourhood, not the whole table:** the top three for the aspiration, then the player with whoever is just above and just below ("Estás em 7.º — 1 jogo para passares o R. Barbosa", the "1 jogo" worked out from the gap). Being told you're 43rd of 50 demotivates; a concrete next step doesn't. Players with 0 points sit at the bottom without being called out
 - **Tone:** the pig's cheeky voice teases instead of shaming ("Passaram-te. Vais deixar?"). Nobody at the bottom gets a mocking title, same rule as the level titles
 
 **How it would work:**
 - **Computed in the database, not the browser:** today every stat is computed in JS from the player's own rows, and RLS rightly blocks reading other players' games. The ranking needs a Postgres function that returns only aggregates (the "R. Barbosa" name + season points + hours) for players who haven't opted out, never the raw rows
 - **First step, useful even without a leaderboard:** move the XP calculation into the database and have the trading card read it from there too. Otherwise the XP rules live twice — in JS and in SQL — and drift apart
-- **Cheating is the real risk:** a walk-in is only a declared game, and a ranking makes faking one tempting. Guards the function can apply: at most 2 games per player per day; ignore walk-ins that overlap another game of the same player; ignore games of 10 min or less (the history already hides them); count bookings only once past and confirmed. Walk-ins already need the location step, and bookings are backed by the admin
+- **Cheating is the real risk:** a walk-in is only a declared game, and a ranking makes faking one tempting. `games_xp` already ignores games of 10 min or less and counts bookings only once past and confirmed. Guards tried and dropped for now (players won't care much yet): at most 2 games per player per day, and ignoring walk-ins that overlap another game of the same player — they'd apply to XP too, since the ranking and the trading card share one function. Walk-ins already need the location step, and bookings are backed by the admin
 - **Admin angle:** an admin could see the most active players at their courts and reward them (a free game, a "sócio do mês" badge) — a candidate add-on under Degrees of Complexity
 
 **Feeds matchmaking later** (see "Player matchmaking"): ranking neighbours play about as much as each other — a natural "people like you" — and Consistência / Território say who plays regularly and who likes new courts. But activity isn't skill: a keen beginner and a rare expert can have the same XP, so matchmaking still needs a skill signal (self-declared level, post-game results). Where and when people play is the most useful match signal and the most private, so matching happens on the server and only ever says "found someone", never the other player's routine. Keeping the XP in the database and the season snapshots is what makes this possible later.
@@ -362,7 +363,7 @@ Not built yet — the shape below is decided, the build isn't planned. XP and th
 Events give a season a rhythm: something new to chase within the six months, and a reason for a lapsed player to come back.
 
 - **Season points, separate from XP:** XP only ever grows and drives the character level, so it stays untouched. A season has its own points, which start at zero and are ranked for that season only. A game earns both: the usual XP plus the season points, with any event bonus applied to the season points alone. The character level never inflates from a double-points weekend
-- **Winter needn't be a dead season:** it can weigh points by the rain (ties in with the rain freeze)
+- **Winter needn't be a dead season — but no flat winter boost (decided):** each season is its own table, so a multiplier on every winter game changes nobody's place; it would only inflate the trading card in winter, or break "season points = a slice of XP". It would also push players onto wet, slippery courts. Keep winter alive with the rain freeze (a rainy week doesn't break the streak), one-off events (double-points weekend, explorer week) and the off-peak booking bonus instead. If weather ever enters the points, only as a bonus on rainy-day games applied to XP and season points alike, which needs past weather stored in the database
 - **Event ideas:**
   - Double points weekend: the simplest boost, and an easy way to test whether events move play at all
   - Local calendar: Santos Populares in June, the Aveiro summer, school holidays. Portuguese moments suit the pig's voice
@@ -497,7 +498,7 @@ Supabase Auth is already included — magic link is a built-in provider, no extr
 | **History** | Their real games with XP + "Fazer login" | 1 locked dummy card (+1000 XP), no button | 1 locked dummy card, no pig |
 | **Passes / Dados** | Locked dummy | Locked dummy | Unchanged |
 
-- **With walk-ins, loss aversion:** the XP is theirs already, and logging in is what saves it. "N" is `playerXp` of their unclaimed walk-ins, exactly what the account receives on login
+- **With walk-ins, loss aversion:** the XP is theirs already, and logging in is what saves it. "N" is the summed `games_xp` of their unclaimed walk-ins, exactly what the account receives on login
 - **Blank, a concrete next step:** they have nothing to lose yet, and an empty account gains nothing. 1000 XP is exact: a first game always earns +500 for the game and +500 for the new court
 - **No buttons on the previews:** the progress view has none, and the blank history has none either — an "Encontrar campo" under the dummy card made the card itself look clickable. The only button is "Fazer login" under a visitor's real history
 - **The history proves the number:** each card shows the XP it earned, so the teaser total can be traced game by game. The single dummy card shows +1000, matching the blank visitor's promise
@@ -626,7 +627,7 @@ Sessions are kept alive indefinitely for active users. Supabase auto-refreshes t
     - [ ] Tune the level thresholds (skills and XP) once real play is known
     - [ ] Visitor teaser (see "Visitor teaser" under Authentication)
       - [x] Visitor history shows unclaimed walk-ins only (`player_id IS NULL`)
-      - [x] XP gained on each history card, players and visitors (`gamesXp`)
+      - [x] XP gained on each history card, players and visitors (`games_xp`)
       - [x] Progress: dummy trading card + skill cards from the dummy first game, teaser inside the trading card
       - [x] Passes: dummy pass ("Meu primeiro passe", 30/02) with the padlock, and the passes explainer above it
       - [ ] Dados: locked dummy version for visitors
@@ -669,6 +670,17 @@ Sessions are kept alive indefinitely for active users. Supabase auto-refreshes t
 - [ ] Test what each page shows after an action (approve, deny, revoke, cancel, book…) — the page often just sits blank
   - Likely cause: admin.js removes the acted-on card with `card.remove()`, so removing the last one leaves an empty list with no pig appearance. Approving also doesn't move the player into the members tab (or deny into anything) until a reload
   - Fix options: re-render the view from the patched `adminData` cache (keeps the pig appearance and cross-tab consistency), or just reload the page after the action
+- [ ] Leaderboards (see "Leaderboards and social comparison")
+  - [x] XP computed in the database (`supabase/sql/xp.sql`); the profile reads it through `my_games_xp` / `my_xp`
+  - [x] Opt-out: `profiles.hide_from_ranking`, a Participar / Recusar toggle in Dados
+    - [ ] Style the toggle better (now the court list's `.view-toggle` with text buttons, `.profile-form .view-toggle-btn`)
+  - [x] Ranking function: `season_ranking` in `supabase/sql/ranking.sql` — season points, "R. Barbosa" names, shared places, Tarimba tie-break, `is_me` instead of ids
+  - [ ] Ranking tab: second of five profile tabs (`icon_ranking`, `loadRanking`), minimal `.ranking-row` styling for now
+    - [ ] Customise the ranking's look per season: Época de Verão vs Época de Inverno
+  - [ ] Leaderboard teaser
+  - [ ] Rain freeze (see "Rain freeze" under Player progress): a rainy week doesn't break the streak — Consistência, and the +500 streak-week XP in `games_xp`. Needs past weather stored in the database (`weather.js` only fetches forecasts, in the browser), so the SQL can tell which weeks were rainy
+  - [ ] End of season: `league_results` snapshot + surprise
+  - [ ] Privacy policy — the app has none yet; needed before a public ranking with names launches
 - [ ] Polish pig mascot with Rive animations
   - [ ] Animate existing pig SVG in Rive editor (idle loop + reaction states)
   - [ ] Export `.riv` and integrate via `@rive-app/canvas` runtime

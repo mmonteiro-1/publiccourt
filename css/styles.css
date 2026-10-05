@@ -362,6 +362,13 @@ header {
 	padding: 0;
 }
 
+/* THE PROFILE'S RANKING TOGGLE HOLDS WORDS, NOT ICONS, SO ITS BUTTONS SIZE TO THEIR TEXT */
+.profile-form .view-toggle-btn {
+	width: auto;
+	padding: 0 10px;
+	font-size: 0.8em;
+}
+
 .view-toggle-btn.active {
 	background: #000;
 	color: #fff;
@@ -1021,16 +1028,36 @@ input[type="time"]::-webkit-date-and-time-value {
 	margin-top: 3px;
 }
 
-/* EACH TAB SITS IN FRONT OF THE NEXT, SO IT COVERS THE NEXT TAB'S LEFT EDGE. FOUR TABS AT MOST */
-.folder-tab:nth-child(1) { z-index: 4; }
-.folder-tab:nth-child(2) { z-index: 3; }
-.folder-tab:nth-child(3) { z-index: 2; }
-.folder-tab:nth-child(4) { z-index: 1; }
+/* EACH TAB SITS IN FRONT OF THE NEXT, SO IT COVERS THE NEXT TAB'S LEFT EDGE. FIVE TABS AT MOST */
+.folder-tab:nth-child(1) { z-index: 5; }
+.folder-tab:nth-child(2) { z-index: 4; }
+.folder-tab:nth-child(3) { z-index: 3; }
+.folder-tab:nth-child(4) { z-index: 2; }
+.folder-tab:nth-child(5) { z-index: 1; }
 
 /* THE FURTHER BACK AN INACTIVE TAB SITS, THE DARKER IT GETS — --pink-dark MIXED WITH MORE BLACK, NO NEW COLOURS */
 .folder-tab:not(.active):nth-child(2) { background: color-mix(in srgb, var(--pink-dark), var(--black) 0%); }
 .folder-tab:not(.active):nth-child(3) { background: color-mix(in srgb, var(--pink-dark), var(--black) 20%); }
 .folder-tab:not(.active):nth-child(4) { background: color-mix(in srgb, var(--pink-dark), var(--black) 40%); }
+.folder-tab:not(.active):nth-child(5) { background: color-mix(in srgb, var(--pink-dark), var(--black) 60%); }
+
+/* === RANKING ===
+   MINIMAL ON PURPOSE UNTIL IT GETS A REAL DESIGN: ONE LINE PER PLAYER — PLACE, NAME, POINTS — THE PLAYER'S OWN ROW IN BOLD.
+   THE GAP BETWEEN THE TOP THREE AND THE PLAYER'S NEIGHBOURHOOD IS THE SHARED .divider */
+.ranking-row {
+	display: flex;
+	gap: 10px;
+	padding: 10px 0;
+	border-bottom: 2px solid var(--black);
+}
+
+.ranking-row span:last-child {
+	margin-left: auto;
+}
+
+.ranking-row.me {
+	font-weight: 700;
+}
 
 /* THE ACTIVE TAB COMES FULLY TO THE FRONT, OVER BOTH NEIGHBOURS. AFTER THE nth-child RULES: SAME SPECIFICITY, SO ORDER WINS */
 .folder-tab.active {

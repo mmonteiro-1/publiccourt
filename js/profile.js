@@ -4,6 +4,7 @@ const MSG_HELLO = name => `Olá, ${name}`;
 const MSG_SAVE_ERROR = "Não foi possível guardar. Tenta outra vez.";
 const MSG_SAVED = "Alterações guardadas.";
 // SHOWN BOTH DURING ONBOARDING AND ON THE PROFILE, NEXT TO WHERE THE DATA IS ENTERED
+const MSG_RANKING_VISIBILITY = "No ranking só aparece a inicial do teu nome com o apelido (ex.: R. Barbosa) e os teus pontos — nunca onde nem quando jogas.";
 const MSG_DATA_DISCLAIMER = "O login só é necessário caso queiras reservar um campo. <br><br>Estas informações são relevantes para o administrador do campo quando pedes um passe. Por este motivo o Campo Livre irá guardar os teus dados, embora não tenha interesse neles.";
 
 const MSG_HISTORY_TITLE = "Teus jogos passados";
@@ -54,6 +55,29 @@ const MSG_STAT_HOURS_HINT = "Em campo, desde a primeira partida";
 const MSG_STAT_STREAK_HINT = "Com pelo menos uma partida";
 const MSG_STAT_COURTS = n => `${n} ${n === 1 ? "campo" : "campos diferentes"}`;
 const MSG_STAT_COURTS_HINT = n => `Já ${n === 1 ? "recebeu" : "receberam"} as tuas partidas`;
+// THE RANKING MEASURES WHO PLAYS THE MOST, NOT WHO PLAYS THE BEST. THE PIG TEASES, NEVER SHAMES
+const MSG_VIEW_RANKING = "Ranking";
+const MSG_SEASON = name => `Época de ${name}`;
+const MSG_SEASON_DATES = (start, end) => `${start} a ${end}`;
+const MSG_PLACE = n => `${n}.º`;
+const MSG_RANKING_FIRST = "Estás em 1.º. Agora é defender o lugar.";
+const MSG_RANKING_TIED = name => `Estás empatado com ${name}. Desempata em campo.`;
+// "N JOGOS" AT 500 XP EACH, THE LEAST A GAME EARNS — A NEW COURT OR A STREAK WEEK CAN MAKE IT FEWER
+const MSG_RANKING_CHASE = (place, games, name) => `Estás em ${MSG_PLACE(place)} — ${games === 1 ? "1 jogo" : `${games} jogos`} para passares ${name}.`;
+const MSG_RANKING_ZERO = "Ainda não jogaste nesta época. Um jogo e entras na corrida.";
+const MSG_RANKING_OUT = "Estás fora do ranking. Podes mudar isso em Dados.";
+// "DADOS" OPENS THAT TAB (data-pane-link), WHERE THE PARTICIPAR / RECUSAR TOGGLE IS
+const MSG_RANKING_ABOUT = `O ranking junta todos os jogadores do Campo Livre. Se preferires ficar de fora, podes sair em <a href="#" data-pane-link="info">Dados</a>.`;
+const MSG_POINTS_INFO = "Entende o ranking";
+// DISPLAY ONLY — THE RULES THEMSELVES LIVE IN games_xp / season_ranking (supabase/sql), SO KEEP THESE IN STEP WITH THEM
+const POINTS_RULES = [
+	["Cada partida", 500],
+	["Primeira partida num campo novo", 500],
+	["Semana com partida, a seguir a outra", 500],
+	["Passe aprovado", XP_PER_PASS],
+];
+const MSG_POINTS_NOTE = "Partidas de 10 minutos ou menos não contam. Os pontos voltam a zero no início de cada época; o XP do teu cartão nunca desce.";
+const MSG_VISITOR_RANKING = `Os jogadores mais ativos de cada época aparecem aqui. ${MSG_LOGIN_LINK} para entrares na corrida.`;
 const MSG_VIEW_PASSES = "Os teus passes";
 const MSG_NO_PASSES = "Não és membro de nenhum campo, infelizmente. Bora mudar isso com o teu primeiro passe!";
 const MSG_PASS_REQUESTED = date => `Pedido a ${date}`;
@@ -112,7 +136,7 @@ async function loadProfile(user) {
 	// maybeSingle() RETURNS null (NOT AN ERROR) WHEN NO ROW EXISTS — USED TO DETECT NEW USERS
 	const { data: profile } = await db
 		.from("profiles")
-		.select("name, phone, nif")
+		.select("name, phone, nif, hide_from_ranking")
 		.eq("id", user.id)
 		.maybeSingle();
 
@@ -216,7 +240,7 @@ function startOnboarding(user) {
 		}
 
 		if (redirectAfterLogin()) return;
-		showProfile(user, { name: collected.name, phone: collected.phone, nif: collected.nif });
+		showProfile(user, { name: collected.name, phone: collected.phone, nif: collected.nif, hide_from_ranking: false });
 	}
 
 	render();
@@ -224,26 +248,19 @@ function startOnboarding(user) {
 
 // PAST GAMES FOR ONE PLAYER, NEWEST FIRST. A REGISTERED PLAYER IS MATCHED ON player_id SO THE HISTORY
 // FOLLOWS THE ACCOUNT ONTO ANY DEVICE; A VISITOR HAS ONLY device_id, AND NO BOOKINGS AT ALL. A VISITOR SEES ONLY UNCLAIMED
-// WALK-INS: THOSE ARE EXACTLY WHAT claimDeviceWalkIns HANDS OVER ON LOGIN, NOT ONES AN EARLIER ACCOUNT ON THIS DEVICE ALREADY TOOK
+// WALK-INS: THOSE ARE EXACTLY WHAT claimDeviceWalkIns HANDS OVER ON LOGIN, NOT ONES AN EARLIER ACCOUNT ON THIS DEVICE ALREADY TOOK.
+// THE GAMES AND THE XP EACH EARNED COME FROM THE DATABASE (my_games_xp → games_xp), THE SAME FUNCTION THE RANKING READS, SO THE
+// XP RULES LIVE ONLY THERE. IT ALREADY DROPS FUTURE GAMES AND THOSE OF 10 MIN OR LESS (MIS-TAPS, WALK-INS ENDED RIGHT AWAY)
 async function fetchHistory(user) {
-	const walkIns = db.from("walk_ins").select("court_id, started_at, ends_at, manual_finished_at");
-	const [{ data: walkInRows }, { data: bookingRows }] = await Promise.all([
-		user ? walkIns.eq("player_id", user.id) : walkIns.eq("device_id", getDeviceId()).is("player_id", null),
-		user
-			? db.from("bookings").select("court_id, start_at, end_at").eq("player_id", user.id).eq("status", "confirmed")
-			: { data: [] },
-	]);
-
-	const now = Date.now();
-	const games = [
-		// A WALK-IN STOPPED EARLY STILL CARRIES ITS ORIGINAL (FUTURE) ends_at, SO manual_finished_at WINS
-		...(walkInRows ?? []).map(w => ({ courtId: w.court_id, start: w.started_at, end: w.manual_finished_at ?? w.ends_at, kind: MSG_KIND_WALKIN })),
-		...(bookingRows ?? []).map(b => ({ courtId: b.court_id, start: b.start_at, end: b.end_at, kind: MSG_KIND_BOOKING })),
-	]
-		.map(game => ({ ...game, mins: Math.round((new Date(game.end) - new Date(game.start)) / 60000) }))
-		// A GAME OF 10 MIN OR LESS IS A MIS-TAP OR A WALK-IN ENDED RIGHT AWAY — NOT LISTED, AND NOT COUNTED IN PROGRESS
-		.filter(game => new Date(game.end).getTime() < now && game.mins > 10)
-		.sort((a, b) => new Date(b.start) - new Date(a.start));
+	const { data } = await db.rpc("my_games_xp", { p_device: user ? null : getDeviceId() });
+	const games = (data ?? []).map(g => ({
+		courtId: g.court_id,
+		start: g.start_at,
+		end: g.end_at,
+		mins: Math.round((new Date(g.end_at) - new Date(g.start_at)) / 60000),
+		kind: g.kind === "booking" ? MSG_KIND_BOOKING : MSG_KIND_WALKIN,
+		xp: g.xp,
+	}));
 	if (!games.length) return games;
 
 	// COURTS IN ONE QUERY INSTEAD OF AN EMBEDDED JOIN, WHICH WOULD NEED AN FK ON BOTH SOURCE TABLES
@@ -256,7 +273,9 @@ async function fetchHistory(user) {
 // TICKET CARDS REUSING THE ADMIN DASHBOARD'S MARKUP, SO A GAME LOOKS THE SAME ON BOTH SIDES OF THE APP.
 // TAKES THE fetchHistory PROMISE SO THE PROGRESS VIEW CAN SHARE ONE FETCH
 // WITH NO GAMES YET, ONE FADED EXAMPLE CARD SHOWS HOW THE LIST WORKS. A FIRST GAME, SO ITS +1000 XP IS EXACTLY WHAT
-// THE PLAYER'S OWN FIRST GAME WILL EARN. REALLY DATED YESTERDAY, SO THE XP AND STREAK MATHS TREAT IT AS A RECENT PAST GAME
+// THE PLAYER'S OWN FIRST GAME WILL EARN (+500 FOR THE GAME, +500 FOR THE NEW COURT). IT ISN'T IN THE DATABASE, SO THAT NUMBER
+// IS FIXED HERE. REALLY DATED YESTERDAY, SO THE STREAK MATHS TREAT IT AS A RECENT PAST GAME
+const DUMMY_GAME_XP = 1000;
 
 function dummyGame() {
 	const start = new Date();
@@ -264,14 +283,13 @@ function dummyGame() {
 	start.setHours(18, 0, 0, 0);
 	const end = new Date(start);
 	end.setHours(19);
-	// THE SHOWN DATE IS 30/02, A DAY THAT DOESN'T EXIST, SO IT READS AS AN EXAMPLE. THE REAL DATES STAY FOR THE XP MATHS
-	return { courtId: 0, title: MSG_DUMMY_TITLE, label: "SAB, 30/02, 18:00-19:00", start: start.toISOString(), end: end.toISOString(), mins: 60, kind: MSG_KIND_WALKIN };
+	// THE SHOWN DATE IS 30/02, A DAY THAT DOESN'T EXIST, SO IT READS AS AN EXAMPLE. THE REAL DATES STAY FOR THE STREAK MATHS
+	return { courtId: 0, title: MSG_DUMMY_TITLE, label: "SAB, 30/02, 18:00-19:00", start: start.toISOString(), end: end.toISOString(), mins: 60, kind: MSG_KIND_WALKIN, xp: DUMMY_GAME_XP };
 }
 
 async function loadHistory(container, gamesPromise, emptyMessage = MSG_HISTORY_EMPTY) {
 	const games = await gamesPromise;
 	const shown = games.length ? games : [dummyGame()];
-	const xpByGame = gamesXp(shown);
 	// THE MESSAGE GOES ABOVE THE LIST, NOT INSIDE IT, SO EVERY PANE SPACES ITS TEXT AND FIRST CARD THE SAME: 10px EACH
 	if (!games.length) {
 		container.insertAdjacentHTML("beforebegin", `<p class="card-sub margin-top-10" style="font-size: .7em">${emptyMessage}</p>`);
@@ -285,7 +303,7 @@ async function loadHistory(container, gamesPromise, emptyMessage = MSG_HISTORY_E
 		<div class="ticket${games.length ? "" : " locked"}">
 			${games.length ? "" : PADLOCK_HTML}
 			<p class="ticket-title" style="white-space: normal">${title}</p>
-			<p class="ticket-line"><img src="images/icon_court.svg" class="link-icon" alt="">${game.kind}<span class="game-xp">${MSG_GAME_XP(xpByGame.get(game))}</span></p>
+			<p class="ticket-line"><img src="images/icon_court.svg" class="link-icon" alt="">${game.kind}<span class="game-xp">${MSG_GAME_XP(game.xp)}</span></p>
 			<div class="divider ticket-divider"></div>
 			<div class="ticket-date-row">
 				<p class="ticket-date"><img src="images/icon_calendar_tennis.svg" class="link-icon" alt="">${game.label ?? gameLabel(game.start, game.end)}</p>
@@ -367,32 +385,9 @@ function levelStars(scale, value) {
 	return scale.levels.map((_, i) => STAR_SVG(i <= current)).join("");
 }
 
-// XP ONLY EVER GROWS, SO IT COMES FROM LIFETIME EVENTS, NOT FROM THE SKILLS' ROLLING VALUES. +XP_PER_INCREMENT FOR EACH GAME,
-// EACH DISTINCT COURT, AND EACH WEEK THAT EXTENDS A STREAK (A WEEK WITH A GAME RIGHT AFTER ANOTHER ONE — A LONE WEEK IS ALREADY PAID BY ITS GAMES)
-// INFLATED ×10 ON PURPOSE — BIG NUMBERS FEEL MORE REWARDING; THE LEVEL ENDS ARE ×10 TOO, SO DIFFICULTY IS UNCHANGED
-const XP_PER_INCREMENT = 500;
-
-// THE SAME XP SPLIT PER GAME, OLDEST FIRST, SO EACH HISTORY CARD SHOWS WHAT IT EARNED AND THE CARDS ADD UP TO THE TOTAL:
-// A COURT'S BONUS GOES TO ITS FIRST GAME, A STREAK WEEK'S TO THE WEEK'S FIRST GAME
-function gamesXp(games) {
-	const courts = new Set();
-	const weeks = new Set();
-	return new Map(games
-		.filter(game => new Date(game.start) < new Date())
-		.sort((a, b) => new Date(a.start) - new Date(b.start))
-		.map(game => {
-			const week = weekStart(game.start);
-			const previous = new Date(week);
-			previous.setDate(previous.getDate() - 7);
-			const increments = 1 + !courts.has(game.courtId) + (!weeks.has(week) && weeks.has(previous.getTime()));
-			courts.add(game.courtId);
-			weeks.add(week);
-			return [game, increments * XP_PER_INCREMENT];
-		}));
-}
-
-function playerXp(games) {
-	return [...gamesXp(games).values()].reduce((sum, xp) => sum + xp, 0);
+// XP ITSELF IS COMPUTED IN THE DATABASE (games_xp, player_xp), NOT HERE — THE RANKING READS THE SAME FUNCTIONS
+function sumXp(games) {
+	return games.reduce((sum, game) => sum + game.xp, 0);
 }
 
 // LEVEL n NEEDS 1500 + 500n XP (2000, 2500 … 6500), SO EACH IS A BIT HARDER. REACHING AN END IS A LEVEL-UP: 0–1999 IS LEVEL 1, 2000–4499 LEVEL 2
@@ -468,10 +463,11 @@ function levelBar(scale, value) {
 // NOT TIME PLAYED: A WALK-IN LASTS WHAT THE PLAYER CHOSE UNLESS ENDED EARLY, AND A BOOKING DOESN'T PROVE A SHOW-UP
 // A teaser MAKES THIS THE VISITOR'S LOCKED PREVIEW: IT PINS THE TRADING CARD'S RATINGS AT 1 AND THE SKILL CARDS' NUMBERS AT 0 —
 // AN EMPTY STARTING POINT RATHER THAN THE DUMMY FIRST GAME'S REAL VALUES. THE LEVELS, BARS AND XP STILL COME FROM THAT GAME
-async function loadProgress(container, gamesPromise, teaserPromise, passAwardsPromise) {
+// xpPromise IS THE TRADING CARD'S TOTAL: THE GAMES' XP PLUS +3000 PER PASS EVER AWARDED, AS player_xp COUNTS IT
+async function loadProgress(container, gamesPromise, teaserPromise, xpPromise) {
 	const games = await gamesPromise;
 	const teaser = await teaserPromise;
-	const passAwards = (await passAwardsPromise) ?? 0;
+	const xp = await xpPromise;
 	if (!games.length) {
 		setPigAppearance(container, MSG_PROGRESS_EMPTY, "pig_reaching");
 		return;
@@ -513,7 +509,7 @@ async function loadProgress(container, gamesPromise, teaserPromise, passAwardsPr
 	const rating = (scale, value) => teaser ? 1 : Math.round(skillRating(scale, value));
 	const shown = value => teaser ? 0 : value;
 	container.innerHTML = [
-		xpCard(playerXp(games) + passAwards * XP_PER_PASS, Object.values(diamonds).filter(Boolean).length, [
+		xpCard(xp, Object.values(diamonds).filter(Boolean).length, [
 			{ icon: "fire_color", rating: rating(LEVELS_GAMES, gamesRecent) },
 			{ icon: "sheriff_color", rating: rating(LEVELS_TARIMBA, hours) },
 			{ icon: "repeat_color", rating: rating(LEVELS_STREAK, streak) },
@@ -527,11 +523,10 @@ async function loadProgress(container, gamesPromise, teaserPromise, passAwardsPr
 }
 
 
-// PASSES EVER APPROVED, FOR XP. NOT THE CURRENT PASSES: REVOKING DELETES THE ROW, AND XP NEVER DROPS.
-// pass_awards IS FILLED BY A TRIGGER ON passes, ONE ROW PER SCOPE EVER, SO A RE-APPROVAL ISN'T PAID TWICE
-async function fetchPassAwards(user) {
-	const { count } = await db.from("pass_awards").select("*", { count: "exact", head: true }).eq("player_id", user.id);
-	return count ?? 0;
+// THE PLAYER'S WHOLE XP, PASSES INCLUDED (FROM pass_awards, SO REVOKING NEVER LOWERS IT)
+async function fetchXp() {
+	const { data } = await db.rpc("my_xp");
+	return data ?? 0;
 }
 
 async function fetchPasses(user) {
@@ -608,6 +603,81 @@ function requestCard(name, request, requested, courtId) {
 }
 
 
+// THE CURRENT SEASON'S NAME AND DAYS, FOR DISPLAY ONLY — THE REAL BOUNDARIES ARE season_start IN supabase/sql/ranking.sql:
+// VERÃO APR–SEP, INVERNO OCT–MAR
+function currentSeason() {
+	const month = new Date().getMonth() + 1;
+	return month >= 4 && month <= 9
+		? { name: "Verão", start: "01/04", end: "30/09" }
+		: { name: "Inverno", start: "01/10", end: "31/03" };
+}
+
+// THE TOP THREE FOR THE ASPIRATION, THEN THE PLAYER WITH WHOEVER IS JUST ABOVE AND BELOW — NEVER THE WHOLE TABLE
+async function loadRanking(container) {
+	const { data } = await db.rpc("season_ranking");
+	const rows = data ?? [];
+	const season = currentSeason();
+	container.insertAdjacentHTML("beforebegin", `<p class="card-sub margin-top-10" style="font-size: 1.5em; text-align: center">${MSG_SEASON(season.name)}</p><p class="card-sub" style="font-size: 1em; text-align: center">${MSG_SEASON_DATES(season.start, season.end)}</p>`);
+	container.classList.replace("margin-top-20", "margin-top-10");
+
+	const meIndex = rows.findIndex(row => row.is_me);
+	const shown = new Set([0, 1, 2]);
+	if (meIndex !== -1) [meIndex - 1, meIndex, meIndex + 1].forEach(i => shown.add(i));
+	const indices = [...shown].filter(i => i >= 0 && i < rows.length).sort((a, b) => a - b);
+
+	// NAMES ARE TYPED BY PLAYERS, SO THEY GO IN THROUGH textContent, NEVER THROUGH THE TEMPLATE
+	const list = document.createElement("div");
+	list.className = "ranking";
+	indices.forEach((i, n) => {
+		if (n && i - indices[n - 1] > 1) list.insertAdjacentHTML("beforeend", `<div class="divider"></div>`);
+		const row = document.createElement("p");
+		row.className = `ranking-row${rows[i].is_me ? " me" : ""}`;
+		row.innerHTML = `<span>${MSG_PLACE(rows[i].place)}</span><span></span><span>${MSG_XP(rows[i].points)}</span>`;
+		row.children[1].textContent = rows[i].name;
+		list.append(row);
+	});
+	container.replaceChildren(list);
+
+	const me = rows[meIndex];
+	const tiedWith = me && rows.find(row => !row.is_me && row.place === me.place);
+	// THE NEAREST PLAYER WITH MORE POINTS; A SAME-POINTS PLAYER AHEAD ON TARIMBA STILL NEEDS ONE MORE POINT, SO ONE GAME
+	const above = me && rows.slice(0, meIndex).reverse().find(row => row.place < me.place);
+	const line = document.createElement("p");
+	line.className = "card-sub margin-top-20";
+	line.style.fontSize = ".7em";
+	if (meIndex === -1) {
+		line.textContent = MSG_RANKING_OUT;
+	} else if (!me.points) {
+		// EVERYONE WITHOUT POINTS SHARES A PLACE ON TARIMBA ALONE, SO "TIED" OR "1.º" WOULD MEAN NOTHING HERE
+		line.textContent = MSG_RANKING_ZERO;
+	} else if (tiedWith) {
+		line.textContent = MSG_RANKING_TIED(tiedWith.name);
+	} else if (!above) {
+		line.textContent = MSG_RANKING_FIRST;
+	} else {
+		line.textContent = MSG_RANKING_CHASE(me.place, Math.ceil((above.points - me.points + 1) / 500), above.name);
+	}
+	container.append(line);
+
+	// WHAT EARNS POINTS, FOLDED AWAY UNTIL ASKED FOR. SAME ROWS AS THE TABLE
+	container.insertAdjacentHTML("beforeend", `
+		<p class="card-sub margin-top-20" style="font-size: 1em; text-align: center"><a href="#" data-action="points-info"><img src="images/icon_info.svg" class="link-icon" alt=""> ${MSG_POINTS_INFO}</a></p>
+		<div class="ranking margin-top-10" id="points-info" hidden>
+			${POINTS_RULES.map(([label, xp]) => `<p class="ranking-row"><span>${label}</span><span>+${MSG_XP(xp)}</span></p>`).join("")}
+			<p class="card-sub margin-top-10" style="font-size: .7em">${MSG_POINTS_NOTE}<br><br>${MSG_RANKING_ABOUT}</p>
+		</div>
+	`);
+	container.querySelector('[data-pane-link="info"]').addEventListener("click", event => {
+		event.preventDefault();
+		app.querySelector('.folder-tab[data-pane="info"]').click();
+	});
+	container.querySelector('[data-action="points-info"]').addEventListener("click", event => {
+		event.preventDefault();
+		const info = document.getElementById("points-info");
+		info.hidden = !info.hidden;
+	});
+}
+
 // THE VISITOR'S EXAMPLE PASS. DATES ARE 30/02, A DAY THAT DOESN'T EXIST, SO IT READS AS AN EXAMPLE
 function dummyPassCard() {
 	return passCard({ name: MSG_DUMMY_PASS, since: "30/02", expires: null, nextGame: "SAB, 30/02, 18:00-19:00", bookings: 1, locked: true });
@@ -634,6 +704,11 @@ function showVisitor() {
 			<p class="card-sub margin-top-10" style="font-size: .7em">${MSG_VISITOR_PROGRESS}</p>
 			<div class="bookings-list margin-top-10"></div>
 		</div>
+		<!-- VISITORS AREN'T RANKED (NO ACCOUNT); THE REAL PREVIEW IS THE "LEADERBOARD TEASER" TODO -->
+		<div data-pane-body="ranking" hidden>
+			<p class="card-sub margin-top-10" style="font-size: .7em">${MSG_VISITOR_RANKING}</p>
+			${loginBtn}
+		</div>
 		<div data-pane-body="passes" hidden>
 			<p class="card-sub margin-top-10" style="font-size: .7em">${MSG_VISITOR_PASSES}</p>
 			<div class="bookings-list margin-top-10">${dummyPassCard()}</div>
@@ -649,8 +724,9 @@ function showVisitor() {
 		document.getElementById("visitor-history-extra").hidden = !count;
 	});
 	// WAITS FOR THE WALK-INS ONLY TO PICK THE TEASER — THE CARDS THEMSELVES ARE ALWAYS THE DUMMY FIRST GAME'S
+	// A VISITOR HAS NO PASSES, SO THEIR GAMES' XP IS ALREADY WHAT player_xp WOULD SAY
 	loadProgress(app.querySelector('[data-pane-body="progress"] .bookings-list'), Promise.resolve([dummyGame()]),
-		games.then(list => list.length ? MSG_TEASER_XP(playerXp(list)) : MSG_TEASER_FIRST(playerXp([dummyGame()]))));
+		games.then(list => list.length ? MSG_TEASER_XP(sumXp(list)) : MSG_TEASER_FIRST(DUMMY_GAME_XP)), Promise.resolve(DUMMY_GAME_XP));
 	wireFolderTabs();
 	app.querySelectorAll('[data-action="login"]').forEach(btn => btn.addEventListener("click", () => { location.href = "login.html"; }));
 }
@@ -659,6 +735,7 @@ function showVisitor() {
 const FOLDER_TABS_HTML = `
 	<div class="folder-tabs">
 		<button class="folder-tab active" data-pane="progress" aria-label="${MSG_VIEW_PROGRESS}"><img src="images/icon_medal.svg" alt=""><span>Progresso</span></button>
+		<button class="folder-tab" data-pane="ranking" aria-label="${MSG_VIEW_RANKING}"><img src="images/icon_ranking.svg" alt=""><span>Ranking</span></button>
 		<button class="folder-tab" data-pane="history" aria-label="${MSG_HISTORY_TITLE}"><img src="images/icon_history.svg" alt=""><span>Histórico</span></button>
 		<button class="folder-tab" data-pane="passes" aria-label="${MSG_VIEW_PASSES}"><img src="images/icon_id.svg" alt=""><span>Passes</span></button>
 		<button class="folder-tab" data-pane="info" aria-label="${MSG_VIEW_INFO}"><img src="images/icon_gear.svg" alt=""><span>Dados</span></button>
@@ -697,6 +774,16 @@ function showProfile(user, profile) {
 						<input class="form-input" type="${f.type}" autocomplete="${f.autocomplete}" data-field="${f.field}">
 					</div>
 				`).join("")}
+				<div>
+					<div class="opening-hours-header">
+						<p class="court-rules-label">Ranking</p>
+						<div class="view-toggle" id="ranking-toggle">
+							<button class="view-toggle-btn" data-hidden="false">Participar</button>
+							<button class="view-toggle-btn" data-hidden="true">Recusar</button>
+						</div>
+					</div>
+					<p class="card-sub" style="font-size: .7em">${MSG_RANKING_VISIBILITY}</p>
+				</div>
 				<p class="card-sub" id="profile-feedback" hidden></p>
 				<p class="card-sub" style="font-size: .7em">${MSG_DATA_DISCLAIMER}</p>
 				<button id="save-profile-btn" disabled><img src="images/icon_save.svg" class="link-icon" alt="">Guardar alterações</button>
@@ -709,6 +796,9 @@ function showProfile(user, profile) {
 		<div data-pane-body="progress">
 			<div class="bookings-list margin-top-20"></div>
 		</div>
+		<div data-pane-body="ranking" hidden>
+			<div class="bookings-list margin-top-20"></div>
+		</div>
 		<div data-pane-body="passes" hidden>
 			<div class="bookings-list margin-top-20"></div>
 		</div>
@@ -716,7 +806,8 @@ function showProfile(user, profile) {
 
 	const games = fetchHistory(user);
 	loadHistory(app.querySelector('[data-pane-body="history"] .bookings-list'), games);
-	loadProgress(app.querySelector('[data-pane-body="progress"] .bookings-list'), games, undefined, fetchPassAwards(user));
+	loadProgress(app.querySelector('[data-pane-body="progress"] .bookings-list'), games, undefined, fetchXp());
+	loadRanking(app.querySelector('[data-pane-body="ranking"] .bookings-list'));
 	loadPasses(app.querySelector('[data-pane-body="passes"] .bookings-list'), user, fetchPasses(user));
 
 	wireFolderTabs();
@@ -732,19 +823,32 @@ function showProfile(user, profile) {
 	const feedback = document.getElementById("profile-feedback");
 	let saved = { ...profile };
 
+	// THE COURT LIST'S LIST/MAP TOGGLE, WITH WORDS INSTEAD OF ICONS
+	const rankingBtns = [...app.querySelectorAll("#ranking-toggle .view-toggle-btn")];
+	let rankingHidden = profile.hide_from_ranking;
+	const drawRankingToggle = () => {
+		rankingBtns.forEach(btn => btn.classList.toggle("active", (btn.dataset.hidden === "true") === rankingHidden));
+	};
+	drawRankingToggle();
+
 	// ENABLED ONLY WHEN SOMETHING DIFFERS FROM WHAT'S SAVED AND THE NAME ISN'T EMPTY
 	const refreshSave = () => {
-		const changed = inputs.some(i => i.value.trim() !== (saved[i.dataset.field] ?? ""));
+		const changed = inputs.some(i => i.value.trim() !== (saved[i.dataset.field] ?? "")) || rankingHidden !== saved.hide_from_ranking;
 		const nameOk = inputs.find(i => i.dataset.field === "name").value.trim().length > 0;
 		saveBtn.disabled = !(changed && nameOk);
 		feedback.hidden = true;
 	};
 	inputs.forEach(i => i.addEventListener("input", refreshSave));
+	rankingBtns.forEach(btn => btn.addEventListener("click", () => {
+		rankingHidden = btn.dataset.hidden === "true";
+		drawRankingToggle();
+		refreshSave();
+	}));
 
 	saveBtn.addEventListener("click", async () => {
 		saveBtn.disabled = true;
 		// EMPTY OPTIONAL FIELDS ARE STORED AS null, MATCHING ONBOARDING WHICH SKIPS THEM
-		const updates = Object.fromEntries(inputs.map(i => [i.dataset.field, i.value.trim() || null]));
+		const updates = { ...Object.fromEntries(inputs.map(i => [i.dataset.field, i.value.trim() || null])), hide_from_ranking: rankingHidden };
 		// .select() SO AN UPDATE SILENTLY FILTERED OUT BY RLS (0 ROWS) COUNTS AS A FAILURE, NOT A SAVE
 		const { data, error } = await db.from("profiles").update(updates).eq("id", user.id).select();
 		feedback.hidden = false;
