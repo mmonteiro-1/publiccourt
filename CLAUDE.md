@@ -662,6 +662,7 @@ Sessions are kept alive indefinitely for active users. Supabase auto-refreshes t
     - [x] Character card art linked to the XP level: `XP_LEVEL_IMAGES` in `profile.js`, one entry per level (index 0 = level 1). Placeholders for now: `pig_sitting` (1–3), `pig_reaching` (4–6), `pig_serving` (7–10)
     - [ ] Draw progressively more "pro" pig images per level (gear, outfit, pose) and swap them into `XP_LEVEL_IMAGES`
     - [ ] Tune the level thresholds (skills and XP) once real play is known
+    - [ ] "Entende o progresso": the same collapsible card as "Entende o ranking", under the progress view — how XP is earned, the levels, the four skills and their bars, and diamonds
     - [ ] Visitor teaser (see "Visitor teaser" under Authentication)
       - [x] Visitor history shows unclaimed walk-ins only (`player_id IS NULL`)
       - [x] XP gained on each history card, players and visitors (`games_xp`)
@@ -729,6 +730,7 @@ Sessions are kept alive indefinitely for active users. Supabase auto-refreshes t
   - [x] Leaderboard teaser: the visitor's ranking tab shows the standard board with nine example players (`DUMMY_RANKING`) and the visitor as "O. Teu Nome", always 6th with the example first game's 1000 XP (`visitorRanking`) — every row shown, nothing saved. Their plaques slide into empty slots every time the tab opens. The line: "Os melhores jogadores de cada época aparecem aqui. Faz login para participar. O teu primeiro jogo vale logo 1000 XP."
   - [ ] Rain freeze (see "Rain freeze" under Player progress): a rainy week doesn't break the streak — Consistência, and the +500 streak-week XP in `games_xp`. Needs past weather stored in the database (`weather.js` only fetches forecasts, in the browser), so the SQL can tell which weeks were rainy
   - [ ] End of season: `league_results` snapshot + surprise
+    - [ ] Hall of fame, champions only (decided): each season's 1st place (`league_results`) gets their name in a hall of fame on the ranking tab, plus a diamond kept forever — the first diamond earned through the ranking rather than a full skill bar, so it adds to the trading card's count — and a card on their progress tab: "Campeão · Verão 2027"
   - [ ] Privacy policy — the app has none yet; needed before a public ranking with names launches
 - [ ] Polish pig mascot with Rive animations
   - [ ] Animate existing pig SVG in Rive editor (idle loop + reaction states)

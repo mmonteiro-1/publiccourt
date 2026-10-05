@@ -4,8 +4,8 @@ const MSG_HELLO = name => `Olá, ${name}`;
 const MSG_SAVE_ERROR = "Não foi possível guardar. Tenta outra vez.";
 const MSG_SAVED = "Alterações guardadas.";
 // SHOWN BOTH DURING ONBOARDING AND ON THE PROFILE, NEXT TO WHERE THE DATA IS ENTERED
-const MSG_RANKING_VISIBILITY = "No ranking só aparece a inicial do teu nome com o apelido (ex.: R. Barbosa) e os teus pontos — nunca onde nem quando jogas.";
-const MSG_DATA_DISCLAIMER = "O login só é necessário caso queiras reservar um campo. <br><br>Estas informações são relevantes para o administrador do campo quando pedes um passe. Por este motivo o Campo Livre irá guardar os teus dados, embora não tenha interesse neles.";
+const MSG_RANKING_VISIBILITY = "O ranking só mostra a inicial do teu nome com o apelido e os teus pontos — nunca onde nem quando jogas.";
+const MSG_DATA_DISCLAIMER = "Estas informações são relevantes para o administrador do campo quando pedes um passe. Por este motivo o Campo Livre irá guardar os teus dados, embora não tenha interesse neles.";
 
 const MSG_HISTORY_TITLE = "Teus jogos passados";
 const MSG_VIEW_INFO = "Dados pessoais";
@@ -58,7 +58,6 @@ const MSG_STAT_COURTS_HINT = n => `Já ${n === 1 ? "recebeu" : "receberam"} as t
 // THE RANKING MEASURES WHO PLAYS THE MOST, NOT WHO PLAYS THE BEST. THE PIG TEASES, NEVER SHAMES
 const MSG_VIEW_RANKING = "Ranking";
 const MSG_SEASON = name => `Época de ${name}`;
-const MSG_SEASONS = "Há duas épocas por ano: Época de Verão: de 01/04 a 30/09. Época de Inverno: de 01/10 a 31/03";
 const MSG_RANKING_FIRST = "A vista do topo é qualquer coisa. Aproveita.";
 const MSG_RANKING_TIED = name => `Estás empatado com ${name}. Desempata em campo.`;
 // "N JOGOS" AT 500 XP EACH, THE LEAST A GAME EARNS — A NEW COURT OR A STREAK WEEK CAN MAKE IT FEWER
@@ -70,17 +69,17 @@ const MSG_RANKING_DROPPED = "Tragédia anunciada: caíste de posição. Não dei
 const MSG_RANKING_ZERO = "Nenhum jogo na época? Tás a gozar.";
 // "BORA PARTICIPAR" OPENS DADOS (data-pane-link), WHERE THE PARTICIPAR / RECUSAR TOGGLE IS
 const MSG_RANKING_OUT = `Não te deixes intimidar, somos todos amadores. <a href="#" data-pane-link="info">Bora participar</a>.`;
-// "DADOS" OPENS THAT TAB (data-pane-link), WHERE THE PARTICIPAR / RECUSAR TOGGLE IS
-const MSG_RANKING_ABOUT = `O ranking junta todos os jogadores do Campo Livre. Se preferires ficar de fora, podes sair em <a href="#" data-pane-link="info">Dados</a>.`;
+// THE WHOLE TEXT UNDER THE POINTS ROWS IN "ENTENDE O RANKING": THE SEASONS, THE RESET AND WHY THE BOARD CAN SHOW LESS THAN THE
+// TRADING CARD (IT ONLY COUNTS THIS SEASON'S XP), WHAT DOESN'T COUNT, AND THE OPT-OUT. "DADOS" OPENS THAT TAB (data-pane-link)
+const MSG_RANKING_INFO = `Há duas épocas por ano: Época de Verão: de 01/04 a 30/09. Época de Inverno: de 01/10 a 31/03<br><br>Os pontos voltam a zero no início de cada época. O teu XP de progresso geral nunca diminui. Se não vês todo o teu XP no ranking, é porque parte dele foi ganho em épocas anteriores.<br><br>Partidas com menos de 10 minutos não contam.<br><br>O ranking mostra todos os jogadores do Campo Livre. Se preferires ficar de fora, podes sair em <a href="#" data-pane-link="info">Dados</a>.`;
 const MSG_POINTS_INFO = "Entende o ranking";
 // DISPLAY ONLY — THE RULES THEMSELVES LIVE IN games_xp / season_ranking (supabase/sql), SO KEEP THESE IN STEP WITH THEM
 const POINTS_RULES = [
 	["Cada partida", 500],
 	["Primeira partida num campo novo", 500],
-	["Semana com partida, a seguir a outra", 500],
+	["Semana com partida novamente", 500],
 	["Passe aprovado", XP_PER_PASS],
 ];
-const MSG_POINTS_NOTE = "Partidas de 10 minutos ou menos não contam. Os pontos voltam a zero no início de cada época; o teu XP de progresso geral nunca desce.";
 // IN THE BOARD'S "R. BARBOSA" FORMAT, SO IT READS LIKE A NAME ALREADY ON A PLAQUE
 const MSG_VISITOR_RANK_NAME = "O. Teu Nome";
 // 1000 IS THE FIRST GAME'S XP (+500 FOR THE GAME, +500 FOR THE NEW COURT), THE SAME AS DUMMY_GAME_XP FURTHER DOWN
@@ -905,9 +904,7 @@ function appendPointsInfo(container) {
 			</div>
 			<div class="court-rules-body" hidden>
 				${POINTS_RULES.map(([label, xp]) => `<p class="ranking-row"><span>${label}</span><span>+${MSG_XP(xp)}</span></p>`).join("")}
-				<p class="card-sub margin-top-10">${MSG_POINTS_NOTE}</p>
-				<p class="card-sub margin-top-10">${MSG_SEASONS}</p>
-				<p class="card-sub margin-top-10">${MSG_RANKING_ABOUT}</p>
+				<p class="card-sub margin-top-10">${MSG_RANKING_INFO}</p>
 			</div>
 		</div>
 	`);
@@ -1019,16 +1016,17 @@ function showProfile(user, profile) {
 						<input class="form-input" type="${f.type}" autocomplete="${f.autocomplete}" data-field="${f.field}">
 					</div>
 				`).join("")}
+				<div class="divider"></div>
 				<div>
-					<div class="opening-hours-header">
-						<p class="court-rules-label">Ranking</p>
-						<div class="view-toggle" id="ranking-toggle">
-							<button class="view-toggle-btn" data-hidden="false">Participar</button>
-							<button class="view-toggle-btn" data-hidden="true">Recusar</button>
-						</div>
+					<p class="court-rules-label">Ranking</p>
+					<!-- fit-content: A FLEX ROW WOULD OTHERWISE STRETCH THE PILL ACROSS THE FORM -->
+					<div class="view-toggle margin-bottom-10" id="ranking-toggle" style="width: fit-content">
+						<button class="view-toggle-btn" data-hidden="false">Participar</button>
+						<button class="view-toggle-btn" data-hidden="true">Recusar</button>
 					</div>
 					<p class="card-sub" style="font-size: .7em">${MSG_RANKING_VISIBILITY}</p>
 				</div>
+				<div class="divider"></div>
 				<p class="card-sub" id="profile-feedback" hidden></p>
 				<p class="card-sub" style="font-size: .7em">${MSG_DATA_DISCLAIMER}</p>
 				<button id="save-profile-btn" disabled><img src="images/icon_save.svg" class="link-icon" alt="">Guardar alterações</button>

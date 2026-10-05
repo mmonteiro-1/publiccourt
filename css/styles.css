@@ -1220,7 +1220,7 @@ input[type="time"]::-webkit-date-and-time-value {
 	padding: 0 5px;
 	/* --muted OVER THE GREEN BOARD, MIXED OPAQUE: EVERY PLAQUE SITS OVER ITS SLOT'S DARK HOLE, WHICH A TRANSLUCENT FILL WOULD SHOW */
 	background: color-mix(in srgb, var(--green), var(--white) 55%);
-	box-shadow: inset 1px 1px 0 var(--black);
+	box-shadow: inset 2px 2px 0 var(--black);
 	font-weight: 700;
 	text-transform: uppercase;
 	white-space: nowrap;
