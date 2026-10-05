@@ -66,6 +66,16 @@ Branch: `bookable-mvp` — building the court booking flow for courts that requi
 - `font-weight` limited to `400` or `700` only
 - Minimise classes — reuse existing ones before creating new ones
 
+### Brutomorphism — the visual style
+
+Our own mix of skeuomorphism and neo-brutalism: a real object's **shape and mechanics**, drawn with a **brutalist surface** — real things cut out of flat card. The ticket (notch, punched hole), the trading card, the tear-strip parcel and the pig hand lifting a prize are all brutomorphic; every new component should be too.
+
+1. **Borrow the object's anatomy, not its texture:** notches, holes, ribbons, pins — yes. Paper grain, cork, gloss, wear — never
+2. **One weight of truth:** 2px black outline on everything; a hard 4px black shadow on anything that sits on top
+3. **Flat colour from tokens only**, no gradients — the realism comes from shape alone
+4. **Mechanics are real:** a parcel tears, a card lifts, a pin holds a sheet. Interaction follows the object
+5. **Exaggerate, don't detail:** a few chunky, recognisable features over many fine ones
+
 ## Glossary
 
 One concept, one word per layer. **Code** is what identifiers, comments, docs and table names use; **Copy** is what players and admins read (PT-PT). A term missing here gets added before it's used in two places.
@@ -99,6 +109,7 @@ One concept, one word per layer. **Code** is what identifiers, comments, docs an
 | Parcel | parcel, tear strip | encomenda | The sealed full-screen overlay the player tears open (`showTearReveal`). Only ever wraps a surprise |
 | Surprise | surprise | — | A rare, important moment (pass approved, level up…) played once: a parcel, then its scene. See "Surprises" |
 | Scene | scene | — | What a surprise reveals: a full-screen layer of its own, independent of the page underneath (`REVEALS` presets) |
+| Brutomorphism | brutomorphism, brutomorphic | — | The visual style: real objects' shape and mechanics with a flat brutalist surface. See "Brutomorphism" under Rules |
 | Revealed | revealed | — | A surprise the player has torn open — a `revealed_surprises` row (`kind` + `ref`); it never plays again for that event |
 
 **Migration (complete)** — code, copy and database now follow the glossary. How it was done, one phase at a time, each tested before the next:
@@ -155,7 +166,13 @@ One concept, one word per layer. **Code** is what identifiers, comments, docs an
 - Backfilled with every pass approved before the feature, so no existing member gets a parcel for an old pass
 - RLS: players read and insert their own only. Faking a row only skips their own surprise
 
-**profiles** — `id uuid, name text, phone text, nif text, created_at timestamptz`
+**ranking_views** — `player_id uuid, season_start date, board jsonb, seen_at timestamptz`
+- The ranking board as each player last saw it, one row per season (primary key `(player_id, season_start)`), overwritten once an update has played. The next visit compares it with the live `season_ranking()` and animates the difference (plaques swapped, XP gained, players passed), so each change plays once, on any device. No row yet (first look this season) means nothing to animate
+- `board` holds only what `season_ranking` already showed: place, "R. Barbosa" name, points, `is_me`, `ref` (`md5` of player + season — tells players apart across two looks without being an id, and changes every season)
+- RLS: players read, insert and update their own only. SQL in `supabase/sql/ranking.sql`
+- Debug: `?board=overtake` / `?board=gain` on `profile.html` replays an update with fake numbers and saves nothing
+
+**profiles** — `id uuid, name text, phone text, nif text, hide_from_ranking bool, created_at timestamptz`
 - `id` = `auth.users.id`; created on first onboarding
 - `phone` and `nif` collected at onboarding, editable on the player profile, shown to admins on pending request cards
 - RLS: players read/insert/update own; admins can read profiles of their approved members
@@ -336,7 +353,7 @@ Unlike the skill bars, the XP bar is relative: the fill only covers the current 
 
 ### Leaderboards and social comparison
 
-Not built yet — the shape below is decided, the build isn't planned. XP and the skill levels give every player a number, and numbers can be ranked. Comparing yourself with others is the strongest motivator in Duolingo (its leagues) and Strava (segment rankings), and it gives solo progress a reason to come back.
+Being built — XP in the database, the opt-out, `season_ranking` and the ranking tab exist (see the Leaderboards todo); end of season doesn't yet. XP and the skill levels give every player a number, and numbers can be ranked. Comparing yourself with others is the strongest motivator in Duolingo (its leagues) and Strava (segment rankings), and it gives solo progress a reason to come back.
 
 **Decided:**
 - **Rank activity, never results:** XP, games, streak and Território all come from recorded games, so they can be ranked. Self-reported wins and losses can't be (see "Honesty" under Player progress). The leaderboard measures who plays the most, not who plays the best, and the copy should say so
@@ -344,17 +361,36 @@ Not built yet — the shape below is decided, the build isn't planned. XP and th
 - **What's ranked: XP earned in the season** — every increment the trading card counts, earned inside the season: +500 per game, per court never played before, per streak week, and +3000 per pass approved in the season. Season points are always a slice of XP, never a separate scale
 - **Ties:** equal points share the place ("1, 2, 2, 4"); then lifetime **Tarimba** (hours on court) breaks the tie, rewarding loyalty
 - **One league for everyone** — no court-group, court or city leagues yet; the player base is too small to split. Visitors aren't ranked (they have no account — one more reason to log in); admins are left out
-- **No opt-in; an opt-out instead.** Every registered player is ranked, with a "don't show me in the ranking" switch in Dados and a line in the privacy policy
+- **No opt-in; an opt-out instead.** Every registered player is ranked, with a Participar / Recusar toggle in Dados (`profiles.hide_from_ranking`) and a line in the privacy policy (the app has none yet)
 - **Names are always "R. Barbosa"** — the first initial and the surname, the only form ever shown, never the full name. Privacy by default, with nothing for the player to configure. Only the name and the score: never the courts, days or times someone plays, which would expose their routine (same concern as matchmaking). A public ranking with names is personal data in the open, so get a quick legal check before launch (see "Activity, never health")
 - **Season results are kept** (a `league_results` table: the final table, saved when a season ends). They become lasting titles on the profile ("Campeão · Verão 2027", "Top 3") and a surprise: the end-of-season parcel, the pig hand lifting the player's final place
-- **Show the neighbourhood, not the whole table:** the top three for the aspiration, then the player with whoever is just above and just below ("Estás em 7.º — 1 jogo para passares o R. Barbosa", the "1 jogo" worked out from the gap). Being told you're 43rd of 50 demotivates; a concrete next step doesn't. Players with 0 points sit at the bottom without being called out
+- **Show the neighbourhood, not the whole table:** the top three for the aspiration, then the player with whoever is just above and just below ("Estás em 7.º — 1 jogo para passares o R. Barbosa", the "1 jogo" worked out from the gap). Being told you're 43rd of 50 demotivates; a concrete next step doesn't. Players with 0 points are still listed ("0 XP", ordered by Tarimba); a player at 0 gets "Ainda não jogaste nesta época…" instead of a place
 - **Tone:** the pig's cheeky voice teases instead of shaming ("Passaram-te. Vais deixar?"). Nobody at the bottom gets a mocking title, same rule as the level titles
 
 **How it would work:**
-- **Computed in the database, not the browser:** today every stat is computed in JS from the player's own rows, and RLS rightly blocks reading other players' games. The ranking needs a Postgres function that returns only aggregates (the "R. Barbosa" name + season points + hours) for players who haven't opted out, never the raw rows
-- **First step, useful even without a leaderboard:** move the XP calculation into the database and have the trading card read it from there too. Otherwise the XP rules live twice — in JS and in SQL — and drift apart
+- **Computed in the database, not the browser:** today every stat is computed in JS from the player's own rows, and RLS rightly blocks reading other players' games. Built as `season_ranking()` (`supabase/sql/ranking.sql`): it returns only the place, the "R. Barbosa" name, the season points, `is_me` and an opaque `ref`, for players who haven't opted out — never ids or raw rows. Tarimba only breaks ties and is never returned
+- **XP lives in the database (done):** `games_xp` / `player_xp` (`supabase/sql/xp.sql`) compute it, and the trading card, the history and the ranking all read them, so the XP rules exist once
 - **Cheating is the real risk:** a walk-in is only a declared game, and a ranking makes faking one tempting. `games_xp` already ignores games of 10 min or less and counts bookings only once past and confirmed. Guards tried and dropped for now (players won't care much yet): at most 2 games per player per day, and ignoring walk-ins that overlap another game of the same player — they'd apply to XP too, since the ranking and the trading card share one function. Walk-ins already need the location step, and bookings are backed by the admin
 - **Admin angle:** an admin could see the most active players at their courts and reward them (a free game, a "sócio do mês" badge) — a candidate add-on under Degrees of Complexity
+
+#### The board — a brutomorphic golf-tournament sign
+
+Built in the ranking tab (`loadRanking` in `profile.js`, `.scoreboard` in `styles.css`), basics only. See "Brutomorphism" under Rules.
+
+- **One big sign:** green (Wimbledon), the season on a darkened header ("Época de Inverno", the dates underneath), columns Pos · Jogador · XP. Every digit and every name is its own **plaque** sunk into the board (inset shadow), sitting in its own **slot** — a dark hole that shows once the plaque is pulled out. Place padded to 2 plaques, XP to 4 (more if a number needs them). One CSS grid, so the columns line up
+- **The player's row is all white** — place, name and XP plaques. A jump in places is a blank row of plaques, like the empty lines on a real board
+- **Rows are fixed, plaques move:** the place digits belong to the row (row 2 always says 2) and never animate. Only names and XP change
+- **Swapping a plaque** (`plaque-out` / `plaque-in`, chained in JS because one keyframe can't change the text halfway): someone behind the board pulls the right side back first (a hinge on the left edge: 10° for names, 25° with a closer perspective for the narrow digits, `--hinge`), slides it right out of the slot, relabels it, and slides it back. `transform` only; off under reduced motion
+- **An update** (`updateRows`): every shown row is handed its final content and only the plaques that differ move. **Names first, as a swap:** the player's plaque is pulled first, then the other; with both slots empty they're exchanged (the white follows the player's name); the player's goes back in first, then the other. **Then the numbers:** both rows at once, each left to right, 1s per digit. Moving the name before its number means each row's digits change once, straight to their final value — an overtake from 5650 to 6000 past a 5890 is 2 names and 5 digits
+- **The line under the board** describes the board as it was while the plaques move; once they're done: `MSG_RANKING_GAINED` ("Ganhaste 150 XP desde a última vez.") or `MSG_RANKING_OVERTAKE` ("Ganhaste 350 XP e passaste R. Barbosa. Sobe, sobe!"), followed by where the player stands now (`rankingLine`)
+- **Each change plays once, on any device:** `ranking_views` keeps the board as the player last saw it this season. The next visit compares it with the live ranking and animates the difference, then saves the new board — only after it has played, so a board never opened still plays next time. A first look this season just shows. Who passed whom is told apart by `ref`, never the display name
+- **"Entende o ranking"** under the board unfolds every way to earn points (`POINTS_RULES`, display only — keep in step with `games_xp`), the season reset, and the opt-out with a link to Dados
+
+**Testing the dummy overtake** (fake numbers, nothing saved):
+1. Be logged in as a player set to **Participar** in Dados, with at least one other ranked player (alone, you're 1st and there's nobody to pass)
+2. Open `profile.html?board=overtake` (e.g. `http://localhost:8080/profile.html?board=overtake`)
+3. Open the **Ranking** tab — the update only starts once the board is on screen. You're put 3rd with 5650 under a 5890: after 1s the two names swap, then both rows' numbers change, and the line ends "…e passaste … Sobe, sobe!"
+4. `?board=gain` instead plays a gain without moving (5650 → 5800, "Ganhaste 150 XP desde a última vez."). Reload to replay
 
 **Feeds matchmaking later** (see "Player matchmaking"): ranking neighbours play about as much as each other — a natural "people like you" — and Consistência / Território say who plays regularly and who likes new courts. But activity isn't skill: a keen beginner and a rare expert can have the same XP, so matchmaking still needs a skill signal (self-declared level, post-game results). Where and when people play is the most useful match signal and the most private, so matching happens on the server and only ever says "found someone", never the other player's routine. Keeping the XP in the database and the season snapshots is what makes this possible later.
 
@@ -675,7 +711,7 @@ Sessions are kept alive indefinitely for active users. Supabase auto-refreshes t
   - [x] Opt-out: `profiles.hide_from_ranking`, a Participar / Recusar toggle in Dados
     - [ ] Style the toggle better (now the court list's `.view-toggle` with text buttons, `.profile-form .view-toggle-btn`)
   - [x] Ranking function: `season_ranking` in `supabase/sql/ranking.sql` — season points, "R. Barbosa" names, shared places, Tarimba tie-break, `is_me` instead of ids
-  - [ ] Ranking tab: second of five profile tabs (`icon_ranking`, `loadRanking`), minimal `.ranking-row` styling for now
+  - [ ] Ranking tab: second of five profile tabs (`icon_ranking`, `loadRanking`), drawn as a brutomorphic golf-tournament sign (`.scoreboard`, one `.plaque` per digit and name) — basics only for now
     - [ ] Customise the ranking's look per season: Época de Verão vs Época de Inverno
   - [ ] Leaderboard teaser
   - [ ] Rain freeze (see "Rain freeze" under Player progress): a rainy week doesn't break the streak — Consistência, and the +500 streak-week XP in `games_xp`. Needs past weather stored in the database (`weather.js` only fetches forecasts, in the browser), so the SQL can tell which weeks were rainy

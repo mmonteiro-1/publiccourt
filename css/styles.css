@@ -1041,9 +1041,144 @@ input[type="time"]::-webkit-date-and-time-value {
 .folder-tab:not(.active):nth-child(4) { background: color-mix(in srgb, var(--pink-dark), var(--black) 40%); }
 .folder-tab:not(.active):nth-child(5) { background: color-mix(in srgb, var(--pink-dark), var(--black) 60%); }
 
-/* === RANKING ===
-   MINIMAL ON PURPOSE UNTIL IT GETS A REAL DESIGN: ONE LINE PER PLAYER — PLACE, NAME, POINTS — THE PLAYER'S OWN ROW IN BOLD.
-   THE GAP BETWEEN THE TOP THREE AND THE PLAYER'S NEIGHBOURHOOD IS THE SHARED .divider */
+/* === SCOREBOARD ===
+   BRUTOMORPHIC GOLF-TOURNAMENT LEADERBOARD IN WIMBLEDON GREEN: ONE BIG SIGN, THE SEASON ON A DARKENED HEADER, EVERY DIGIT AND NAME ON ITS OWN
+   PLAQUE SUNK INTO THE BOARD (THE INSET SHADOW). BASICS ONLY FOR NOW */
+.scoreboard {
+	border: 2px solid var(--black);
+	border-radius: 10px;
+	background: var(--green);
+	box-shadow: 4px 4px 0 var(--black);
+	overflow: hidden;
+}
+
+.scoreboard-head {
+	padding: 10px;
+	background: var(--muted-black);
+	color: var(--white);
+	text-align: center;
+	text-transform: uppercase;
+	font-weight: 700;
+}
+
+.scoreboard-head p:first-child {
+	font-size: 1.5em;
+}
+
+.scoreboard-head p + p {
+	font-size: 0.8em;
+}
+
+/* ONE GRID FOR THE WHOLE BOARD: PLACE · NAME · XP. auto COLUMNS SIZE TO THEIR WIDEST CELL, SO EVERY ROW LINES UP */
+.scoreboard-grid {
+	display: grid;
+	grid-template-columns: auto 1fr auto;
+	gap: 5px;
+	padding: 10px;
+}
+
+/* THE COLUMN HEADINGS */
+.scoreboard-grid > p {
+	font-size: 0.7em;
+	font-weight: 700;
+	text-transform: uppercase;
+	text-align: center;
+	color: var(--white);
+}
+
+.scoreboard-digits {
+	display: flex;
+	gap: 5px;
+}
+
+/* min-width: 0 LETS A LONG NAME SHRINK INSIDE ITS 1fr COLUMN INSTEAD OF STRETCHING THE BOARD */
+.plaque {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	min-width: 0;
+	height: 30px;
+	padding: 0 5px;
+	/* --muted OVER THE GREEN BOARD, MIXED OPAQUE: EVERY PLAQUE SITS OVER ITS SLOT'S DARK HOLE, WHICH A TRANSLUCENT FILL WOULD SHOW */
+	background: color-mix(in srgb, var(--green), var(--white) 55%);
+	box-shadow: inset 2px 2px 0 var(--black);
+	font-weight: 700;
+	text-transform: uppercase;
+	white-space: nowrap;
+	overflow: hidden;
+}
+
+.scoreboard-digits .plaque {
+	width: 20px;
+	padding: 0;
+}
+
+/* THE HOLE A NAME PLAQUE SITS IN: CLIPS THE PLAQUE AS IT'S PULLED OUT, AND SHOWS AS A RECESS ONCE IT'S GONE.
+   min-width: 0 LETS A LONG NAME SHRINK INSIDE ITS 1fr COLUMN. perspective GIVES THE HINGE ITS DEPTH */
+.plaque-slot {
+	min-width: 0;
+	height: 30px;
+	overflow: hidden;
+	background: var(--muted-black);
+	box-shadow: inset 2px 2px 0 var(--black);
+	perspective: 300px;
+}
+
+/* NAMES READ FROM THE LEFT, LIKE ON THE REAL BOARD */
+.plaque.name {
+	justify-content: flex-start;
+}
+
+/* EVERY DIGIT IS SLOTTED, ONE 20px HOLE EACH, SO ANY ROW'S DIGITS CAN BE SWAPPED ONE BY ONE. A CLOSER perspective
+   AND A WIDER HINGE (--hinge, READ BY THE plaque-out / plaque-in KEYFRAMES) THAN THE NAMES': ON A PLAQUE THIS NARROW THE
+   NAMES' 10deg WOULD BARELY SHOW */
+.scoreboard-digits .plaque-slot {
+	width: 20px;
+	perspective: 50px;
+	--hinge: 25deg;
+}
+
+/* SOMEONE BEHIND THE BOARD SWAPS A PLAQUE (loopPlaqueSwap IN profile.js CHAINS THE TWO HALVES AND EXCHANGES THE NAMES BETWEEN
+   THEM). OUT: THE RIGHT SIDE IS PULLED BACK FIRST (A HINGE ON THE LEFT EDGE), THEN THE TILTED PLAQUE IS DRAGGED RIGHT UNTIL IT
+   LEAVES THE SLOT, AND STAYS OUT (forwards). IN: THE SAME, REVERSED. transform ONLY */
+.plaque-slot .plaque {
+	transform-origin: left center;
+}
+
+.plaque-out {
+	animation: plaque-out 1s ease-in-out forwards;
+}
+
+.plaque-in {
+	animation: plaque-in 1s ease-in-out forwards;
+}
+
+@keyframes plaque-out {
+	0% { transform: none; }
+	60% { transform: rotateY(var(--hinge, 10deg)); }
+	100% { transform: translateX(110%) rotateY(var(--hinge, 10deg)); }
+}
+
+@keyframes plaque-in {
+	0% { transform: translateX(110%) rotateY(var(--hinge, 10deg)); }
+	40% { transform: rotateY(var(--hinge, 10deg)); }
+	100% { transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.plaque-out,
+	.plaque-in {
+		animation: none;
+	}
+}
+
+/* THE PLAYER'S OWN ROW: EVERY PLAQUE WHITE — PLACE, NAME AND XP */
+.plaque.me,
+.scoreboard-digits.me .plaque {
+	background: var(--white);
+}
+
+/* THE "ENTENDE O RANKING" RUNDOWN: ONE LINE PER WAY TO EARN POINTS */
 .ranking-row {
 	display: flex;
 	gap: 10px;
@@ -1055,13 +1190,9 @@ input[type="time"]::-webkit-date-and-time-value {
 	margin-left: auto;
 }
 
-.ranking-row.me {
-	font-weight: 700;
-}
-
 /* THE ACTIVE TAB COMES FULLY TO THE FRONT, OVER BOTH NEIGHBOURS. AFTER THE nth-child RULES: SAME SPECIFICITY, SO ORDER WINS */
 .folder-tab.active {
-	z-index: 5;
+	z-index: 6;
 }
 
 /* THE TAB BEFORE THE ACTIVE ONE NOW LOSES ITS RIGHT 20px UNDER IT, SO IT RE-CENTRES ITS ICON THE SAME WAY */

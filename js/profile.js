@@ -64,6 +64,9 @@ const MSG_RANKING_FIRST = "Estás em 1.º. Agora é defender o lugar.";
 const MSG_RANKING_TIED = name => `Estás empatado com ${name}. Desempata em campo.`;
 // "N JOGOS" AT 500 XP EACH, THE LEAST A GAME EARNS — A NEW COURT OR A STREAK WEEK CAN MAKE IT FEWER
 const MSG_RANKING_CHASE = (place, games, name) => `Estás em ${MSG_PLACE(place)} — ${games === 1 ? "1 jogo" : `${games} jogos`} para passares ${name}.`;
+// AFTER THE BOARD UPDATES, BEFORE THE USUAL LINE: WHAT THE PLAYER GAINED SINCE THEY LAST LOOKED, AND WHO THEY PASSED
+const MSG_RANKING_GAINED = xp => `Ganhaste ${MSG_XP(xp)} desde a última vez.`;
+const MSG_RANKING_OVERTAKE = (xp, name) => `Ganhaste ${MSG_XP(xp)} e passaste ${name}. Sobe, sobe!`;
 const MSG_RANKING_ZERO = "Ainda não jogaste nesta época. Um jogo e entras na corrida.";
 const MSG_RANKING_OUT = "Estás fora do ranking. Podes mudar isso em Dados.";
 // "DADOS" OPENS THAT TAB (data-pane-link), WHERE THE PARTICIPAR / RECUSAR TOGGLE IS
@@ -605,64 +608,213 @@ function requestCard(name, request, requested, courtId) {
 
 // THE CURRENT SEASON'S NAME AND DAYS, FOR DISPLAY ONLY — THE REAL BOUNDARIES ARE season_start IN supabase/sql/ranking.sql:
 // VERÃO APR–SEP, INVERNO OCT–MAR
+// startDate IS season_start'S DATE, THE KEY FOR ranking_views
 function currentSeason() {
-	const month = new Date().getMonth() + 1;
-	return month >= 4 && month <= 9
-		? { name: "Verão", start: "01/04", end: "30/09" }
-		: { name: "Inverno", start: "01/10", end: "31/03" };
+	const now = new Date();
+	const year = now.getFullYear();
+	const month = now.getMonth() + 1;
+	if (month >= 4 && month <= 9) return { name: "Verão", start: "01/04", end: "30/09", startDate: `${year}-04-01` };
+	return { name: "Inverno", start: "01/10", end: "31/03", startDate: `${month >= 10 ? year : year - 1}-10-01` };
+}
+
+// DEBUG: REPLAYS AN UPDATE WITH FAKE NUMBERS, ON DEMAND — ADD ?board=overtake OR ?board=gain TO profile.html. NOTHING IS SAVED.
+// THE PLAYER IS PUT 3rd (OR LAST, WITH FEWER PLAYERS) WITH 5650 XP UNDER A 5890; overtake TAKES THEM TO 6000, PASSING IT, AND
+// gain TO 5800, STAYING PUT
+function debugBoards(rows, kind) {
+	const FAKE_XP = [9200, 5890, 5650, 4100, 3550, 2000, 1500, 1000];
+	const mine = rows.find(row => row.is_me);
+	if (!mine) return { before: rows, after: rows };
+	const board = rows.filter(row => !row.is_me);
+	board.splice(Math.min(2, board.length), 0, mine);
+	const before = board.map((row, i) => ({ ...row, place: i + 1, points: FAKE_XP[i] ?? 500 }));
+	const after = before.map(row => ({ ...row }));
+	const i = before.indexOf(before.find(row => row.is_me));
+	if (i === 0) return { before, after };
+	if (kind === "overtake") {
+		after[i - 1] = { ...before[i], place: before[i - 1].place, points: 6000 };
+		after[i] = { ...before[i - 1], place: before[i].place };
+	} else {
+		after[i].points = 5800;
+	}
+	return { before, after };
+}
+
+// A PLAQUE IS SWAPPED BY TWO CSS ANIMATIONS CHAINED IN JS (plaque-out, THEN plaque-in), BECAUSE ONE KEYFRAME CAN'T CHANGE THE
+// TEXT HALFWAY. UNDER REDUCED MOTION THE CSS TURNS THEM OFF, SO animationend WOULD NEVER FIRE — CALLERS SKIP THE MOTION THERE
+const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
+const reducedMotion = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
+function playPlaque(plaque, name) {
+	return new Promise(resolve => {
+		plaque.classList.remove("plaque-out", "plaque-in");
+		plaque.classList.add(name);
+		plaque.addEventListener("animationend", resolve, { once: true });
+	});
+}
+
+// ONE PLAQUE PULLED OUT, RELABELLED WHILE ITS SLOT IS EMPTY, AND SLID BACK IN
+async function replacePlaque(plaque, text) {
+	await playPlaque(plaque, "plaque-out");
+	await wait(300);
+	plaque.textContent = text;
+	await playPlaque(plaque, "plaque-in");
+}
+
+// THE XP DIGITS A ROW MUST CHANGE TO SHOW target, LEFT TO RIGHT: ONLY THOSE THAT DIFFER. THE PLACE DIGITS BELONG TO THE ROW
+// (ROW 2 ALWAYS SAYS 2), SO THEY NEVER CHANGE
+function digitChanges(row, target) {
+	const plaques = [...row.xp.querySelectorAll(".plaque")];
+	const chars = [...String(target.points).padStart(plaques.length, " ")].map(c => c.trim());
+	return plaques.map((plaque, i) => [plaque, chars[i]]).filter(([plaque, char]) => plaque.textContent !== char);
+}
+
+// THE WHITE .me PLAQUES FOLLOW THE PLAYER'S NAME: THE WHOLE ROW THAT HOLDS IT IS WHITE
+function setMine(row, mine) {
+	[row.name, row.place, row.xp].forEach(el => el.classList.toggle("me", mine));
+}
+
+// ONE PAIR OF HANDS REARRANGING THE BOARD, EACH MOVE 1s AFTER THE LAST. NAMES FIRST, AS A SWAP: THE PLAYER'S PLAQUE IS PULLED
+// OUT FIRST, THEN THE OTHERS; WITH ALL THEIR SLOTS EMPTY THEY'RE EXCHANGED, AND THE PLAYER'S GOES BACK IN FIRST (INTO ITS NEW
+// ROW), THEN THE OTHERS. ONLY THEN THE NUMBERS: EVERY ROW STARTS AT ONCE, EACH WORKING LEFT TO RIGHT. A NAME MOVED BEFORE ITS
+// NUMBER MEANS EACH ROW'S DIGITS CHANGE ONCE, STRAIGHT TO THEIR FINAL VALUE
+async function updateRows(updates) {
+	const named = updates.filter(([row, target]) => row.name.textContent !== target.name);
+	const digits = updates.map(([row, target]) => digitChanges(row, target));
+	const relabel = () => named.forEach(([row, target]) => { row.name.textContent = target.name; setMine(row, target.is_me); });
+	if (reducedMotion()) {
+		relabel();
+		digits.flat().forEach(([plaque, char]) => { plaque.textContent = char; });
+		return;
+	}
+	const mineFirst = isMine => (a, b) => isMine(b) - isMine(a);
+	const pullOrder = [...named].sort(mineFirst(([row]) => row.name.classList.contains("me")));
+	const pushOrder = [...named].sort(mineFirst(([, target]) => target.is_me));
+	const oneByOne = (list, act) => Promise.all(list.map((item, n) => wait(n * 1000).then(() => act(item))));
+
+	await oneByOne(pullOrder, ([row]) => playPlaque(row.name, "plaque-out"));
+	await wait(300);
+	relabel();
+	await oneByOne(pushOrder, ([row]) => playPlaque(row.name, "plaque-in"));
+	await wait(1000);
+	await Promise.all(digits.map(row => oneByOne(row, ([plaque, char]) => replacePlaque(plaque, char))));
+}
+
+// WHERE THE PLAYER STANDS ON A GIVEN BOARD (BEFORE OR AFTER AN UPDATE), IN THE PIG'S VOICE
+function rankingLine(list) {
+	const meIndex = list.findIndex(row => row.is_me);
+	const me = list[meIndex];
+	if (!me) return MSG_RANKING_OUT;
+	// EVERYONE WITHOUT POINTS SHARES A PLACE ON TARIMBA ALONE, SO "TIED" OR "1.º" WOULD MEAN NOTHING HERE
+	if (!me.points) return MSG_RANKING_ZERO;
+	const tiedWith = list.find(row => !row.is_me && row.place === me.place);
+	if (tiedWith) return MSG_RANKING_TIED(tiedWith.name);
+	// THE NEAREST PLAYER WITH MORE POINTS; A SAME-POINTS PLAYER AHEAD ON TARIMBA STILL NEEDS ONE MORE POINT, SO ONE GAME
+	const above = list.slice(0, meIndex).reverse().find(row => row.place < me.place);
+	if (!above) return MSG_RANKING_FIRST;
+	return MSG_RANKING_CHASE(me.place, Math.ceil((above.points - me.points + 1) / 500), above.name);
 }
 
 // THE TOP THREE FOR THE ASPIRATION, THEN THE PLAYER WITH WHOEVER IS JUST ABOVE AND BELOW — NEVER THE WHOLE TABLE
-async function loadRanking(container) {
-	const { data } = await db.rpc("season_ranking");
-	const rows = data ?? [];
+async function loadRanking(container, user) {
 	const season = currentSeason();
-	container.insertAdjacentHTML("beforebegin", `<p class="card-sub margin-top-10" style="font-size: 1.5em; text-align: center">${MSG_SEASON(season.name)}</p><p class="card-sub" style="font-size: 1em; text-align: center">${MSG_SEASON_DATES(season.start, season.end)}</p>`);
-	container.classList.replace("margin-top-20", "margin-top-10");
+	const { data } = await db.rpc("season_ranking");
+	const debug = new URLSearchParams(location.search).get("board");
+	// before IS THE BOARD AS THE PLAYER LAST SAW IT THIS SEASON (ranking_views), after THE LIVE RANKING. NO SNAPSHOT YET (FIRST
+	// LOOK THIS SEASON) MEANS NOTHING TO ANIMATE: THE BOARD JUST SHOWS
+	let before, after;
+	if (debug) {
+		({ before, after } = debugBoards(data ?? [], debug));
+	} else {
+		const { data: seen } = await db.from("ranking_views").select("board").eq("season_start", season.startDate).maybeSingle();
+		after = data ?? [];
+		before = seen?.board ?? after;
+	}
 
-	const meIndex = rows.findIndex(row => row.is_me);
+	const meIndex = after.findIndex(row => row.is_me);
 	const shown = new Set([0, 1, 2]);
 	if (meIndex !== -1) [meIndex - 1, meIndex, meIndex + 1].forEach(i => shown.add(i));
-	const indices = [...shown].filter(i => i >= 0 && i < rows.length).sort((a, b) => a - b);
+	const indices = [...shown].filter(i => i >= 0 && i < after.length).sort((a, b) => a - b);
 
-	// NAMES ARE TYPED BY PLAYERS, SO THEY GO IN THROUGH textContent, NEVER THROUGH THE TEMPLATE
-	const list = document.createElement("div");
-	list.className = "ranking";
+	// THE LAYOUT IS THE LIVE ONE: THE ROWS SHOWN NOW, EACH STARTING WITH WHAT THE PLAYER SAW IN THAT ROW LAST TIME (BLANK IF THE
+	// BOARD WAS SHORTER THEN). THE PLACE DIGITS ARE ALWAYS THE LIVE ONES — THEY BELONG TO THE ROW AND NEVER ANIMATE
+	const BLANK = { name: "", points: "", is_me: false };
+	const start = i => before[i] ?? BLANK;
+
+	// A GOLF-TOURNAMENT SIGN: EVERY DIGIT ON ITS OWN PLAQUE IN ITS OWN SLOT, PADDED WITH BLANK ONES (2 FOR THE PLACE, 4 FOR THE
+	// XP — MORE IF ANY NUMBER, BEFORE OR AFTER, NEEDS THEM). ONE GRID FOR THE WHOLE BOARD, SO THE COLUMNS LINE UP
+	const xpCount = Math.max(4, ...[...before, ...after].map(row => String(row.points).length));
+	const digits = (value, count, me = false) => `<div class="scoreboard-digits${me ? " me" : ""}">${[...String(value).padStart(count, " ")]
+		.map(c => `<span class="plaque-slot"><span class="plaque">${c.trim()}</span></span>`).join("")}</div>`;
+	const board = document.createElement("div");
+	board.className = "scoreboard";
+	board.innerHTML = `
+		<div class="scoreboard-head"><p>${MSG_SEASON(season.name)}</p><p>${MSG_SEASON_DATES(season.start, season.end)}</p></div>
+		<div class="scoreboard-grid"><p>Pos</p><p>Jogador</p><p>XP</p></div>
+	`;
+	const grid = board.querySelector(".scoreboard-grid");
+	// EACH SHOWN ROW'S THREE PARTS (PLACE DIGITS, NAME PLAQUE, XP DIGITS), BY ITS INDEX IN after, SO A ROW CAN BE UPDATED LATER
+	const rowEls = {};
 	indices.forEach((i, n) => {
-		if (n && i - indices[n - 1] > 1) list.insertAdjacentHTML("beforeend", `<div class="divider"></div>`);
-		const row = document.createElement("p");
-		row.className = `ranking-row${rows[i].is_me ? " me" : ""}`;
-		row.innerHTML = `<span>${MSG_PLACE(rows[i].place)}</span><span></span><span>${MSG_XP(rows[i].points)}</span>`;
-		row.children[1].textContent = rows[i].name;
-		list.append(row);
+		// A JUMP IN PLACES IS AN EMPTY ROW OF PLAQUES, LIKE THE BLANK LINES ON A REAL BOARD
+		if (n && i - indices[n - 1] > 1) grid.insertAdjacentHTML("beforeend", `${digits("", 2)}<span class="plaque-slot"><span class="plaque"></span></span>${digits("", xpCount)}`);
+		const row = start(i);
+		// THE NAME PLAQUE SITS IN A SLOT THAT CLIPS IT, SO IT CAN BE PULLED OUT FROM BEHIND
+		grid.insertAdjacentHTML("beforeend", `${digits(after[i].place, 2, row.is_me)}<span class="plaque-slot"><span class="plaque name${row.is_me ? " me" : ""}"></span></span>${digits(row.points, xpCount, row.is_me)}`);
+		const nameSlot = grid.lastElementChild.previousElementSibling;
+		rowEls[i] = { place: nameSlot.previousElementSibling, name: nameSlot.firstElementChild, xp: grid.lastElementChild };
+		// NAMES ARE TYPED BY PLAYERS, SO THEY GO IN THROUGH textContent, NEVER THROUGH THE TEMPLATE
+		rowEls[i].name.textContent = row.name;
 	});
-	container.replaceChildren(list);
+	container.replaceChildren(board);
 
-	const me = rows[meIndex];
-	const tiedWith = me && rows.find(row => !row.is_me && row.place === me.place);
-	// THE NEAREST PLAYER WITH MORE POINTS; A SAME-POINTS PLAYER AHEAD ON TARIMBA STILL NEEDS ONE MORE POINT, SO ONE GAME
-	const above = me && rows.slice(0, meIndex).reverse().find(row => row.place < me.place);
 	const line = document.createElement("p");
 	line.className = "card-sub margin-top-20";
 	line.style.fontSize = ".7em";
-	if (meIndex === -1) {
-		line.textContent = MSG_RANKING_OUT;
-	} else if (!me.points) {
-		// EVERYONE WITHOUT POINTS SHARES A PLACE ON TARIMBA ALONE, SO "TIED" OR "1.º" WOULD MEAN NOTHING HERE
-		line.textContent = MSG_RANKING_ZERO;
-	} else if (tiedWith) {
-		line.textContent = MSG_RANKING_TIED(tiedWith.name);
-	} else if (!above) {
-		line.textContent = MSG_RANKING_FIRST;
-	} else {
-		line.textContent = MSG_RANKING_CHASE(me.place, Math.ceil((above.points - me.points + 1) / 500), above.name);
-	}
+	// THE LINE FIRST DESCRIBES THE BOARD AS IT STANDS (before), SO IT MATCHES WHAT'S ON SCREEN WHILE THE PLAQUES MOVE
+	line.textContent = rankingLine(before);
 	container.append(line);
 
-	// WHAT EARNS POINTS, FOLDED AWAY UNTIL ASKED FOR. SAME ROWS AS THE TABLE
+	// THE SNAPSHOT IS SAVED ONLY ONCE THE PLAYER HAS SEEN THE UPDATE, SO A BOARD NEVER OPENED STILL PLAYS NEXT TIME. ONLY WHAT
+	// season_ranking ALREADY SHOWED THEM. NEVER IN DEBUG
+	const save = () => {
+		if (debug) return;
+		const snapshot = after.map(({ place, name, points, is_me, ref }) => ({ place, name, points, is_me, ref }));
+		// .then() BECAUSE A SUPABASE QUERY IS ONLY SENT WHEN AWAITED OR THEN-ED — NOTHING HERE WAITS ON IT
+		db.from("ranking_views").upsert({ player_id: user.id, season_start: season.startDate, board: snapshot, seen_at: new Date().toISOString() }, { onConflict: "player_id,season_start" }).then(({ error }) => { if (error) console.error(error); });
+	};
+	const changed = indices.some(i => start(i).name !== after[i].name || start(i).points !== after[i].points);
+	if (!changed) {
+		if (before === after) save();
+		return appendPointsInfo(container);
+	}
+
+	// THE UPDATE PLAYS THE FIRST TIME THE BOARD IS ACTUALLY SEEN (THE RANKING TAB OPENED), NOT WHEN IT'S RENDERED HIDDEN. EVERY
+	// SHOWN ROW IS HANDED ITS FINAL CONTENT; ROWS THAT DON'T CHANGE HAVE NOTHING TO DO. ONCE THE BOARD IS DONE, THE LINE SAYS
+	// WHAT HAPPENED — THE XP GAINED, AND THE PLAYER PASSED IF THEY MOVED UP (TOLD APART BY ref) — THEN WHERE THEY STAND NOW
+	const meBefore = before.findIndex(row => row.is_me);
+	const gained = meIndex === -1 || meBefore === -1 ? 0 : after[meIndex].points - before[meBefore].points;
+	const passed = after[meIndex + 1];
+	const passedBefore = passed?.ref ? before.findIndex(row => row.ref === passed.ref) : -1;
+	const overtook = meIndex !== -1 && passedBefore !== -1 && passedBefore < meBefore;
+	const observer = new IntersectionObserver(entries => {
+		if (!entries[0].isIntersecting) return;
+		observer.disconnect();
+		wait(1000)
+			.then(() => updateRows(indices.map(i => [rowEls[i], after[i]])))
+			.then(() => {
+				const lead = gained > 0 ? `${overtook ? MSG_RANKING_OVERTAKE(gained, passed.name) : MSG_RANKING_GAINED(gained)} ` : "";
+				line.textContent = lead + rankingLine(after);
+				save();
+			});
+	});
+	observer.observe(board);
+	appendPointsInfo(container);
+}
+
+// WHAT EARNS POINTS, FOLDED AWAY UNTIL ASKED FOR. SAME ROWS AS THE TABLE
+function appendPointsInfo(container) {
 	container.insertAdjacentHTML("beforeend", `
 		<p class="card-sub margin-top-20" style="font-size: 1em; text-align: center"><a href="#" data-action="points-info"><img src="images/icon_info.svg" class="link-icon" alt=""> ${MSG_POINTS_INFO}</a></p>
-		<div class="ranking margin-top-10" id="points-info" hidden>
+		<div class="margin-top-10" id="points-info" hidden>
 			${POINTS_RULES.map(([label, xp]) => `<p class="ranking-row"><span>${label}</span><span>+${MSG_XP(xp)}</span></p>`).join("")}
 			<p class="card-sub margin-top-10" style="font-size: .7em">${MSG_POINTS_NOTE}<br><br>${MSG_RANKING_ABOUT}</p>
 		</div>
@@ -807,7 +959,7 @@ function showProfile(user, profile) {
 	const games = fetchHistory(user);
 	loadHistory(app.querySelector('[data-pane-body="history"] .bookings-list'), games);
 	loadProgress(app.querySelector('[data-pane-body="progress"] .bookings-list'), games, undefined, fetchXp());
-	loadRanking(app.querySelector('[data-pane-body="ranking"] .bookings-list'));
+	loadRanking(app.querySelector('[data-pane-body="ranking"] .bookings-list'), user);
 	loadPasses(app.querySelector('[data-pane-body="passes"] .bookings-list'), user, fetchPasses(user));
 
 	wireFolderTabs();
