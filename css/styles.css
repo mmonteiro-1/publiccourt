@@ -1044,16 +1044,55 @@ input[type="time"]::-webkit-date-and-time-value {
 /* === SCOREBOARD ===
    BRUTOMORPHIC GOLF-TOURNAMENT LEADERBOARD IN WIMBLEDON GREEN: ONE BIG SIGN, THE SEASON ON A DARKENED HEADER, EVERY DIGIT AND NAME ON ITS OWN
    PLAQUE SUNK INTO THE BOARD (THE INSET SHADOW). BASICS ONLY FOR NOW */
+/* THE SIGN'S ORNAMENTS: THE BOARD STANDS BETWEEN TWO GREEN POLES, EACH CAPPED WITH A SPHERE NEAR WHERE THE ARCHED TOP STARTS.
+   NO DROP SHADOW — EACH IS ROUNDED BY ITS OWN SHADE ONLY, A TRANSLUCENT BLACK INSET ON ITS FAR SIDE. THE POLES SIT JUST
+   OUTSIDE THE BOARD'S EDGES (-5px) AND STOP AT ITS FOOT (bottom: 20px, THE SIGN'S BOTTOM PADDING) */
+.scoreboard-sign {
+	position: relative;
+	padding: 0 5px 20px;
+}
+
+.scoreboard-pole {
+	position: absolute;
+	top: 20px;
+	bottom: 20px;
+	left: -5px;
+	width: 10px;
+	border: 2px solid var(--black);
+	background: var(--green);
+	box-shadow: inset -4px 0 0 var(--muted-black);
+}
+
+.scoreboard-pole + .scoreboard-pole {
+	left: auto;
+	right: -5px;
+}
+
+.scoreboard-pole::before {
+	content: "";
+	position: absolute;
+	bottom: calc(100% - 5px);
+	left: 50%;
+	width: 15px;
+	height: 15px;
+	transform: translateX(-50%);
+	border: 2px solid var(--black);
+	border-radius: 50%;
+	background: var(--green);
+	box-shadow: inset -4px -4px 0 var(--muted-black);
+}
+
+/* THE TOP IS ARCHED LIKE THE REAL SIGN'S CAP: AN ELLIPTICAL RADIUS ACROSS THE FULL WIDTH, SO THE OUTLINE FOLLOWS THE CURVE.
+   SQUARE AT THE FOOT AND NO DROP SHADOW: IT STANDS ON ITS POLES, NOT ON THE PAGE. THE HEADER'S TOP PADDING KEEPS THE SEASON NAME CLEAR OF IT */
 .scoreboard {
 	border: 2px solid var(--black);
-	border-radius: 10px;
+	border-radius: 50% 50% 0 0 / 30px 30px 0 0;
 	background: var(--green);
-	box-shadow: 4px 4px 0 var(--black);
 	overflow: hidden;
 }
 
 .scoreboard-head {
-	padding: 10px;
+	padding: 20px 10px 10px;
 	background: var(--muted-black);
 	color: var(--white);
 	text-align: center;
@@ -1061,12 +1100,8 @@ input[type="time"]::-webkit-date-and-time-value {
 	font-weight: 700;
 }
 
-.scoreboard-head p:first-child {
+.scoreboard-head p {
 	font-size: 1.5em;
-}
-
-.scoreboard-head p + p {
-	font-size: 0.8em;
 }
 
 /* ONE GRID FOR THE WHOLE BOARD: PLACE · NAME · XP. auto COLUMNS SIZE TO THEIR WIDEST CELL, SO EVERY ROW LINES UP */
@@ -1101,7 +1136,7 @@ input[type="time"]::-webkit-date-and-time-value {
 	padding: 0 5px;
 	/* --muted OVER THE GREEN BOARD, MIXED OPAQUE: EVERY PLAQUE SITS OVER ITS SLOT'S DARK HOLE, WHICH A TRANSLUCENT FILL WOULD SHOW */
 	background: color-mix(in srgb, var(--green), var(--white) 55%);
-	box-shadow: inset 2px 2px 0 var(--black);
+	box-shadow: inset 1px 1px 0 var(--black);
 	font-weight: 700;
 	text-transform: uppercase;
 	white-space: nowrap;

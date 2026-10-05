@@ -58,7 +58,7 @@ const MSG_STAT_COURTS_HINT = n => `Já ${n === 1 ? "recebeu" : "receberam"} as t
 // THE RANKING MEASURES WHO PLAYS THE MOST, NOT WHO PLAYS THE BEST. THE PIG TEASES, NEVER SHAMES
 const MSG_VIEW_RANKING = "Ranking";
 const MSG_SEASON = name => `Época de ${name}`;
-const MSG_SEASON_DATES = (start, end) => `${start} a ${end}`;
+const MSG_SEASONS = "Há duas épocas por ano: a Época de Verão, de 01/04 a 30/09, e a Época de Inverno, de 01/10 a 31/03.";
 const MSG_PLACE = n => `${n}.º`;
 const MSG_RANKING_FIRST = "Estás em 1.º. Agora é defender o lugar.";
 const MSG_RANKING_TIED = name => `Estás empatado com ${name}. Desempata em campo.`;
@@ -606,15 +606,15 @@ function requestCard(name, request, requested, courtId) {
 }
 
 
-// THE CURRENT SEASON'S NAME AND DAYS, FOR DISPLAY ONLY — THE REAL BOUNDARIES ARE season_start IN supabase/sql/ranking.sql:
+// THE CURRENT SEASON'S NAME, FOR DISPLAY ONLY — THE REAL BOUNDARIES ARE season_start IN supabase/sql/ranking.sql:
 // VERÃO APR–SEP, INVERNO OCT–MAR
 // startDate IS season_start'S DATE, THE KEY FOR ranking_views
 function currentSeason() {
 	const now = new Date();
 	const year = now.getFullYear();
 	const month = now.getMonth() + 1;
-	if (month >= 4 && month <= 9) return { name: "Verão", start: "01/04", end: "30/09", startDate: `${year}-04-01` };
-	return { name: "Inverno", start: "01/10", end: "31/03", startDate: `${month >= 10 ? year : year - 1}-10-01` };
+	if (month >= 4 && month <= 9) return { name: "Verão", startDate: `${year}-04-01` };
+	return { name: "Inverno", startDate: `${month >= 10 ? year : year - 1}-10-01` };
 }
 
 // DEBUG: REPLAYS AN UPDATE WITH FAKE NUMBERS, ON DEMAND — ADD ?board=overtake OR ?board=gain TO profile.html. NOTHING IS SAVED.
@@ -747,15 +747,22 @@ async function loadRanking(container, user) {
 	const board = document.createElement("div");
 	board.className = "scoreboard";
 	board.innerHTML = `
-		<div class="scoreboard-head"><p>${MSG_SEASON(season.name)}</p><p>${MSG_SEASON_DATES(season.start, season.end)}</p></div>
+		<div class="scoreboard-head"><p>${MSG_SEASON(season.name)}</p></div>
 		<div class="scoreboard-grid"><p>Pos</p><p>Jogador</p><p>XP</p></div>
 	`;
 	const grid = board.querySelector(".scoreboard-grid");
 	// EACH SHOWN ROW'S THREE PARTS (PLACE DIGITS, NAME PLAQUE, XP DIGITS), BY ITS INDEX IN after, SO A ROW CAN BE UPDATED LATER
 	const rowEls = {};
+	// A ROW OF EMPTY PLAQUES, LIKE THE BLANK LINES ON A REAL BOARD
+	const blankRow = () => grid.insertAdjacentHTML("beforeend", `${digits("", 2)}<span class="plaque-slot"><span class="plaque"></span></span>${digits("", xpCount)}`);
+	let rowCount = 0;
 	indices.forEach((i, n) => {
-		// A JUMP IN PLACES IS AN EMPTY ROW OF PLAQUES, LIKE THE BLANK LINES ON A REAL BOARD
-		if (n && i - indices[n - 1] > 1) grid.insertAdjacentHTML("beforeend", `${digits("", 2)}<span class="plaque-slot"><span class="plaque"></span></span>${digits("", xpCount)}`);
+		// A JUMP IN PLACES IS A BLANK ROW
+		if (n && i - indices[n - 1] > 1) {
+			blankRow();
+			rowCount++;
+		}
+		rowCount++;
 		const row = start(i);
 		// THE NAME PLAQUE SITS IN A SLOT THAT CLIPS IT, SO IT CAN BE PULLED OUT FROM BEHIND
 		grid.insertAdjacentHTML("beforeend", `${digits(after[i].place, 2, row.is_me)}<span class="plaque-slot"><span class="plaque name${row.is_me ? " me" : ""}"></span></span>${digits(row.points, xpCount, row.is_me)}`);
@@ -764,7 +771,16 @@ async function loadRanking(container, user) {
 		// NAMES ARE TYPED BY PLAYERS, SO THEY GO IN THROUGH textContent, NEVER THROUGH THE TEMPLATE
 		rowEls[i].name.textContent = row.name;
 	});
-	container.replaceChildren(board);
+	// THE BOARD NEVER LOOKS EMPTY: AT LEAST 10 ROWS, THE REST BLANK, SO EARLY IN A SEASON IT'S STILL A FULL SIGN WAITING FOR NAMES
+	const MIN_ROWS = 10;
+	for (; rowCount < MIN_ROWS; rowCount++) blankRow();
+	// THE BOARD STANDS BETWEEN TWO POLES, EACH CAPPED WITH A SPHERE, LIKE A REAL TOURNAMENT SIGN. AFTER THE BOARD, SO THEY PAINT
+	// IN FRONT OF ITS EDGES, AS IF HOLDING IT
+	const sign = document.createElement("div");
+	sign.className = "scoreboard-sign";
+	sign.append(board);
+	sign.insertAdjacentHTML("beforeend", `<span class="scoreboard-pole"></span><span class="scoreboard-pole"></span>`);
+	container.replaceChildren(sign);
 
 	const line = document.createElement("p");
 	line.className = "card-sub margin-top-20";
@@ -816,7 +832,7 @@ function appendPointsInfo(container) {
 		<p class="card-sub margin-top-20" style="font-size: 1em; text-align: center"><a href="#" data-action="points-info"><img src="images/icon_info.svg" class="link-icon" alt=""> ${MSG_POINTS_INFO}</a></p>
 		<div class="margin-top-10" id="points-info" hidden>
 			${POINTS_RULES.map(([label, xp]) => `<p class="ranking-row"><span>${label}</span><span>+${MSG_XP(xp)}</span></p>`).join("")}
-			<p class="card-sub margin-top-10" style="font-size: .7em">${MSG_POINTS_NOTE}<br><br>${MSG_RANKING_ABOUT}</p>
+			<p class="card-sub margin-top-10" style="font-size: .7em">${MSG_SEASONS} ${MSG_POINTS_NOTE}<br><br>${MSG_RANKING_ABOUT}</p>
 		</div>
 	`);
 	container.querySelector('[data-pane-link="info"]').addEventListener("click", event => {
