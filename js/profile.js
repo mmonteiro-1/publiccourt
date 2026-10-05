@@ -58,17 +58,18 @@ const MSG_STAT_COURTS_HINT = n => `Já ${n === 1 ? "recebeu" : "receberam"} as t
 // THE RANKING MEASURES WHO PLAYS THE MOST, NOT WHO PLAYS THE BEST. THE PIG TEASES, NEVER SHAMES
 const MSG_VIEW_RANKING = "Ranking";
 const MSG_SEASON = name => `Época de ${name}`;
-const MSG_SEASONS = "Há duas épocas por ano: a Época de Verão, de 01/04 a 30/09, e a Época de Inverno, de 01/10 a 31/03.";
-const MSG_PLACE = n => `${n}.º`;
-const MSG_RANKING_FIRST = "Estás em 1.º. Agora é defender o lugar.";
+const MSG_SEASONS = "Há duas épocas por ano: Época de Verão: de 01/04 a 30/09. Época de Inverno: de 01/10 a 31/03";
+const MSG_RANKING_FIRST = "A vista do topo é qualquer coisa. Aproveita.";
 const MSG_RANKING_TIED = name => `Estás empatado com ${name}. Desempata em campo.`;
 // "N JOGOS" AT 500 XP EACH, THE LEAST A GAME EARNS — A NEW COURT OR A STREAK WEEK CAN MAKE IT FEWER
-const MSG_RANKING_CHASE = (place, games, name) => `Estás em ${MSG_PLACE(place)} — ${games === 1 ? "1 jogo" : `${games} jogos`} para passares ${name}.`;
+const MSG_RANKING_CHASE = (games, name) => `${games === 1 ? "1 jogito" : `${games} jogitos`} e deixas ${name} para trás.`;
 // AFTER THE BOARD UPDATES, BEFORE THE USUAL LINE: WHAT THE PLAYER GAINED SINCE THEY LAST LOOKED, AND WHO THEY PASSED
 const MSG_RANKING_GAINED = xp => `Ganhaste ${MSG_XP(xp)} desde a última vez.`;
-const MSG_RANKING_OVERTAKE = (xp, name) => `Ganhaste ${MSG_XP(xp)} e passaste ${name}. Sobe, sobe!`;
-const MSG_RANKING_ZERO = "Ainda não jogaste nesta época. Um jogo e entras na corrida.";
-const MSG_RANKING_OUT = "Estás fora do ranking. Podes mudar isso em Dados.";
+const MSG_RANKING_OVERTAKE = (xp, name) => `Máquina! Ganhaste ${MSG_XP(xp)} e agora vês ${name} pelo retrovisor.`;
+const MSG_RANKING_DROPPED = "Tragédia anunciada: caíste de posição. Não deixes ficar barato.";
+const MSG_RANKING_ZERO = "Nenhum jogo na época? Tás a gozar.";
+// "BORA PARTICIPAR" OPENS DADOS (data-pane-link), WHERE THE PARTICIPAR / RECUSAR TOGGLE IS
+const MSG_RANKING_OUT = `Não te deixes intimidar, somos todos amadores. <a href="#" data-pane-link="info">Bora participar</a>.`;
 // "DADOS" OPENS THAT TAB (data-pane-link), WHERE THE PARTICIPAR / RECUSAR TOGGLE IS
 const MSG_RANKING_ABOUT = `O ranking junta todos os jogadores do Campo Livre. Se preferires ficar de fora, podes sair em <a href="#" data-pane-link="info">Dados</a>.`;
 const MSG_POINTS_INFO = "Entende o ranking";
@@ -79,7 +80,7 @@ const POINTS_RULES = [
 	["Semana com partida, a seguir a outra", 500],
 	["Passe aprovado", XP_PER_PASS],
 ];
-const MSG_POINTS_NOTE = "Partidas de 10 minutos ou menos não contam. Os pontos voltam a zero no início de cada época; o XP do teu cartão nunca desce.";
+const MSG_POINTS_NOTE = "Partidas de 10 minutos ou menos não contam. Os pontos voltam a zero no início de cada época; o teu XP de progresso geral nunca desce.";
 const MSG_VISITOR_RANKING = `Os jogadores mais ativos de cada época aparecem aqui. ${MSG_LOGIN_LINK} para entrares na corrida.`;
 const MSG_VIEW_PASSES = "Os teus passes";
 const MSG_NO_PASSES = "Não és membro de nenhum campo, infelizmente. Bora mudar isso com o teu primeiro passe!";
@@ -710,7 +711,7 @@ function rankingLine(list) {
 	// THE NEAREST PLAYER WITH MORE POINTS; A SAME-POINTS PLAYER AHEAD ON TARIMBA STILL NEEDS ONE MORE POINT, SO ONE GAME
 	const above = list.slice(0, meIndex).reverse().find(row => row.place < me.place);
 	if (!above) return MSG_RANKING_FIRST;
-	return MSG_RANKING_CHASE(me.place, Math.ceil((above.points - me.points + 1) / 500), above.name);
+	return MSG_RANKING_CHASE(Math.ceil((above.points - me.points + 1) / 500), above.name);
 }
 
 // THE TOP THREE FOR THE ASPIRATION, THEN THE PLAYER WITH WHOEVER IS JUST ABOVE AND BELOW — NEVER THE WHOLE TABLE
@@ -728,6 +729,12 @@ async function loadRanking(container, user) {
 		after = data ?? [];
 		before = seen?.board ?? after;
 	}
+	// THE BOARD ONLY ANIMATES GOOD NEWS. A PLAYER WHO DROPPED A PLACE GETS THE NEW BOARD STRAIGHT AWAY, NO PLAQUES MOVING — AND
+	// IT'S SAVED, SO THE DROP NEVER REPLAYS. COMPARED BY PLACE, NOT ROW, SO A TIE SHUFFLING THE ORDER DOESN'T COUNT AS A DROP
+	const placeBefore = before.find(row => row.is_me)?.place;
+	const placeAfter = after.find(row => row.is_me)?.place;
+	const dropped = placeBefore && placeAfter > placeBefore;
+	if (dropped) before = after;
 
 	const meIndex = after.findIndex(row => row.is_me);
 	const shown = new Set([0, 1, 2]);
@@ -747,8 +754,10 @@ async function loadRanking(container, user) {
 	const board = document.createElement("div");
 	board.className = "scoreboard";
 	board.innerHTML = `
-		<div class="scoreboard-head"><p>${MSG_SEASON(season.name)}</p></div>
-		<div class="scoreboard-grid"><p>Pos</p><p>Jogador</p><p>XP</p></div>
+		<div class="scoreboard-face">
+			<div class="scoreboard-head"><p>${MSG_SEASON(season.name)}</p></div>
+			<div class="scoreboard-grid"><p>Pos</p><p>Jogador</p><p>XP</p></div>
+		</div>
 	`;
 	const grid = board.querySelector(".scoreboard-grid");
 	// EACH SHOWN ROW'S THREE PARTS (PLACE DIGITS, NAME PLAQUE, XP DIGITS), BY ITS INDEX IN after, SO A ROW CAN BE UPDATED LATER
@@ -783,11 +792,30 @@ async function loadRanking(container, user) {
 	container.replaceChildren(sign);
 
 	const line = document.createElement("p");
-	line.className = "card-sub margin-top-20";
+	// ABOVE THE BOARD, LIKE EVERY OTHER PANE'S DESCRIPTION: 10px ABOVE IT AND 10px BETWEEN IT AND THE BOARD
+	line.className = "card-sub margin-top-10";
 	line.style.fontSize = ".7em";
-	// THE LINE FIRST DESCRIBES THE BOARD AS IT STANDS (before), SO IT MATCHES WHAT'S ON SCREEN WHILE THE PLAQUES MOVE
-	line.textContent = rankingLine(before);
-	container.append(line);
+	// THE LINE TELLS THE NEWS STRAIGHT AWAY, WITHOUT WAITING FOR THE PLAQUES: WHAT HAPPENED SINCE THE LAST LOOK, THEN WHERE THE
+	// PLAYER STANDS NOW. A GAIN, AND WHO THEY PASSED IF THEY MOVED UP (TOLD APART BY ref); AFTER A DROP THE PIG TEASES — NEVER SHAMES
+	const meBefore = before.findIndex(row => row.is_me);
+	const gained = meIndex === -1 || meBefore === -1 ? 0 : after[meIndex].points - before[meBefore].points;
+	const passed = after[meIndex + 1];
+	const passedBefore = passed?.ref ? before.findIndex(row => row.ref === passed.ref) : -1;
+	const overtook = meIndex !== -1 && passedBefore !== -1 && passedBefore < meBefore;
+	const lead = dropped ? MSG_RANKING_DROPPED : gained > 0 ? (overtook ? MSG_RANKING_OVERTAKE(gained, passed.name) : MSG_RANKING_GAINED(gained)) : "";
+	if (meIndex === -1) {
+		// OPTED OUT: THE ONE LINE WITH A LINK, AND NO PLAYER NAMES IN IT, SO IT CAN GO IN AS HTML
+		line.innerHTML = MSG_RANKING_OUT;
+		line.querySelector("a").addEventListener("click", event => {
+			event.preventDefault();
+			app.querySelector('.folder-tab[data-pane="info"]').click();
+		});
+	} else {
+		// NAMES ARE TYPED BY PLAYERS, SO EVERY OTHER LINE GOES IN AS TEXT
+		line.textContent = (lead ? `${lead} ` : "") + rankingLine(after);
+	}
+	container.before(line);
+	container.classList.replace("margin-top-20", "margin-top-10");
 
 	// THE SNAPSHOT IS SAVED ONLY ONCE THE PLAYER HAS SEEN THE UPDATE, SO A BOARD NEVER OPENED STILL PLAYS NEXT TIME. ONLY WHAT
 	// season_ranking ALREADY SHOWED THEM. NEVER IN DEBUG
@@ -804,45 +832,44 @@ async function loadRanking(container, user) {
 	}
 
 	// THE UPDATE PLAYS THE FIRST TIME THE BOARD IS ACTUALLY SEEN (THE RANKING TAB OPENED), NOT WHEN IT'S RENDERED HIDDEN. EVERY
-	// SHOWN ROW IS HANDED ITS FINAL CONTENT; ROWS THAT DON'T CHANGE HAVE NOTHING TO DO. ONCE THE BOARD IS DONE, THE LINE SAYS
-	// WHAT HAPPENED — THE XP GAINED, AND THE PLAYER PASSED IF THEY MOVED UP (TOLD APART BY ref) — THEN WHERE THEY STAND NOW
-	const meBefore = before.findIndex(row => row.is_me);
-	const gained = meIndex === -1 || meBefore === -1 ? 0 : after[meIndex].points - before[meBefore].points;
-	const passed = after[meIndex + 1];
-	const passedBefore = passed?.ref ? before.findIndex(row => row.ref === passed.ref) : -1;
-	const overtook = meIndex !== -1 && passedBefore !== -1 && passedBefore < meBefore;
+	// SHOWN ROW IS HANDED ITS FINAL CONTENT; ROWS THAT DON'T CHANGE HAVE NOTHING TO DO
 	const observer = new IntersectionObserver(entries => {
 		if (!entries[0].isIntersecting) return;
 		observer.disconnect();
 		wait(1000)
 			.then(() => updateRows(indices.map(i => [rowEls[i], after[i]])))
-			.then(() => {
-				const lead = gained > 0 ? `${overtook ? MSG_RANKING_OVERTAKE(gained, passed.name) : MSG_RANKING_GAINED(gained)} ` : "";
-				line.textContent = lead + rankingLine(after);
-				save();
-			});
+			.then(save);
 	});
 	observer.observe(board);
 	appendPointsInfo(container);
 }
 
-// WHAT EARNS POINTS, FOLDED AWAY UNTIL ASKED FOR. SAME ROWS AS THE TABLE
+// WHAT EARNS POINTS, FOLDED AWAY UNTIL ASKED FOR: THE SAME COLLAPSIBLE CARD AS THE ADMIN'S COURT RULES (admin.js), STARTING
+// CLOSED — THE TRIANGLE TURNED -90deg, AS admin.js TURNS IT WHEN A CARD IS FOLDED
 function appendPointsInfo(container) {
 	container.insertAdjacentHTML("beforeend", `
-		<p class="card-sub margin-top-20" style="font-size: 1em; text-align: center"><a href="#" data-action="points-info"><img src="images/icon_info.svg" class="link-icon" alt=""> ${MSG_POINTS_INFO}</a></p>
-		<div class="margin-top-10" id="points-info" hidden>
-			${POINTS_RULES.map(([label, xp]) => `<p class="ranking-row"><span>${label}</span><span>+${MSG_XP(xp)}</span></p>`).join("")}
-			<p class="card-sub margin-top-10" style="font-size: .7em">${MSG_SEASONS} ${MSG_POINTS_NOTE}<br><br>${MSG_RANKING_ABOUT}</p>
+		<div class="court-rules-card">
+			<div class="court-rules-toggle">
+				<p class="court-rules-title"><img src="images/icon_info.svg" class="link-icon" alt="">${MSG_POINTS_INFO}</p>
+				<img src="images/icon_triangle.svg" class="card-toggle-icon" alt="" style="transform: rotate(-90deg)">
+			</div>
+			<div class="court-rules-body" hidden>
+				${POINTS_RULES.map(([label, xp]) => `<p class="ranking-row"><span>${label}</span><span>+${MSG_XP(xp)}</span></p>`).join("")}
+				<p class="card-sub margin-top-10">${MSG_POINTS_NOTE}</p>
+				<p class="card-sub margin-top-10">${MSG_SEASONS}</p>
+				<p class="card-sub margin-top-10">${MSG_RANKING_ABOUT}</p>
+			</div>
 		</div>
 	`);
-	container.querySelector('[data-pane-link="info"]').addEventListener("click", event => {
+	const card = container.lastElementChild;
+	card.querySelector('[data-pane-link="info"]').addEventListener("click", event => {
 		event.preventDefault();
 		app.querySelector('.folder-tab[data-pane="info"]').click();
 	});
-	container.querySelector('[data-action="points-info"]').addEventListener("click", event => {
-		event.preventDefault();
-		const info = document.getElementById("points-info");
-		info.hidden = !info.hidden;
+	card.querySelector(".court-rules-toggle").addEventListener("click", () => {
+		const body = card.querySelector(".court-rules-body");
+		body.hidden = !body.hidden;
+		card.querySelector(".card-toggle-icon").style.transform = body.hidden ? "rotate(-90deg)" : "";
 	});
 }
 

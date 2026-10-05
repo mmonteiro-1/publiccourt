@@ -1044,9 +1044,10 @@ input[type="time"]::-webkit-date-and-time-value {
 /* === SCOREBOARD ===
    BRUTOMORPHIC GOLF-TOURNAMENT LEADERBOARD IN WIMBLEDON GREEN: ONE BIG SIGN, THE SEASON ON A DARKENED HEADER, EVERY DIGIT AND NAME ON ITS OWN
    PLAQUE SUNK INTO THE BOARD (THE INSET SHADOW). BASICS ONLY FOR NOW */
-/* THE SIGN'S ORNAMENTS: THE BOARD STANDS BETWEEN TWO GREEN POLES, EACH CAPPED WITH A SPHERE NEAR WHERE THE ARCHED TOP STARTS.
-   NO DROP SHADOW — EACH IS ROUNDED BY ITS OWN SHADE ONLY, A TRANSLUCENT BLACK INSET ON ITS FAR SIDE. THE POLES SIT JUST
-   OUTSIDE THE BOARD'S EDGES (-5px) AND STOP AT ITS FOOT (bottom: 20px, THE SIGN'S BOTTOM PADDING) */
+/* THE SIGN'S ORNAMENTS: THE BOARD STANDS BETWEEN TWO GREEN POLES, EACH CAPPED WITH A SPHERE UP BY THE ARCH (THE POLES START
+   10px BELOW THE BOARD'S TOP). NO DROP SHADOW — EACH IS ROUNDED BY ITS OWN SHADE ONLY, A
+   TRANSLUCENT BLACK INSET ON ITS FAR SIDE. THE POLES SIT JUST OUTSIDE THE BOARD'S EDGES (-5px) AND STOP AT ITS FOOT
+   (bottom: 20px, THE SIGN'S BOTTOM PADDING) */
 .scoreboard-sign {
 	position: relative;
 	padding: 0 5px 20px;
@@ -1054,7 +1055,7 @@ input[type="time"]::-webkit-date-and-time-value {
 
 .scoreboard-pole {
 	position: absolute;
-	top: 20px;
+	top: 10px;
 	bottom: 20px;
 	left: -5px;
 	width: 10px;
@@ -1068,31 +1069,44 @@ input[type="time"]::-webkit-date-and-time-value {
 	right: -5px;
 }
 
+/* bottom: 100% PLUS HALF ITS OWN HEIGHT BACK DOWN (translate 50%) CENTRES THE SPHERE ON THE POLE'S TOP */
 .scoreboard-pole::before {
 	content: "";
 	position: absolute;
-	bottom: calc(100% - 5px);
+	bottom: 100%;
 	left: 50%;
 	width: 15px;
 	height: 15px;
-	transform: translateX(-50%);
+	transform: translate(-50%, 50%);
 	border: 2px solid var(--black);
 	border-radius: 50%;
 	background: var(--green);
 	box-shadow: inset -4px -4px 0 var(--muted-black);
 }
 
-/* THE TOP IS ARCHED LIKE THE REAL SIGN'S CAP: AN ELLIPTICAL RADIUS ACROSS THE FULL WIDTH, SO THE OUTLINE FOLLOWS THE CURVE.
-   SQUARE AT THE FOOT AND NO DROP SHADOW: IT STANDS ON ITS POLES, NOT ON THE PAGE. THE HEADER'S TOP PADDING KEEPS THE SEASON NAME CLEAR OF IT */
+/* THE ARCHED CAP, WITH SHARP CORNERS WHERE IT MEETS THE STRAIGHT SIDES — A border-radius ALWAYS BLENDS INTO THE SIDES, SO THE
+   TOP IS CUT BY A VERY WIDE ELLIPSE INSTEAD (290% OF THE WIDTH ACROSS, 1350px TALL, SO ONLY ITS TOP ~20px OF CURVE SHOWS,
+   WHATEVER THE SCREEN WIDTH). TWO LAYERS DRAW THE OUTLINE: THE BOARD IS BLACK, PADDED 2px, CUT BY THE ELLIPSE; THE GREEN FACE
+   INSIDE IS CUT BY THE SAME ELLIPSE 2px LOWER, LEAVING A 2px BLACK LINE ALL ROUND, CURVE INCLUDED. SQUARE AT THE FOOT, AND NO
+   DROP SHADOW (A clip-path WOULD CUT IT ANYWAY): IT STANDS ON ITS POLES, NOT ON THE PAGE */
 .scoreboard {
-	border: 2px solid var(--black);
-	border-radius: 50% 50% 0 0 / 30px 30px 0 0;
-	background: var(--green);
-	overflow: hidden;
+	padding: 2px;
+	background: var(--black);
+	clip-path: ellipse(290% 1350px at 50% 1350px);
 }
 
+.scoreboard-face {
+	background: var(--green);
+	clip-path: ellipse(290% 1350px at 50% 1350px);
+}
+
+/* A FIXED HEIGHT SO THE POLES CAN START EXACTLY AT ITS BOTTOM EDGE; THE TOP PADDING KEEPS THE SEASON NAME CLEAR OF THE ARCH */
 .scoreboard-head {
-	padding: 20px 10px 10px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	height: 60px;
+	padding: 20px 10px 0;
 	background: var(--muted-black);
 	color: var(--white);
 	text-align: center;
