@@ -25,6 +25,19 @@ const MSG_STAT_HOURS_HINT = "Em campo, desde a primeira partida";
 const MSG_STAT_STREAK_HINT = "Com pelo menos uma partida";
 const MSG_STAT_COURTS = n => `${n} ${n === 1 ? "campo" : "campos diferentes"}`;
 const MSG_STAT_COURTS_HINT = n => `Já ${n === 1 ? "recebeu" : "receberam"} as tuas partidas`;
+const MSG_PROGRESS_INFO = "Entende o progresso";
+// "ENTENDE O PROGRESSO": XP AND LEVELS (LIFETIME) ABOVE THE ROWS, WHICH SHOW WHAT EACH SKILL BRINGS IN; BELOW THEM, WHY THE
+// SKILLS AND THE XP MOVE TOGETHER WITHOUT ONE PAYING THE OTHER — AND TARIMBA, THE ONE SKILL WITH NO XP OF ITS OWN
+const MSG_PROGRESS_INTRO = `O XP é o teu progresso de sempre: nunca diminui, nem quando paras. É ele que te faz subir de nível, do 1 ao 10.<br><br>Para além do XP tens também 4 atributos, que mostram os teus hábitos de jogo.`;
+const MSG_PROGRESS_RULES = `Cada atributo tem o seu progresso de 0 a 100. Este progresso é representado pelos números grandes do cartão e pela barra de progresso azul. Quem enche uma barra ganha um diamante, que fica para sempre — mesmo que a barra volte a descer.<br><br>Os atributos não dão XP por si: o XP vem das mesmas partidas que os fazem subir, como mostra a lista acima. Tarimba é a exceção, não tem XP próprio: uma partida de 2h vale o mesmo que uma de 30 min.<br><br>Partidas com menos de 10 minutos não contam.`;
+// WHICH SKILL EACH XP INCREMENT RIDES ON. DISPLAY ONLY — THE RULES THEMSELVES LIVE IN games_xp (supabase/sql/xp.sql), SO KEEP
+// THESE IN STEP WITH IT (AND WITH POINTS_RULES IN ranking.js)
+const PROGRESS_RULES = [
+	[`<img src="images/icon_fire_color.svg" class="link-icon" alt="">Momentum: cada partida`, 500],
+	[`<img src="images/icon_globe_color.svg" class="link-icon" alt="">${MSG_TITLE_TERRITORY}: cada campo novo`, 500],
+	[`<img src="images/icon_repeat_color.svg" class="link-icon" alt="">Consistência: cada semana seguida`, 500],
+	[`<img src="images/icon_id.svg" class="link-icon" alt="">Passe aprovado`, XP_PER_PASS],
+];
 
 // MONDAY 00:00 OF THE WEEK date FALLS IN, AS A TIMESTAMP — THE KEY FOR THE WEEKLY STREAK
 function weekStart(date) {
@@ -85,15 +98,6 @@ function levelIndex(scale, value) {
 
 function levelTitle(scale, value) {
 	return scale.levels[levelIndex(scale, value)].title;
-}
-
-// INLINE, NOT AN <img>: CSS CAN'T REACH INTO AN <img> SVG, AND THE FIRST PATH'S FILL IS WHAT TURNS YELLOW ON ACHIEVEMENT
-const STAR_SVG = achieved => `<svg class="level-star${achieved ? " achieved" : ""}" viewBox="0 0 22 21" aria-hidden="true"><path d="M10.7459 0C11.0974 0 11.4216 0.199219 11.5818 0.511719L14.4529 6.14453L20.699 7.13672C21.0466 7.19141 21.3357 7.4375 21.4451 7.77344C21.5545 8.10938 21.4646 8.47656 21.2185 8.72656L16.7459 13.1992L17.7341 19.4453C17.7888 19.793 17.6443 20.1445 17.3591 20.3516C17.074 20.5586 16.6951 20.5898 16.3826 20.4297L10.7459 17.5625L5.10915 20.4297C4.79665 20.5898 4.41774 20.5586 4.13258 20.3516C3.84743 20.1445 3.7029 19.7969 3.75758 19.4453L4.74196 13.1992L0.27321 8.72656C0.0232101 8.47656 -0.0627274 8.10938 0.0466476 7.77344C0.156023 7.4375 0.441179 7.19141 0.792741 7.13672L7.03883 6.14453L9.91383 0.511719C10.074 0.199219 10.3982 0 10.7498 0H10.7459Z"/><path d="M10.7459 0C11.0974 0 11.4216 0.199219 11.5818 0.511719L14.4529 6.14453L20.699 7.13672C21.0466 7.19141 21.3357 7.4375 21.4451 7.77344C21.5545 8.10938 21.4646 8.47656 21.2185 8.72656L16.7459 13.1992L17.7341 19.4453C17.7888 19.793 17.6443 20.1445 17.3591 20.3516C17.074 20.5586 16.6951 20.5898 16.3826 20.4297L10.7459 17.5625L5.10915 20.4297C4.79665 20.5898 4.41774 20.5586 4.13259 20.3516C3.84743 20.1445 3.7029 19.7969 3.75758 19.4453L4.74196 13.1992L0.27321 8.72656C0.0232101 8.47656 -0.0627274 8.10938 0.0466476 7.77344C0.156023 7.4375 0.441179 7.19141 0.792741 7.13672L7.03884 6.14453L9.91383 0.511719C10.074 0.199219 10.3982 0 10.7498 0H10.7459ZM10.7459 3L8.48805 7.42188C8.35134 7.6875 8.09743 7.875 7.80055 7.92188L2.89821 8.70313L6.40602 12.2148C6.61696 12.4258 6.71462 12.7266 6.66774 13.0234L5.8943 17.9258L10.3201 15.6758C10.5857 15.5391 10.9021 15.5391 11.1716 15.6758L15.5974 17.9258L14.824 13.0234C14.7771 12.7266 14.8748 12.4258 15.0857 12.2148L18.5935 8.70313L13.6912 7.92188C13.3943 7.875 13.1404 7.6875 13.0037 7.42188L10.7459 3Z"/></svg>`;
-
-// ONE STAR PER LEVEL; THE CURRENT LEVEL AND EVERY ONE BELOW IT ARE FILLED, SO THE FIRST LEVEL ALREADY HAS ONE
-function levelStars(scale, value) {
-	const current = levelIndex(scale, value);
-	return scale.levels.map((_, i) => STAR_SVG(i <= current)).join("");
 }
 
 // XP ITSELF IS COMPUTED IN THE DATABASE (games_xp, player_xp), NOT HERE — THE RANKING READS THE SAME FUNCTIONS
@@ -174,6 +178,7 @@ async function loadProgress(container, gamesPromise, teaserPromise, xpPromise) {
 	const xp = await xpPromise;
 	if (!games.length) {
 		setPigAppearance(container, MSG_PROGRESS_EMPTY, "pig_reaching");
+		appendRulesCard(container, MSG_PROGRESS_INFO, PROGRESS_RULES, MSG_PROGRESS_RULES, MSG_PROGRESS_INTRO);
 		return;
 	}
 
@@ -219,11 +224,41 @@ async function loadProgress(container, gamesPromise, teaserPromise, xpPromise) {
 			{ icon: "repeat_color", rating: rating(LEVELS_STREAK, streak) },
 			{ icon: "globe_color", rating: rating(LEVELS_TERRITORY, courts) },
 		], teaser),
-		statCard("fire_color", "Momentum", levelTitle(LEVELS_GAMES, gamesRecent) + levelStars(LEVELS_GAMES, gamesRecent), MSG_STAT_GAMES_VALUE(shown(gamesRecent)), MSG_STAT_GAMES_HINT, levelBar(LEVELS_GAMES, gamesRecent), diamonds.games),
-		statCard("sheriff_color", "Tarimba", levelTitle(LEVELS_TARIMBA, hours) + levelStars(LEVELS_TARIMBA, hours), MSG_STAT_HOURS(shown(hours)), MSG_STAT_HOURS_HINT, levelBar(LEVELS_TARIMBA, hours), diamonds.hours),
-		statCard("repeat_color", "Consistência", levelTitle(LEVELS_STREAK, streak) + levelStars(LEVELS_STREAK, streak), MSG_STAT_STREAK(shown(streak)), MSG_STAT_STREAK_HINT, levelBar(LEVELS_STREAK, streak), diamonds.streak),
-		statCard("globe_color", MSG_TITLE_TERRITORY, levelTitle(LEVELS_TERRITORY, courts - 1) + levelStars(LEVELS_TERRITORY, courts - 1), MSG_STAT_COURTS(shown(courts)), MSG_STAT_COURTS_HINT(shown(courts)), levelBar(LEVELS_TERRITORY, courts), diamonds.courts),
+		statCard("fire_color", "Momentum", levelTitle(LEVELS_GAMES, gamesRecent), MSG_STAT_GAMES_VALUE(shown(gamesRecent)), MSG_STAT_GAMES_HINT, levelBar(LEVELS_GAMES, gamesRecent), diamonds.games),
+		statCard("sheriff_color", "Tarimba", levelTitle(LEVELS_TARIMBA, hours), MSG_STAT_HOURS(shown(hours)), MSG_STAT_HOURS_HINT, levelBar(LEVELS_TARIMBA, hours), diamonds.hours),
+		statCard("repeat_color", "Consistência", levelTitle(LEVELS_STREAK, streak), MSG_STAT_STREAK(shown(streak)), MSG_STAT_STREAK_HINT, levelBar(LEVELS_STREAK, streak), diamonds.streak),
+		statCard("globe_color", MSG_TITLE_TERRITORY, levelTitle(LEVELS_TERRITORY, courts - 1), MSG_STAT_COURTS(shown(courts)), MSG_STAT_COURTS_HINT(shown(courts)), levelBar(LEVELS_TERRITORY, courts), diamonds.courts),
 	].join("");
+	appendRulesCard(container, MSG_PROGRESS_INFO, PROGRESS_RULES, MSG_PROGRESS_RULES, MSG_PROGRESS_INTRO);
+}
+
+// "ENTENDE O …": THE RULES OF A TAB, FOLDED AWAY UNTIL ASKED FOR — THE SAME COLLAPSIBLE CARD AS THE ADMIN'S COURT RULES
+// (admin.js), STARTING CLOSED: THE TRIANGLE TURNED -90deg, AS admin.js TURNS IT WHEN A CARD IS FOLDED. rows ARE [label, xp];
+// A data-pane-link IN THE TEXT OPENS THAT PROFILE TAB. AN intro GOES ABOVE THE ROWS. SHARED WITH THE RANKING TAB (ranking.js)
+function appendRulesCard(container, title, rows, text, intro) {
+	container.insertAdjacentHTML("beforeend", `
+		<div class="court-rules-card">
+			<div class="court-rules-toggle">
+				<p class="court-rules-title"><img src="images/icon_info.svg" class="link-icon" alt="">${title}</p>
+				<img src="images/icon_triangle.svg" class="card-toggle-icon" alt="" style="transform: rotate(-90deg)">
+			</div>
+			<div class="court-rules-body" hidden>
+				${intro ? `<p class="card-sub">${intro}</p>` : ""}
+				${rows.map(([label, xp]) => `<p class="ranking-row"><span>${label}</span><span>+${MSG_XP(xp)}</span></p>`).join("")}
+				<p class="card-sub margin-top-10">${text}</p>
+			</div>
+		</div>
+	`);
+	const card = container.lastElementChild;
+	card.querySelectorAll("[data-pane-link]").forEach(link => link.addEventListener("click", event => {
+		event.preventDefault();
+		document.querySelector(`.folder-tab[data-pane="${link.dataset.paneLink}"]`).click();
+	}));
+	card.querySelector(".court-rules-toggle").addEventListener("click", () => {
+		const body = card.querySelector(".court-rules-body");
+		body.hidden = !body.hidden;
+		card.querySelector(".card-toggle-icon").style.transform = body.hidden ? "rotate(-90deg)" : "";
+	});
 }
 
 

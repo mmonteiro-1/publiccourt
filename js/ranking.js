@@ -305,7 +305,7 @@ async function loadRanking(container, user, preset) {
 	const changed = indices.some(i => start(i).name !== after[i].name || start(i).points !== after[i].points);
 	if (!changed) {
 		if (before === after) save();
-		return appendPointsInfo(container);
+		return appendRulesCard(container, MSG_POINTS_INFO, POINTS_RULES, MSG_RANKING_INFO);
 	}
 
 	// THE UPDATE PLAYS THE FIRST TIME THE BOARD IS ACTUALLY SEEN (THE RANKING TAB OPENED), NOT WHEN IT'S RENDERED HIDDEN. EVERY
@@ -318,32 +318,5 @@ async function loadRanking(container, user, preset) {
 			.then(save);
 	});
 	observer.observe(board);
-	appendPointsInfo(container);
-}
-
-// WHAT EARNS POINTS, FOLDED AWAY UNTIL ASKED FOR: THE SAME COLLAPSIBLE CARD AS THE ADMIN'S COURT RULES (admin.js), STARTING
-// CLOSED — THE TRIANGLE TURNED -90deg, AS admin.js TURNS IT WHEN A CARD IS FOLDED
-function appendPointsInfo(container) {
-	container.insertAdjacentHTML("beforeend", `
-		<div class="court-rules-card">
-			<div class="court-rules-toggle">
-				<p class="court-rules-title"><img src="images/icon_info.svg" class="link-icon" alt="">${MSG_POINTS_INFO}</p>
-				<img src="images/icon_triangle.svg" class="card-toggle-icon" alt="" style="transform: rotate(-90deg)">
-			</div>
-			<div class="court-rules-body" hidden>
-				${POINTS_RULES.map(([label, xp]) => `<p class="ranking-row"><span>${label}</span><span>+${MSG_XP(xp)}</span></p>`).join("")}
-				<p class="card-sub margin-top-10">${MSG_RANKING_INFO}</p>
-			</div>
-		</div>
-	`);
-	const card = container.lastElementChild;
-	card.querySelector('[data-pane-link="info"]').addEventListener("click", event => {
-		event.preventDefault();
-		app.querySelector('.folder-tab[data-pane="info"]').click();
-	});
-	card.querySelector(".court-rules-toggle").addEventListener("click", () => {
-		const body = card.querySelector(".court-rules-body");
-		body.hidden = !body.hidden;
-		card.querySelector(".card-toggle-icon").style.transform = body.hidden ? "rotate(-90deg)" : "";
-	});
+	appendRulesCard(container, MSG_POINTS_INFO, POINTS_RULES, MSG_RANKING_INFO);
 }

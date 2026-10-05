@@ -3,9 +3,7 @@ const app = document.getElementById("app");
 const MSG_HELLO = name => `Olá, ${name}`;
 const MSG_SAVE_ERROR = "Não foi possível guardar. Tenta outra vez.";
 const MSG_SAVED = "Alterações guardadas.";
-// SHOWN BOTH DURING ONBOARDING AND ON THE PROFILE, NEXT TO WHERE THE DATA IS ENTERED
 const MSG_RANKING_VISIBILITY = "O ranking só mostra a inicial do teu nome com o apelido e os teus pontos — nunca onde nem quando jogas.";
-const MSG_DATA_DISCLAIMER = "Estas informações são relevantes para o administrador do campo quando pedes um passe. Por este motivo o Campo Livre irá guardar os teus dados, embora não tenha interesse neles.";
 
 const MSG_HISTORY_TITLE = "Teus jogos passados";
 const MSG_VIEW_INFO = "Dados pessoais";
@@ -92,110 +90,15 @@ async function loadProfile(user) {
 		.eq("id", user.id)
 		.maybeSingle();
 
-	// NEW PLAYERS ONBOARD FIRST; THE RETURN HAPPENS WHEN ONBOARDING FINISHES (SEE finish())
+	// NEW PLAYERS ONBOARD FIRST, ON THEIR OWN PAGE, WHICH SENDS THEM BACK HERE ONCE THE ROW EXISTS. returnTo / justLoggedIn
+	// AREN'T TAKEN YET, SO THE RETURN TO THE COURT STILL HAPPENS ON THAT SECOND PASS. replace() SO "BACK" DOESN'T BOUNCE THEM
 	if (!profile) {
-		startOnboarding(user);
+		location.replace("onboarding.html");
 		return;
 	}
 
 	if (redirectAfterLogin()) return;
 	showProfile(user, profile);
-}
-
-// ONBOARDING SLIDESHOW FOR NEW USERS — ONE QUESTION PER STEP, ALL SAVED IN A SINGLE INSERT AT THE END
-function startOnboarding(user) {
-	// CENTRES THE ONE-QUESTION SLIDES; THE PROFILE ITSELF STAYS TOP-ANCHORED (SEE .page-profile #app)
-	document.body.classList.add("onboarding");
-	const collected = { name: '', phone: '', nif: '' };
-	let step = 0;
-
-	// NAME IS REQUIRED; PHONE AND NIF ARE OPTIONAL
-	const steps = [
-		{ question: 'Como devemos chamar-te?', field: 'name', type: 'text', placeholder: 'Nome', autocomplete: 'name', required: true },
-		{ question: 'Queres deixar o telefone registado?', field: 'phone', type: 'tel', placeholder: 'Telefone (opcional)', autocomplete: 'tel', required: false },
-		{ question: 'Queres deixar o NIF registado?', field: 'nif', type: 'number', placeholder: 'NIF (opcional)', autocomplete: 'off', required: false },
-	];
-
-	function render() {
-		const s = steps[step];
-		const isLast = step === steps.length - 1;
-		const isFirst = step === 0;
-		// CONTINUE IS BLOCKED ONLY ON THE NAME STEP IF THE FIELD IS EMPTY
-		const canAdvance = !s.required || collected[s.field].length > 0;
-
-		app.innerHTML = `
-			<p class="card-sub onboarding-step">${step + 1} / ${steps.length}</p>
-			<p class="onboarding-question">${s.question}</p>
-			<input class="form-input" type="${s.type}" id="onboarding-input"
-				placeholder="${s.placeholder}"
-				autocomplete="${s.autocomplete}"
-				value="${collected[s.field]}">
-			<div class="onboarding-actions margin-top-10">
-				${!isFirst ? `<button id="back-btn" class="button-shallow">Voltar</button>` : ''}
-				<button id="next-btn" ${canAdvance ? '' : 'disabled'}>${isLast ? 'Concluir' : 'Continuar'}</button>
-			</div>
-			<p class="card-sub margin-top-10 margin-bottom-10" style="font-size: .7em; color: var(--black)">${MSG_DATA_DISCLAIMER}</p>
-		`;
-
-		const input = document.getElementById('onboarding-input');
-		const nextBtn = document.getElementById('next-btn');
-
-		input.focus();
-
-		// RE-CHECK disabled STATE AS THE USER TYPES ON REQUIRED STEPS
-		if (s.required) {
-			input.addEventListener('input', () => {
-				nextBtn.disabled = !input.value.trim();
-			});
-		}
-
-		// ENTER KEY ADVANCES LIKE TAPPING CONTINUAR
-		input.addEventListener('keydown', e => {
-			if (e.key === 'Enter' && !nextBtn.disabled) nextBtn.click();
-		});
-
-		if (!isFirst) {
-			document.getElementById('back-btn').addEventListener('click', () => {
-				// SAVE THE CURRENT FIELD VALUE BEFORE GOING BACK SO IT'S RESTORED ON RETURN
-				collected[s.field] = input.value.trim();
-				step--;
-				render();
-			});
-		}
-
-		nextBtn.addEventListener('click', async () => {
-			collected[s.field] = input.value.trim();
-			if (isLast) {
-				await finish(nextBtn);
-			} else {
-				step++;
-				render();
-			}
-		});
-	}
-
-	// BUILDS THE INSERT PAYLOAD AND WRITES THE PROFILE; ONLY SETS phone/nif IF THE USER FILLED THEM
-	async function finish(nextBtn) {
-		nextBtn.disabled = true;
-		nextBtn.textContent = 'A guardar...';
-
-		const payload = { id: user.id, name: collected.name };
-		if (collected.phone) payload.phone = collected.phone;
-		if (collected.nif) payload.nif = collected.nif;
-
-		const { error } = await db.from('profiles').insert(payload);
-		if (error) {
-			nextBtn.disabled = false;
-			nextBtn.textContent = 'Concluir';
-			app.insertAdjacentHTML('beforeend', `<p class="form-error">Erro ao guardar. Tenta outra vez.</p>`);
-			return;
-		}
-
-		if (redirectAfterLogin()) return;
-		showProfile(user, { name: collected.name, phone: collected.phone, nif: collected.nif, hide_from_ranking: false });
-	}
-
-	render();
 }
 
 // PAST GAMES FOR ONE PLAYER, NEWEST FIRST. A REGISTERED PLAYER IS MATCHED ON player_id SO THE HISTORY
@@ -423,7 +326,6 @@ const PROFILE_FIELDS = [
 // RENDERS THE PLAYER PROFILE: A TOGGLE BETWEEN FOUR PANES — PAST GAMES, PROGRESS, PASSES, AND INFO
 // (GREETING, EMAIL READ-ONLY SINCE IT'S THE LOGIN, EDITABLE FIELDS + LOGOUT)
 function showProfile(user, profile) {
-	document.body.classList.remove("onboarding");
 	app.innerHTML = `
 		${FOLDER_TABS_HTML}
 		<div data-pane-body="info" hidden>

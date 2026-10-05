@@ -1,5 +1,7 @@
 // "FAZ LOGIN" IN THE VISITOR COPY IS A LINK TO login.html, SO THE ASK IS ONE TAP AWAY WHEREVER IT'S READ
 const MSG_LOGIN_LINK = `<a href="login.html">Faz login</a>`;
+// SHOWN BOTH DURING ONBOARDING AND ON THE PROFILE'S DADOS, NEXT TO WHERE THE DATA IS ENTERED
+const MSG_DATA_DISCLAIMER = "Estas informações são relevantes para o administrador do campo quando pedes um passe. Por este motivo o Campo Livre irá guardar os teus dados, embora não tenha interesse neles.";
 
 // PENDING AND REFUSED PASS REQUESTS DROP OUT OF VIEW — ADMIN AND PLAYER ALIKE — A MONTH AFTER THEY WERE MADE. HIDDEN ONLY:
 // THE ROW STAYS IN THE DATABASE. COUNTED FROM created_at FOR BOTH, SINCE passes HAS NO COLUMN FOR WHEN A REQUEST WAS REFUSED

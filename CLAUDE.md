@@ -18,9 +18,10 @@ court.html / js/court-stage.js    — court detail + walk-in flow
                 js/court-bookable.js  — bookable court flow (active)
 admin.html / js/admin.js          — admin dashboard (members, rules, hours)
 login.html / js/login.js
-profile.html / js/profile.js     — post-login router, onboarding, profile views (history, passes, info)
+profile.html / js/profile.js     — post-login router, profile views (history, passes, info)
                 js/player_progress.js — the profile's progress tab: skill levels, streaks, diamonds, trading card (loaded before profile.js)
                 js/ranking.js     — the profile's ranking tab: board, plaque updates, "Entende o ranking" (loaded before profile.js)
+onboarding.html / js/onboarding.js — first-login slideshow for players with no `profiles` row; back to profile.html when done
 info.html
 
 js/utils.js           — shared helpers: setPigAppearance, gameLabel, formatTime, minutesLeft, getDeviceId, cityHtml
@@ -243,7 +244,7 @@ When a court's burocracia level requires document verification, documents are ne
 
 ### Activity stats — a reason to use Campo Livre beyond booking
 
-**First set implemented** (profile progress view, see Todo): games in the last 6 months (replaced hours in the last 30 days; the comparison with the previous period was dropped), weekly streak, distinct courts played ("Território", replaced the favourite court card). Cities collected was dropped. A rolling window rather than a calendar period, so the total doesn't reset to zero on a fixed date and knock the player down a level. All three carry a level title, stars and a segmented progress bar (`LEVELS_GAMES` / `LEVELS_STREAK` / `LEVELS_TERRITORY` in `player_progress.js`). The rest below is still exploration.
+**First set implemented** (profile progress view, see Todo): games in the last 6 months (replaced hours in the last 30 days; the comparison with the previous period was dropped), weekly streak, distinct courts played ("Território", replaced the favourite court card). Cities collected was dropped. A rolling window rather than a calendar period, so the total doesn't reset to zero on a fixed date and knock the player down a level. All three carry a level title and a segmented progress bar (`LEVELS_GAMES` / `LEVELS_STREAK` / `LEVELS_TERRITORY` in `player_progress.js`). The rest below is still exploration.
 
 The chosen levels are listed under "Player progress" below, since they're the first piece of that progress layer.
 
@@ -279,7 +280,7 @@ Builds on activity stats. Short, interactive questions after each game collect t
   - Tone: too much confetti feels childish. The pig's cheeky voice ("batotas", "porreiríssimo") should carry it, not badges everywhere
 - **Where to start:** only the post-game card (duration, singles/doubles, result) stored on the game row, with no points or levels. It pays off alone by making stats more accurate, and it shows whether players actually answer before a progression system is built on top. Since stats are behind the login wall, answering is also the natural moment to prompt visitors to make an account ("guarda o teu progresso")
 
-**Levels already implemented** (progress view, `LEVELS_GAMES` / `LEVELS_STREAK` / `LEVELS_TERRITORY` in `player_progress.js`). Titles are ranks that grow with the number, so a low value never gets a mocking title. Each bar runs from 0 to its max in four equal segments, one per level, with the level title written inside. Each scale is defined as a step plus its titles (`levelScale(step, titles)`): every level spans the same step, so the segments are always equal. Games step: 5. Streak step: 2 weeks. Four stars next to the card title, filled up to the current level.
+**Levels already implemented** (progress view, `LEVELS_GAMES` / `LEVELS_STREAK` / `LEVELS_TERRITORY` in `player_progress.js`). Titles are ranks that grow with the number, so a low value never gets a mocking title. Each bar runs from 0 to its max in four equal segments, one per level, with the level title written inside. Each scale is defined as a step plus its titles (`levelScale(step, titles)`): every level spans the same step, so the segments are always equal. Games step: 5. Streak step: 2 weeks.
 
 | Games in the last 6 months ("Momentum") | Title |
 |---|---|
@@ -515,7 +516,7 @@ Supabase Auth is already included — magic link is a built-in provider, no extr
 1. `login.html` — player submits email only (`signInWithOtp`, `emailRedirectTo: profile.html`). Already logged in → straight to `profile.html`
 2. Magic link lands on `profile.html`, which is also the post-login router (`js/profile.js`):
    - **Admin** → `admin.html` (admins have no `profile.html`; their profile is a view inside the dashboard)
-   - **No `profiles` row** → 3-step onboarding (name required; phone, NIF optional), then continues below
+   - **No `profiles` row** → `onboarding.html` (`js/onboarding.js`): 3-step onboarding (name required; phone, NIF optional), then back to `profile.html`, which continues below
    - **Came from a court page** → back to that court (see "Return to court")
    - **Otherwise, landing from a magic link** → the court list. `login.js` sets a one-shot `localStorage.justLoggedIn` when the link is sent, so this doesn't fire when the profile is opened from the header avatar
    - **Otherwise** (avatar visit, or a link opened in another browser) → the player profile
@@ -654,17 +655,17 @@ Sessions are kept alive indefinitely for active users. Supabase auto-refreshes t
     - [x] Tested: logging in claims the device's older anonymous walk-ins
   - [x] Profile split into toggle views: progress (`icon_medal`, first and the default for players and visitors — the visitor teaser will fill theirs), history, passes (`icon_id`), personal info (`icon_gear`)
   - [x] Progress view (players only; visitors get the login button), being turned into RPG-like mechanics: games in the last 6 months, weekly streak, distinct courts played. Computed in JS from the same fetch as the history, so games of 10 min or less are excluded
-    - [x] Metric name above the level title: "Momentum" (hours; common in PT-PT sports talk — "Balanço" alone reads as "summary", "Forma" drifts towards health), "Consistência" (streak) and "Território" (distinct courts). The metric name is `.skill-title`, a white banner across the top of the card; the level title is `.stat-level` (1em, 700) with the stars after it
+    - [x] Metric name above the level title: "Momentum" (hours; common in PT-PT sports talk — "Balanço" alone reads as "summary", "Forma" drifts towards health), "Consistência" (streak) and "Território" (distinct courts). The metric name is `.skill-title`, a white banner across the top of the card; the level title is `.stat-level` (1em, 700)
     - [x] Level titles instead of plain labels — see the tables under "Levels already implemented"
     - [x] Território (first named "Movimento", renamed because it read as physical agility rather than variety of courts) replaced the favourite court card ("Segunda casa")
     - [x] Progress bars on all three skills, 0 to max (20 games / 8 weeks / 4 courts) in four equal segments with the level title inside each
     - [x] Segment titles are black on the empty track and white over the fill: the labels are rendered twice (`barHtml` in `player_progress.js`), with the white copy on top clipped to the fill width via `clip-path` and a `--fill` variable. The XP bar keeps both copies black, which reads better on its yellow fill
-    - [x] Stars next to the level title: one per level (four each), the current level and those below it filled `--yellow`, so the first level already shows one. Inline SVG (`STAR_SVG` in `player_progress.js`) so CSS can switch the fill
+    - [x] ~~Stars next to the level title~~ — removed; the level title and the bar are enough
     - [x] XP bar above the skill cards: +500 XP per game / new court / streak week, levels 1–10 (see "XP")
     - [x] Character card art linked to the XP level: `XP_LEVEL_IMAGES` in `player_progress.js`, one entry per level (index 0 = level 1). Placeholders for now: `pig_sitting` (1–3), `pig_reaching` (4–6), `pig_serving` (7–10)
     - [ ] Draw progressively more "pro" pig images per level (gear, outfit, pose) and swap them into `XP_LEVEL_IMAGES`
     - [ ] Tune the level thresholds (skills and XP) once real play is known
-    - [ ] "Entende o progresso": the same collapsible card as "Entende o ranking", under the progress view — how XP is earned, the levels, the four skills and their bars, and diamonds
+    - [x] "Entende o progresso": the same collapsible card as "Entende o ranking" (both drawn by `appendRulesCard` in `player_progress.js`), under the progress view — one row per XP increment with the skill it rides on (`PROGRESS_RULES`, display only — keep in step with `games_xp`), then XP and levels (lifetime) versus the skills (current form), diamonds, and Tarimba as the one skill with no XP of its own
     - [ ] Visitor teaser (see "Visitor teaser" under Authentication)
       - [x] Visitor history shows unclaimed walk-ins only (`player_id IS NULL`)
       - [x] XP gained on each history card, players and visitors (`games_xp`)

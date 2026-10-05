@@ -857,7 +857,8 @@ button .link-icon {
 /* === LOGIN === */
 
 .page-login,
-.page-profile {
+.page-profile,
+.page-onboarding {
 	align-items: center;
 	padding: 20px;
 	padding-bottom: 90px;
@@ -867,12 +868,14 @@ button .link-icon {
 	justify-content: center;
 }
 
-.page-profile .card-sub {
+.page-profile .card-sub,
+.page-onboarding .card-sub {
 	color: var(--black);
 }
 
 .page-login header,
-.page-profile header {
+.page-profile header,
+.page-onboarding header {
 	margin-bottom: 0;
 }
 
@@ -903,7 +906,8 @@ button .link-icon {
 	margin-top: 20px;
 }
 
-.page-profile.onboarding #app {
+/* ONE QUESTION AT A TIME, CENTRED */
+.page-onboarding #app {
 	margin-top: auto;
 	margin-bottom: auto;
 }
@@ -1020,12 +1024,13 @@ input[type="time"]::-webkit-date-and-time-value {
 	font-weight: 400;
 }
 
-.page-profile .info-link img, .page-login .info-link img {
+.page-profile .info-link img, .page-login .info-link img, .page-onboarding .info-link img {
 	filter: invert(1);
 }
 
 /* THE PROFILE PAGE CENTRES ITS CONTENT; WITHOUT A WIDTH THE FORM WOULD SHRINK TO ITS INPUTS */
-.page-profile #app {
+.page-profile #app,
+.page-onboarding #app {
 	width: 100%;
 }
 
@@ -1671,38 +1676,11 @@ input[type="time"]::-webkit-date-and-time-value {
 	border-radius: 100px;
 }
 
-/* A STATS CARD'S LEVEL TITLE, STARS IN A ROW AFTER IT */
+/* A STATS CARD'S LEVEL TITLE */
 .stat-level {
-	display: flex;
-	align-items: center;
-	flex-wrap: wrap;
-	gap: 5px;
 	font-size: 1em;
 	font-weight: 700;
 	margin-top: 10px;
-}
-
-/* LEVEL STARS NEXT TO A STAT'S TITLE: FIRST PATH IS THE FILL (EMPTY UNTIL REACHED), SECOND IS THE OUTLINE */
-.level-star {
-	height: 15px;
-	width: auto;
-	flex-shrink: 0;
-}
-
-.level-star:first-of-type {
-	margin-left: auto;
-}
-
-.level-star path:first-child {
-	fill: transparent;
-}
-
-.level-star.achieved path:first-child {
-	fill: var(--yellow);
-}
-
-.level-star path:last-child {
-	fill: var(--black);
 }
 
 /* LEVEL PROGRESS ON THE STATS CARDS: THE DIV IS THE FILL (INLINE width, 0 TO THE SCALE'S max) SITTING BEHIND
