@@ -1543,19 +1543,11 @@ input[type="time"]::-webkit-date-and-time-value {
 }
 
 /* position: relative PUTS IT OVER THE FRAME (LATER IN THE MARKUP, SO IT PAINTS ON TOP) */
-.trading-card-art img,
-.trading-card-art video {
+.trading-card-art img {
 	position: relative;
 	display: block;
 	width: 90%;
 	margin: 0 auto;
-}
-
-/* THE VIDEO'S FRAME HAS TRANSPARENT MARGIN AROUND THE PIG, SO IT FILLS THE WHOLE WIDTH. THE .webp IS ITS POSTER, SHOWN
-   ALONE FOR REDUCED MOTION, SO IT MATCHES */
-.trading-card-art video,
-.trading-card-art img[src$=".webp"] {
-	width: 100%;
 }
 
 .trading-card-name {

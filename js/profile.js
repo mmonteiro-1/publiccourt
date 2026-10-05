@@ -408,30 +408,6 @@ const XP_LEVEL_IMAGES = [
 	"pig_serving", "pig_serving", "pig_serving", "pig_serving",
 ];
 
-// LEVELS THAT HAVE AN ANIMATION REPLACE THEIR IMAGE WITH A LOOPING VIDEO: videos/lN.webm, lN_safari.mov AND lN_poster.webp
-const XP_LEVEL_VIDEOS = { 1: "l1" };
-
-// WEBKIT (SAFARI, AND EVERY BROWSER ON IPHONE) DROPS WEBM TRANSPARENCY AND SOME CHROME BUILDS DROP IT IN HEVC, SO EACH GETS
-// ITS OWN FILE RATHER THAN TRUSTING <source> ORDER. IPHONE CHROME SAYS "CriOS", NOT "Chrome", SO IT LANDS ON THE WEBKIT SIDE
-const IS_WEBKIT = /AppleWebKit/.test(navigator.userAgent) && !/Chrome|Chromium|Android/.test(navigator.userAgent);
-
-function tradingCardArt(level) {
-	const video = XP_LEVEL_VIDEOS[level];
-	if (!video) return `<img src="images/${XP_LEVEL_IMAGES[level - 1]}.svg" alt="">`;
-	const poster = `videos/${video}_poster.webp`;
-	if (matchMedia("(prefers-reduced-motion: reduce)").matches) return `<img src="${poster}" alt="">`;
-	const src = `videos/${video}${IS_WEBKIT ? "_safari.mov" : ".webm"}`;
-	return `<video src="${src}" poster="${poster}" autoplay muted loop playsinline preload="metadata" aria-hidden="true"></video>`;
-}
-
-// PLAYS ONLY WHILE ON SCREEN. A HIDDEN VIEW COUNTS AS OFF SCREEN, SO SWITCHING TABS PAUSES IT TOO
-function playWhenVisible(container) {
-	const observer = new IntersectionObserver(entries => entries.forEach(entry => {
-		entry.isIntersecting ? entry.target.play().catch(() => {}) : entry.target.pause();
-	}));
-	container.querySelectorAll(".trading-card-art video").forEach(video => observer.observe(video));
-}
-
 // CHARACTER NAME + FLAVOUR TEXT PER XP LEVEL (INDEX 0 = LEVEL 1). ONLY ONE FOR TESTING — UNTIL EVERY LEVEL HAS ITS OWN,
 // A MISSING ENTRY FALLS BACK TO THE FIRST
 const XP_LEVEL_INFO = [
@@ -456,7 +432,7 @@ function xpCard(xp, diamonds, skills, teaser) {
 			<p class="trading-card-level">${MSG_XP_LEVEL(index + 1)}<span>${DIAMOND_ICON} ${diamonds}</span></p>
 			<div class="trading-card-art">
 				<div class="trading-card-frame"></div>
-				${tradingCardArt(index + 1)}
+				<img src="images/${XP_LEVEL_IMAGES[index]}.svg" alt="">
 			</div>
 			<p class="trading-card-name">${info.title}</p>
 			<p class="trading-card-text">${info.description}</p>
@@ -548,7 +524,6 @@ async function loadProgress(container, gamesPromise, teaserPromise, passAwardsPr
 		statCard("repeat_color", "Consistência", levelTitle(LEVELS_STREAK, streak) + levelStars(LEVELS_STREAK, streak), MSG_STAT_STREAK(shown(streak)), MSG_STAT_STREAK_HINT, levelBar(LEVELS_STREAK, streak), diamonds.streak),
 		statCard("globe_color", MSG_TITLE_TERRITORY, levelTitle(LEVELS_TERRITORY, courts - 1) + levelStars(LEVELS_TERRITORY, courts - 1), MSG_STAT_COURTS(shown(courts)), MSG_STAT_COURTS_HINT(shown(courts)), levelBar(LEVELS_TERRITORY, courts), diamonds.courts),
 	].join("");
-	playWhenVisible(container);
 }
 
 
