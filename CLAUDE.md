@@ -19,6 +19,7 @@ court.html / js/court-stage.js    — court detail + walk-in flow
 admin.html / js/admin.js          — admin dashboard (members, rules, hours)
 login.html / js/login.js
 profile.html / js/profile.js     — post-login router, onboarding, profile views (history, stats, passes, info)
+                js/ranking.js     — the profile's ranking tab: board, plaque updates, "Entende o ranking" (loaded after profile.js)
 info.html
 
 js/utils.js           — shared helpers: setPigAppearance, gameLabel, formatTime, minutesLeft, getDeviceId, cityHtml
@@ -375,7 +376,7 @@ Being built — XP in the database, the opt-out, `season_ranking` and the rankin
 
 #### The board — a brutomorphic golf-tournament sign
 
-Built in the ranking tab (`loadRanking` in `profile.js`, `.scoreboard` in `styles.css`), basics only. See "Brutomorphism" under Rules.
+Built in the ranking tab (`loadRanking` in `ranking.js`, `.scoreboard` in `styles.css`), basics only. See "Brutomorphism" under Rules.
 
 - **One big sign:** green (Wimbledon), the season name on a darkened header ("Época de Inverno"; the dates live in "Entende o ranking"), columns Pos · Jogador · XP. The top is an arched cap with sharp corners (a wide `clip-path` ellipse, outlined by two layers), the foot square, no drop shadow; it stands between two green poles capped with spheres, self-shaded only. At least 10 rows, padded with blank ones. Every digit and every name is its own **plaque** sunk into the board (inset shadow), sitting in its own **slot** — a dark hole that shows once the plaque is pulled out. Place padded to 2 plaques, XP to 4 (more if a number needs them). One CSS grid, so the columns line up
 - **The player's row is all white** — place, name and XP plaques. A jump in places is a blank row of plaques, like the empty lines on a real board
