@@ -157,6 +157,8 @@ async function checkSurprises() {
 	}));
 }
 
+// profile.html IS ALSO THE POST-LOGIN ROUTER, SO IT CHECKS ONLY ONCE IT SHOWS THE PROFILE (showProfile) — CHECKING ON LOAD
+// FLASHED THE PARCEL JUST BEFORE THE REDIRECT TO THE COURT LIST, WHERE IT PLAYED AGAIN
 const debugKind = IS_DEV ? new URLSearchParams(location.search).get("surprise") : null;
 if (debugKind !== null) debugSurprise(debugKind || undefined);
-else checkSurprises();
+else if (!document.body.classList.contains("page-profile")) checkSurprises();

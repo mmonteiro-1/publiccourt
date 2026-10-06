@@ -22,8 +22,8 @@ const DIAMOND_STREAK = 26;
 const MSG_PROGRESS_INFO = "Entende o progresso";
 // "ENTENDE O PROGRESSO": XP ABOVE THE ROWS; BELOW THEM ESTILO DE JOGO AND DIAMONDS — THREE SEPARATE THINGS THAT NEVER FEED
 // EACH OTHER (SEE "THE PROGRESS MODEL" IN CLAUDE.md)
-const MSG_PROGRESS_INTRO = `Cada partida dá-te XP, e o XP sobe o teu nível, do 1 ao 10. Nunca diminui. Partidas com menos de 10 min não contam.`;
-const MSG_PROGRESS_RULES = `<b>Estilo de jogo:</b> mostra como tens jogado nos últimos 6 meses. <img src="images/icon_fire_color.svg" class="link-icon" alt="">Frequência, <img src="images/icon_repeat_color.svg" class="link-icon" alt="">Consistência e <img src="images/icon_globe_color.svg" class="link-icon" alt="">Território são medidos aqui. Cada um recebe uma nota de 0 a 100%.<br><br><b>Diamantes:</b> são as conquistas mais valiosas do Campo Livre: 100 partidas, ou 10 campos diferentes, ou jogar todas as semanas durante 6 meses, ou vencer uma <a href="#" data-pane-link="ranking">época</a>.`;
+const MSG_PROGRESS_INTRO = `Cada partida dá-te XP, e acumular XP faz-te subir do nível 1 ao 10. Estas são as formas de ganhar XP:`;
+const MSG_PROGRESS_RULES = `<b>Estilo de jogo:</b> mostra como tens jogado nos últimos 6 meses. <img src="images/icon_fire_color.svg" class="link-icon" alt="">Frequência, <img src="images/icon_repeat_color.svg" class="link-icon" alt="">Consistência e <img src="images/icon_globe_color.svg" class="link-icon" alt="">Território são medidos aqui. Cada um recebe uma nota de 0 a 100%.<br><br><b>Diamantes:</b> são as conquistas mais valiosas do Campo Livre: 100 partidas, ou 10 campos diferentes, ou jogar todas as semanas durante 6 meses, ou vencer uma <a href="#" data-pane-link="ranking">época</a>.<br><br>Partidas com menos de 10 min não são registadas.`;
 // DISPLAY ONLY — THE RULES THEMSELVES LIVE IN games_xp (supabase/sql/xp.sql), SO KEEP THESE IN STEP WITH IT (AND WITH
 // POINTS_RULES IN ranking.js). THE PASS IS POSTPONED, SO ITS ROW SAYS "EM BREVE"
 const PROGRESS_RULES = [

@@ -207,7 +207,7 @@ npx supabase functions deploy notify-pass
 ### Usage metrics
 - **`weekly_metrics`** (`supabase/sql/metrics.sql`), read in the SQL editor only (`select * from weekly_metrics`), never exposed to the API: per week, games, players, new players, returning players (the retention number), courts used (the count) and courts (their names, alphabetical). Walk-ins only, since registration isn't live yet. A player is an account, or a device for visitors — an upper bound
 - **Not real play, excluded there:** the chart generator's device (`00000000-…`), the test games on courts 1, 2 and 8 before 22/09/2026, games of 10 min or less. Keep any new query on these rules, or read from the view
-- **Vercel Web Analytics:** `/_vercel/insights/script.js` on every page (cookieless). Page views on court pages versus walk-ins in `weekly_metrics` is the funnel. Needs Analytics switched on in the Vercel project; the script 404s on the local dev server, which is harmless
+- **Vercel Web Analytics:** `/_vercel/insights/script.js` on every page (cookieless), switched on in the project. Ad blockers (uBlock Origin…) block it, so visits are a lower bound — mostly desktop; QR players on phones rarely run one. Page views on court pages versus walk-ins in `weekly_metrics` is the funnel. Needs Analytics switched on in the Vercel project; the script 404s on the local dev server, which is harmless
 
 ### Resend
 Sends every email the app sends, on the domain **`campolivre.app`** (bought 10/2026 through Vercel, so its DNS lives in Vercel; verified in Resend, region Ireland `eu-west-1`). The domain only sends email — the site stays at `publiccourt.vercel.app`, which every printed QR code points to.
@@ -221,6 +221,7 @@ Sends every email the app sends, on the domain **`campolivre.app`** (bought 10/2
 
 - Single global CSS file (`css/styles.css`) — no scoped or component CSS
 - Each HTML page loads its own JS file + shared utils (`utils.js`, `config.js`, etc.)
+- Every HTML page links `manifest.json` and `<meta name="theme-color">` in its `<head>`: iOS reads the manifest of the page the player is on when they tap "Add to Home Screen", and without it the app installs as a plain bookmark with the address bar
 - **Pig appearances:** whenever the pig shows up with a message (empty lists, but also informing the player), use `setPigAppearance(container, message)` from `utils.js`. Defaults to `pig_sitting`; pass a third argument for another image, e.g. `setPigAppearance(el, MSG_X, "pig_serving")`
 - **Success screens:** everything about them lives in `js/success.js` — the `MSG_*` copy, and one preset per screen in `SUCCESS` (pig, `header` as `.info-heading`, `sub1`/`sub2` as `.info-sub1`/`.info-sub2`, `seconds` before the reload, `animation` `"ball"` or omitted). Other files only inject the dynamic parts: `showSuccess(SUCCESS.booked(gameLabel(start, end)))`. A new screen means a new preset there, never an inline one. This overrides the "copy at the top of its own file" rule
 - **One pig at a time:** the header's logo pig hides whenever another pig is visible (a `.pig-appearance` or a success screen's `.info-pig`). It's a single CSS `:has()` rule; appearances inside a `[hidden]` view don't count, so pages need no JS to keep it in sync
@@ -317,11 +318,15 @@ Frequência (formerly "Momentum" — the plain word reads instantly), Consistên
 | Campeão | 1st place in a season (needs `league_results`, "em breve" until then) |
 
 **"Entende o progresso" copy (final):**
-> Cada partida dá-te XP, e o XP sobe o teu nível, do 1 ao 10. Nunca diminui. Partidas com menos de 10 min não contam.
+> Cada partida dá-te XP, e acumular XP faz-te subir do nível 1 ao 10. Estas são as formas de ganhar XP:
 >
 > Cada partida · +500 XP / Cada campo novo · +500 XP / Cada semana seguida a jogar · +500 XP / Obter passe · +1000 XP · em breve
 >
-> **Estilo de jogo** mostra como tens jogado nos últimos 6 meses. Frequência, Consistência e Território são medidas aqui. Cada uma recebe uma nota de 0 a 100%. **Diamantes** são as conquistas mais valiosas do Campo Livre e não são para todos: 100 partidas, ou 10 campos diferentes, ou jogar todas as semanas durante 6 meses, ou vencer uma época.
+> **Estilo de jogo:** mostra como tens jogado nos últimos 6 meses. Frequência, Consistência e Território (each with its icon) são medidos aqui. Cada um recebe uma nota de 0 a 100%.
+>
+> **Diamantes:** são as conquistas mais valiosas do Campo Livre: 100 partidas, ou 10 campos diferentes, ou jogar todas as semanas durante 6 meses, ou vencer uma época (linked to the Ranking tab).
+>
+> Partidas com menos de 10 min não são registadas.
 
 **Next stat candidate — Desportivismo:** walk-ins closed by hand with "Terminar jogo atual" (`manual_finished_at`), counting only games over 10 min. Rewards freeing the court for the next player, which keeps the live status honest. Not built yet; it would have to stay on its own axis, like the three staples.
 
@@ -619,9 +624,9 @@ Sessions are kept alive indefinitely for active users. Supabase auto-refreshes t
     - [x] Real names (level 10, brands in 1, 3, 7): kept as written, no legal check — decided 10/2026, fallback for 10 "Lenda do bairro" if anyone objects
     - [ ] Pig images per level: `XP_LEVEL_IMAGES` uses 3 placeholders for 10 levels — fine for shipping, drawings later
   - **Check in the dashboards**
-    - [ ] Supabase has every SQL file live: `xp.sql`, `ranking.sql` (incl. `profiles.hide_from_ranking`), `court_groups.sql`, `metrics.sql`
+    - [x] Supabase has every SQL file live (checked 10/2026 with one query: functions, ranking_views, hide_from_ranking, weekly_metrics + courts, pass XP off, name locked): `xp.sql`, `ranking.sql` (incl. `profiles.hide_from_ranking`), `court_groups.sql`, `metrics.sql`
     - [x] Email templates "Magic Link" and "Confirm signup" (brand-new emails get the second): show `{{ .Token }}`, no link, in Portuguese — login breaks without the code in the email
-    - [ ] Vercel Analytics is switched on
+    - [x] Vercel Analytics is switched on (ad blockers hide some visits — see "Usage metrics")
   - **Should fix (can follow right after)**
     - [x] Debug switches (`?surprise`, `debugSurprise()`, `?board=`) work only on the dev server (`IS_DEV` in `utils.js`: localhost or a 192.168 LAN IP), never in production or on Vercel previews
     - [ ] Stale `localStorage` flag: (`justLoggedIn` fixed — now set only after the code is accepted) `returnTo` (set by "Fazer login" on a court) can return a much later login to an old court
@@ -673,6 +678,7 @@ Sessions are kept alive indefinitely for active users. Supabase auto-refreshes t
     - [ ] Level-up and diamond surprises need a baseline: the first time their check runs, record the player's current level and diamonds silently, so nobody gets a parcel for something done months ago
     - [x] Reduced-motion version of the scene — the prize sits already in place, still, under `prefers-reduced-motion: reduce`
     - [ ] Next surprises, one at a time: level up, a diamond; later end of a season
+- [ ] After shipping `bookable-mvp`, in a quiet week: move the site to `campolivre.app`. Vercel → project → Settings → Domains → add `campolivre.app` (DNS already in Vercel; `.app` forces HTTPS, which Vercel serves). Then redirect `publiccourt.vercel.app` to it — path and query are kept, so every printed QR code (`court?court=…`) still lands on its court. Update Supabase's Site URL and Redirect URLs, `manifest.json` if needed. Cost: storage is per address, so visitors arrive fresh (their `device_id` and unclaimed walk-ins stay on the old address) and logged-in players log in once more; installed apps keep working through the redirect
 - [ ] After shipping `bookable-mvp`: tease the slot picker while bookings are "em breve". Never on a court page — no fake court on the list, and no real court advertising bookings it doesn't have. Options weighed: a read-only demo grid (`renderSlotPicker` `readOnly`, dummy hours and bookings) in a collapsible card by the dummy pass — dropped as too hidden; the info page as "Como funciona" — more discoverable, further from the pass. Until then the dummy pass's "próximo jogo" line is the only booking hint
 - [ ] Support multiple admins per court group (receptionists)
   - [ ] Create `court_group_members (group_id UUID, user_id UUID)` table
