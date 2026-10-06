@@ -160,7 +160,7 @@ function visitorRanking(xp) {
 	return players.map((row, i) => ({ ...row, place: i + 1 }));
 }
 
-// THE TOP THREE FOR THE ASPIRATION, THEN THE PLAYER WITH WHOEVER IS JUST ABOVE AND BELOW — NEVER THE WHOLE TABLE.
+// THE SEASON BOARD, EVERY PLAYER ON IT.
 // preset (THE VISITOR'S EXAMPLE ROWS) SKIPS THE DATABASE ENTIRELY: NO LIVE RANKING, NO SNAPSHOT, NOTHING SAVED OR ANIMATED
 async function loadRanking(container, user, preset) {
 	const season = currentSeason();
@@ -186,10 +186,9 @@ async function loadRanking(container, user, preset) {
 	if (dropped) before = after;
 
 	const meIndex = after.findIndex(row => row.is_me);
-	const shown = new Set([0, 1, 2]);
-	if (meIndex !== -1) [meIndex - 1, meIndex, meIndex + 1].forEach(i => shown.add(i));
-	// THE VISITOR'S EXAMPLE BOARD SHOWS EVERY ROW: A FULL SIGN SELLS IT BETTER THAN A NEIGHBOURHOOD THEY AREN'T PART OF YET
-	const indices = preset ? after.map((_, i) => i) : [...shown].filter(i => i >= 0 && i < after.length).sort((a, b) => a - b);
+	// EVERY ROW FOR NOW: WITH FEW PLAYERS, TRIMMING TO THE TOP THREE AND THE PLAYER'S NEIGHBOURS ONLY HID PEOPLE. TRIM ONCE THE
+	// TABLE OUTGROWS THE SIGN
+	const indices = after.map((_, i) => i);
 
 	// THE LAYOUT IS THE LIVE ONE: THE ROWS SHOWN NOW, EACH STARTING WITH WHAT THE PLAYER SAW IN THAT ROW LAST TIME (BLANK IF THE
 	// BOARD WAS SHORTER THEN). THE PLACE DIGITS ARE ALWAYS THE LIVE ONES — THEY BELONG TO THE ROW AND NEVER ANIMATE

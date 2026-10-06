@@ -1084,8 +1084,7 @@ input[type="time"]::-webkit-date-and-time-value {
 .folder-tab.active {
 	background: var(--pink);
 	flex: none;
-	padding: 1px 20px 1px 20px;
-	padding-right: 20px;
+	padding: 1px 15px;
 	border-bottom-color: transparent;
 	box-shadow: 4px 4px 0 var(--black);
 	clip-path: inset(0 -5px 0 0);
@@ -1093,7 +1092,7 @@ input[type="time"]::-webkit-date-and-time-value {
 }
 
 .folder-tab + .folder-tab.active {
-	padding-left: 20px;
+	padding-left: 15px;
 }
 
 .folder-tab:not(.active) span {

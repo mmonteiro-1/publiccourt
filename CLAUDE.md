@@ -203,6 +203,11 @@ npx supabase functions deploy notify-pass
 - `SUPABASE_URL` — auto-provided by Supabase runtime
 - `SUPABASE_SERVICE_ROLE_KEY` — auto-provided by Supabase runtime
 
+### Usage metrics
+- **`weekly_metrics`** (`supabase/sql/metrics.sql`), read in the SQL editor only (`select * from weekly_metrics`), never exposed to the API: per week, games, players, new players, returning players (the retention number), courts used. Walk-ins only, since registration isn't live yet. A player is an account, or a device for visitors — an upper bound
+- **Not real play, excluded there:** the chart generator's device (`00000000-…`), the test games on courts 1, 2 and 8 before 22/09/2026, games of 10 min or less. Keep any new query on these rules, or read from the view
+- **Vercel Web Analytics:** `/_vercel/insights/script.js` on every page (cookieless). Page views on court pages versus walk-ins in `weekly_metrics` is the funnel. Needs Analytics switched on in the Vercel project; the script 404s on the local dev server, which is harmless
+
 ### Resend
 Used exclusively inside edge functions. Not called from the frontend.
 - From address: `Campo Livre <onboarding@resend.dev>` (Resend sandbox domain — intentional, app has no public domain yet)
@@ -365,7 +370,7 @@ Being built — XP in the database, the opt-out, `season_ranking` and the rankin
 - **No opt-in; an opt-out instead.** Every registered player is ranked, with a Participar / Recusar toggle in Dados (`profiles.hide_from_ranking`) and a line in the privacy policy (the app has none yet)
 - **Names are always "R. Barbosa"** — the first initial and the surname, the only form ever shown, never the full name. Privacy by default, with nothing for the player to configure. Only the name and the score: never the courts, days or times someone plays, which would expose their routine (same concern as matchmaking). A public ranking with names is personal data in the open, so get a quick legal check before launch (see "Activity, never health")
 - **Season results are kept** (a `league_results` table: the final table, saved when a season ends). They become lasting titles on the profile ("Campeão · Verão 2027", "Top 3") and a surprise: the end-of-season parcel, the pig hand lifting the player's final place
-- **Show the neighbourhood, not the whole table:** the top three for the aspiration, then the player with whoever is just above and just below ("Estás em 7.º — 1 jogo para passares o R. Barbosa", the "1 jogo" worked out from the gap). Being told you're 43rd of 50 demotivates; a concrete next step doesn't. Players with 0 points are still listed ("0 XP", ordered by Tarimba); a player at 0 gets "Ainda não jogaste nesta época…" instead of a place
+- **Show the neighbourhood, not the whole table (postponed — every player is shown for now, while there are few; trim once the table outgrows the sign):** the top three for the aspiration, then the player with whoever is just above and just below ("Estás em 7.º — 1 jogo para passares o R. Barbosa", the "1 jogo" worked out from the gap). Being told you're 43rd of 50 demotivates; a concrete next step doesn't. Players with 0 points are still listed ("0 XP", ordered by Tarimba); a player at 0 gets "Ainda não jogaste nesta época…" instead of a place
 - **Tone:** the pig's cheeky voice teases instead of shaming ("Passaram-te. Vais deixar?"). Nobody at the bottom gets a mocking title, same rule as the level titles
 
 **How it would work:**
