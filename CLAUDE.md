@@ -132,7 +132,8 @@ One concept, one word per layer. **Code** is what identifiers, comments, docs an
 
 **court_groups** — `id int4, name text, admin_id uuid, pass_duration_months int4, slot_duration_minutes int4, min_game_duration_minutes int4, price_per_slot_cents int4`
 - `admin_id` → `auth.users.id`
-- RLS: SELECT open to all; UPDATE only where `admin_id = auth.uid()`
+- `name`: the place, spelled out ("Gafanha da Encarnação", "Praia da Torreira"), shown on pass cards; the court names are the fallback. Group 10 ("Grupo de teste": Calvão, Ervosas) is test-only, the one group with an admin
+- RLS: SELECT open to all; UPDATE only where `admin_id = auth.uid()`, and only the four rule columns the dashboard edits (column grants in `supabase/sql/court_groups.sql`) — never `name` or `admin_id`
 
 **court_opening_hours** — `id int8, group_id int4, day_of_week int4, closed bool, open time, close time, pause_start time, pause_end time`
 - One row per day (0=Sun–6=Sat); `closed` disables the day; `open`/`close`/`pause_*` are `time` type
@@ -694,7 +695,7 @@ Sessions are kept alive indefinitely for active users. Supabase auto-refreshes t
       - [x] History: 1 locked dummy card ("Minha primeira partida", +1000 XP) for blank visitors and players with no games, replacing the pig, with "Teu histórico de jogos ficará guardado aqui." above it. `.locked` card with a `.padlock` in the top-right corner: the round `.ticket-hole` plus `icon_padlock_color_cut.svg`, whose shackle is already cut where it runs behind the card — so it only works at its exact hand-tuned position
   - [x] Passes view (since 10/2026 no longer a tab: the pass section sits on top of Meus jogos (the games tab, formerly "Histórico"), a divider above the games (tab icon `icon_ball`) — passes are postponed, so it's a teaser; the four tabs fit small phones): the player's approved passes, shown as the admin's member card with the group name in place of the player name and no revoke link
     - [x] Fix the player member card — title falls back to the group's court names, courts line removed, expiry uses `icon_trash.svg`
-    - [ ] Give every court group a name, so passes stop reading as "Court X, Court Y" — `court_groups.name` is `null` on every row today, so cards fall back to the court names. Fill it in Supabase, or let the admin set it in the dashboard
+    - [x] Give every court group a name, so passes stop reading as "Court X, Court Y" — filled in Supabase (10/2026); empty group 13 deleted. Names are set by us in Supabase, not by the admin (decided)
     - [x] Show pending and refused requests there too, not only approved passes (one list, no toggle — a player never has many; pending first, then passes, then refusals; `requestCard` in `profile.js`, the same ticket and badge slot as a pass): pending as a card marked "aguarda aprovação" (ties into the pending approval UX under Open Questions), refused with its reason and a way to ask again
     - [x] Registered players with no pass: the locked dummy pass ticket (`dummyPassCard`) instead of the lone pig, under `MSG_NO_PASSES`
       - [ ] A follow-up action for them: "Bora mudar isso com o teu primeiro passe!" promises a next step but nothing is tappable. Something that leads to a private court where they can ask for a pass. Keep it off the dummy ticket, which must not look clickable (see "No buttons on the previews")
