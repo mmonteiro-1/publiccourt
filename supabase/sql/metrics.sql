@@ -25,9 +25,12 @@ select g.week,
 	count(distinct g.player) filter (where f.first_week = g.week) as new_players,
 	-- PLAYED IN AN EARLIER WEEK TOO: THE RETENTION NUMBER
 	count(distinct g.player) filter (where f.first_week < g.week) as returning_players,
-	count(distinct g.court_id) as courts_used
+	count(distinct g.court_id) as courts_used,
+	-- LAST, SO create or replace CAN ADD IT TO THE LIVE VIEW (IT ONLY APPENDS COLUMNS)
+	string_agg(distinct c.name, ', ' order by c.name) as courts
 from real_games g
 join first_weeks f using (player)
+join courts c on c.id = g.court_id
 group by g.week
 order by g.week desc;
 

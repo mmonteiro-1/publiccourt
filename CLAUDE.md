@@ -204,7 +204,7 @@ npx supabase functions deploy notify-pass
 - `SUPABASE_SERVICE_ROLE_KEY` — auto-provided by Supabase runtime
 
 ### Usage metrics
-- **`weekly_metrics`** (`supabase/sql/metrics.sql`), read in the SQL editor only (`select * from weekly_metrics`), never exposed to the API: per week, games, players, new players, returning players (the retention number), courts used. Walk-ins only, since registration isn't live yet. A player is an account, or a device for visitors — an upper bound
+- **`weekly_metrics`** (`supabase/sql/metrics.sql`), read in the SQL editor only (`select * from weekly_metrics`), never exposed to the API: per week, games, players, new players, returning players (the retention number), courts used (the count) and courts (their names, alphabetical). Walk-ins only, since registration isn't live yet. A player is an account, or a device for visitors — an upper bound
 - **Not real play, excluded there:** the chart generator's device (`00000000-…`), the test games on courts 1, 2 and 8 before 22/09/2026, games of 10 min or less. Keep any new query on these rules, or read from the view
 - **Vercel Web Analytics:** `/_vercel/insights/script.js` on every page (cookieless). Page views on court pages versus walk-ins in `weekly_metrics` is the funnel. Needs Analytics switched on in the Vercel project; the script 404s on the local dev server, which is harmless
 
