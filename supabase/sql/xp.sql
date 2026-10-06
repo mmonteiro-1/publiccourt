@@ -48,15 +48,14 @@ as $$
 	select * from games_xp(auth.uid(), case when auth.uid() is null then p_device end);
 $$;
 
--- THE TRADING CARD'S NUMBER: EVERY COUNTED GAME'S XP PLUS +3000 PER PASS EVER AWARDED (pass_awards, SO REVOKING NEVER LOWERS IT)
+-- THE TRADING CARD'S NUMBER: EVERY COUNTED GAME'S XP. THE +1000 PER PASS IS POSTPONED ("EM BREVE") — pass_awards KEEPS
+-- RECORDING, SO ADDING `+ 1000 * (select count(*) from pass_awards where p_player is not null and player_id = p_player)`
+-- BACK PAYS EVERY PASS EVER APPROVED
 create or replace function public.player_xp(p_player uuid, p_device uuid)
 returns int
 language sql stable security definer set search_path = public
 as $$
-	select (
-		coalesce((select sum(xp) from games_xp(p_player, p_device)), 0)
-		+ 3000 * (select count(*) from pass_awards where p_player is not null and player_id = p_player)
-	)::int;
+	select coalesce((select sum(xp) from games_xp(p_player, p_device)), 0)::int;
 $$;
 
 -- WHAT THE APP CALLS, SCOPED LIKE my_games_xp

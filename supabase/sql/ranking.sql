@@ -19,7 +19,7 @@ as $$
 $$;
 
 -- THE SEASON TABLE (THE CURRENT ONE, OR THE ONE STARTING ON p_start). SEASON POINTS ARE THE SLICE OF XP EARNED INSIDE THE
--- SEASON — THE SAME games_xp AND pass_awards AS THE TRADING CARD, ONLY FILTERED BY DATE — SO IN A PLAYER'S FIRST SEASON THE
+-- SEASON — THE SAME games_xp AS THE TRADING CARD, ONLY FILTERED BY DATE (PASS XP IS POSTPONED, SEE player_xp) — SO IN A PLAYER'S FIRST SEASON THE
 -- TWO NUMBERS ARE EQUAL. ONLY AGGREGATES LEAVE: A "R. BARBOSA" NAME, THE POINTS AND THE PLACE, NEVER IDS, COURTS OR TIMES.
 -- is_me LETS THE APP FIND THE PLAYER WITHOUT SEEING ANYONE'S ID. ref TELLS PLAYERS APART ACROSS TWO LOOKS AT THE BOARD (WHO
 -- PASSED WHOM) WITHOUT BEING AN ID: A HASH OF THE PLAYER AND THE SEASON, SO IT CHANGES EVERY SEASON AND CAN'T BE TRACED BACK.
@@ -42,12 +42,10 @@ players as (
 	where not p.hide_from_ranking
 		and not exists (select 1 from court_groups g where g.admin_id = p.id)
 ),
--- TARIMBA (LIFETIME WHOLE HOURS, AS THE SKILL CARD SHOWS IT) ONLY BREAKS TIES; IT ISN'T RETURNED
+-- TARIMBA (LIFETIME WHOLE HOURS ON COURT, NO LONGER SHOWN ON THE PROFILE) ONLY BREAKS TIES; IT ISN'T RETURNED
 scored as (
 	select pl.id, pl.name, s.start_on,
-		coalesce(sum(g.xp) filter (where g.start_at >= s.from_at and g.start_at < s.to_at), 0)
-			+ 3000 * (select count(*) from pass_awards a where a.player_id = pl.id and a.awarded_at >= s.from_at and a.awarded_at < s.to_at)
-			as points,
+		coalesce(sum(g.xp) filter (where g.start_at >= s.from_at and g.start_at < s.to_at), 0) as points,
 		floor(coalesce(extract(epoch from sum(g.end_at - g.start_at)), 0) / 3600) as tarimba
 	from players pl
 	cross join season s

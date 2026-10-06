@@ -1,42 +1,36 @@
-// THE PROFILE'S PROGRESS TAB: THE SKILLS (LEVEL SCALES, STREAK AND PEAK MATHS), DIAMONDS, THE TRADING CARD AND THE SKILL CARDS.
+// THE PROFILE'S PROGRESS TAB: THE STATS (ESTILO DE JOGO), DIAMONDS, THE TRADING CARD AND THE STAT CARDS.
 // THE XP LEVELS THEMSELVES ARE IN utils.js, SHARED WITH THE HEADER'S LEVEL RING
 
 // "ATIVIDADE", NEVER "SAÚDE" — SEE "ACTIVITY, NEVER HEALTH" IN CLAUDE.md
 const MSG_PROGRESS_EMPTY = "O teu progresso aparece aqui depois do primeiro jogo.";
-const MSG_STAT_STREAK = n => `${n} ${n === 1 ? "semana" : "semanas seguidas"}`;
 // "NENHUMA" FOR ZERO: SPACE GROTESK'S ROUND 0 READ AS AN "o" ("o jogos"), AND IT HAS NO SLASHED ZERO
+const MSG_STAT_WEEKS = n => n === 0 ? "Nenhuma semana com partidas" : `${n} ${n === 1 ? "semana" : "semanas"} com partidas`;
 const MSG_STAT_GAMES_VALUE = n => n === 0 ? "Nenhuma partida" : `${n} ${n === 1 ? "partida" : "partidas"}`;
-const MSG_STAT_GAMES_HINT = "Nos últimos 6 meses";
+const MSG_STAT_RATING = n => `${n}%`;
+const MSG_STAT_HINT = "nos últimos 6 meses";
 const MSG_XP_LEVEL = n => `Nível ${n}`;
-// TITLES ARE RANKS THAT GROW WITH THE NUMBER — A FIXED TOP TITLE WOULD READ AS MOCKERY OVER ONE GAME.
-// EVERY LEVEL SPANS THE SAME step (GAMES IN THE LAST 6 MONTHS / WEEKS IN A ROW), SO THE BAR SPLITS INTO EQUAL SEGMENTS.
-// LEVEL i STARTS AT i × step; THE BAR IS FULL AT titles.length × step
-const levelScale = (step, titles) => ({
-	max: titles.length * step,
-	levels: titles.map((title, i) => ({ from: i * step, title })),
-});
-const LEVELS_GAMES = levelScale(5, ["Raquete de gaveta", "Voltou da reforma", "Cliente da casa", "24 sobre 7"]);
-const LEVELS_STREAK = levelScale(2, ["Só quer postar", "Comprometido", "Joga até na chuva", "Força da natureza"]);
-const LEVELS_TERRITORY = levelScale(1, ["Gato de apartamento", "Turista", "Presidente da junta", "Sem morada fixa"]);
+// EACH STAT'S 100 MARK: THE COUNT OVER THE LAST 6 MONTHS THAT RATES 100 (ANYTHING ABOVE IS CAPPED)
+const STAT_GAMES = 40;
+const STAT_WEEKS = 20;
+const STAT_TERRITORY = 5;
 const MSG_TITLE_TERRITORY = "Território";
-const LEVELS_TARIMBA = levelScale(10, ["Ainda com etiqueta", "Já tem calos", "Mobília do clube", "Património do ténis"]);
-const MSG_STAT_HOURS = n => `${n} ${n === 1 ? "hora" : "horas"}`;
-const MSG_STAT_HOURS_HINT = "Em campo, desde a primeira partida";
-const MSG_STAT_STREAK_HINT = "Com pelo menos uma partida";
-const MSG_STAT_COURTS = n => `${n} ${n === 1 ? "campo" : "campos diferentes"}`;
-const MSG_STAT_COURTS_HINT = n => `Já ${n === 1 ? "recebeu" : "receberam"} as tuas partidas`;
+const MSG_STAT_COURTS = n => n === 0 ? "Nenhum campo" : `${n} ${n === 1 ? "campo" : "campos diferentes"}`;
+// DIAMONDS: LIFETIME FEATS, NOT FULL BARS. CAMPEÃO (A SEASON WIN) WAITS FOR league_results
+const DIAMOND_GAMES = 100;
+const DIAMOND_COURTS = 10;
+const DIAMOND_STREAK = 26;
 const MSG_PROGRESS_INFO = "Entende o progresso";
-// "ENTENDE O PROGRESSO": XP AND LEVELS (LIFETIME) ABOVE THE ROWS, WHICH SHOW WHAT EACH SKILL BRINGS IN; BELOW THEM, WHY THE
-// SKILLS AND THE XP MOVE TOGETHER WITHOUT ONE PAYING THE OTHER — AND TARIMBA, THE ONE SKILL WITH NO XP OF ITS OWN
-const MSG_PROGRESS_INTRO = `O XP é o teu progresso de sempre: nunca diminui, nem quando paras. É ele que te faz subir de nível, do 1 ao 10.<br><br>Para além do XP tens também 4 atributos, que mostram os teus hábitos de jogo.`;
-const MSG_PROGRESS_RULES = `Cada atributo tem o seu progresso de 0 a 100. Este progresso é representado pelos números grandes do cartão e pela barra de progresso azul. Quem enche uma barra ganha um diamante, que fica para sempre — mesmo que a barra volte a descer.<br><br>Os atributos não dão XP por si: o XP vem das mesmas partidas que os fazem subir, como mostra a lista acima. Tarimba é a exceção, não tem XP próprio: uma partida de 2h vale o mesmo que uma de 30 min.<br><br>Partidas com menos de 10 minutos não contam.`;
-// WHICH SKILL EACH XP INCREMENT RIDES ON. DISPLAY ONLY — THE RULES THEMSELVES LIVE IN games_xp (supabase/sql/xp.sql), SO KEEP
-// THESE IN STEP WITH IT (AND WITH POINTS_RULES IN ranking.js)
+// "ENTENDE O PROGRESSO": XP ABOVE THE ROWS; BELOW THEM ESTILO DE JOGO AND DIAMONDS — THREE SEPARATE THINGS THAT NEVER FEED
+// EACH OTHER (SEE "THE PROGRESS MODEL" IN CLAUDE.md)
+const MSG_PROGRESS_INTRO = `Cada partida dá-te XP, e o XP sobe o teu nível, do 1 ao 10. Nunca diminui. Partidas com menos de 10 min não contam.`;
+const MSG_PROGRESS_RULES = `<b>Estilo de jogo</b> mostra como tens jogado nos últimos 6 meses. <img src="images/icon_fire_color.svg" class="link-icon" alt="">Frequência, <img src="images/icon_repeat_color.svg" class="link-icon" alt="">Consistência e <img src="images/icon_globe_color.svg" class="link-icon" alt="">Território são medidas aqui. Cada uma recebe uma nota de 0 a 100%.<br><br><b>Diamantes</b> são as conquistas mais valiosas do Campo Livre e não são para todos: 100 partidas, ou 10 campos diferentes, ou jogar todas as semanas durante 6 meses, ou vencer uma <a href="#" data-pane-link="ranking">época</a>.`;
+// DISPLAY ONLY — THE RULES THEMSELVES LIVE IN games_xp (supabase/sql/xp.sql), SO KEEP THESE IN STEP WITH IT (AND WITH
+// POINTS_RULES IN ranking.js). THE PASS IS POSTPONED, SO ITS ROW SAYS "EM BREVE"
 const PROGRESS_RULES = [
-	[`<img src="images/icon_fire_color.svg" class="link-icon" alt="">Momentum: cada partida`, 500],
-	[`<img src="images/icon_globe_color.svg" class="link-icon" alt="">${MSG_TITLE_TERRITORY}: cada campo novo`, 500],
-	[`<img src="images/icon_repeat_color.svg" class="link-icon" alt="">Consistência: cada semana seguida`, 500],
-	[`<img src="images/icon_id.svg" class="link-icon" alt="">Passe aprovado`, XP_PER_PASS],
+	["Cada partida", 500],
+	["Cada campo novo", 500],
+	["Cada semana seguida a jogar", 500],
+	[`Obter passe <span class="badge">Em breve</span>`, XP_PER_PASS],
 ];
 
 // MONDAY 00:00 OF THE WEEK date FALLS IN, AS A TIMESTAMP — THE KEY FOR THE WEEKLY STREAK
@@ -45,20 +39,6 @@ function weekStart(date) {
 	d.setHours(0, 0, 0, 0);
 	d.setDate(d.getDate() - ((d.getDay() + 6) % 7));
 	return d.getTime();
-}
-
-// WEEKS IN A ROW WITH AT LEAST ONE GAME, ENDING NOW. WEEKLY, NOT DAILY: DAILY STREAKS WOULD PUNISH NORMAL TENNIS
-// RHYTHMS. A CURRENT WEEK WITH NO GAME YET DOESN'T BREAK IT — THE PLAYER STILL HAS UNTIL SUNDAY
-function weeklyStreak(games) {
-	const weeks = new Set(games.map(game => weekStart(game.start)));
-	const cursor = new Date(weekStart(new Date()));
-	if (!weeks.has(cursor.getTime())) cursor.setDate(cursor.getDate() - 7);
-	let streak = 0;
-	while (weeks.has(cursor.getTime())) {
-		streak++;
-		cursor.setDate(cursor.getDate() - 7);
-	}
-	return streak;
 }
 
 // LONGEST RUN OF WEEKS IN A ROW EVER, NOT JUST THE CURRENT ONE — A DIAMOND ONCE EARNED IS KEPT
@@ -80,26 +60,7 @@ function longestStreak(games) {
 	return longest;
 }
 
-// MOST GAMES EVER INSIDE ONE 6-MONTH WINDOW. THE COUNT ONLY PEAKS RIGHT AFTER A GAME, SO WINDOWS ENDING AT EACH GAME ARE ENOUGH
-function peakRecentGames(games) {
-	return Math.max(0, ...games.map(game => {
-		const end = new Date(game.start);
-		const start = new Date(end);
-		start.setMonth(start.getMonth() - 6);
-		return games.filter(other => new Date(other.start) >= start && new Date(other.start) <= end).length;
-	}));
-}
-
 const DIAMOND_ICON = `<img src="images/icon_diamond_color.svg" class="link-icon" alt="">`;
-
-function levelIndex(scale, value) {
-	return scale.levels.findLastIndex(level => value >= level.from);
-}
-
-function levelTitle(scale, value) {
-	return scale.levels[levelIndex(scale, value)].title;
-}
-
 // XP ITSELF IS COMPUTED IN THE DATABASE (games_xp, player_xp), NOT HERE — THE RANKING READS THE SAME FUNCTIONS
 function sumXp(games) {
 	return games.reduce((sum, game) => sum + game.xp, 0);
@@ -124,9 +85,9 @@ const XP_LEVEL_INFO = [
 const XP_VISITOR_INFO = { title: "Raquete emprestada", description: "Aparece para jogar com a raquete do primo e sapatilhas da Vans. Ainda tá a descobrir se é destro ou canhoto." };
 
 // THE TRADING CARD (THINK MAGIC / POKÉMON): LEVEL IN THE BANNER, PLAYER ART, CHARACTER NAME AND FLAVOUR TEXT,
-// THE FOUR SKILL RATINGS, THEN THE XP BAR. A teaser MAKES IT THE VISITOR'S LOCKED PREVIEW: ITS OWN CHARACTER, THE FILL
+// THE THREE STAT RATINGS, THEN THE XP BAR. A teaser MAKES IT THE VISITOR'S LOCKED PREVIEW: ITS OWN CHARACTER, THE FILL
 // GROWING IN (.locked), AND THE TEASER UNDER THE BAR
-function xpCard(xp, diamonds, skills, teaser) {
+function xpCard(xp, diamonds, stats, teaser) {
 	const { level, fill } = xpLevel(xp);
 	const index = level - 1;
 	const info = teaser ? XP_VISITOR_INFO : XP_LEVEL_INFO[index] ?? XP_LEVEL_INFO[0];
@@ -139,38 +100,27 @@ function xpCard(xp, diamonds, skills, teaser) {
 			</div>
 			<p class="trading-card-name">${info.title}</p>
 			<p class="trading-card-text">${info.description}</p>
-			<div class="trading-card-skills">${skills.map(skill => `
-				<div class="trading-card-skill">
-					${skill.rating}
-					<img src="images/icon_${skill.icon}.svg" class="link-icon" alt="">
+			<div class="trading-card-stats">${stats.map(stat => `
+				<div class="trading-card-stat">
+					${stat.rating}
+					<img src="images/icon_${stat.icon}.svg" class="link-icon" alt="">
 				</div>
 			`).join("")}</div>
-			${barHtml(fill, `<span>${MSG_XP(xp)}</span>`, "xp-bar")}
+			<div class="xp-bar" style="--fill: ${fill}%"><div></div><span>${MSG_XP(xp)}</span></div>
 			${teaser ? `<p class="trading-card-text">${teaser}</p>` : ""}
 		</div>
 	`;
 }
 
-// THE LABELS ARE RENDERED TWICE: BLACK ON THE TRACK, AND A WHITE COPY ON TOP CLIPPED TO THE FILL'S WIDTH
-function barHtml(fill, labels, modifier = "") {
-	return `<div class="level-bar ${modifier}" style="--fill: ${fill}%"><div></div><p>${labels}</p><p>${labels}</p></div>`;
-}
-
-// THE SKILL AS A SHARE OF ITS BAR, 0–100, SO THE TRADING CARD'S FOUR NUMBERS SHARE ONE SCALE (THINK FIFA CARD RATINGS).
-// 100 IS A FULL BAR, THE SAME MOMENT THE DIAMOND IS EARNED
-function skillRating(scale, value) {
-	return Math.min(value / scale.max, 1) * 100;
-}
-
-// FILL FROM 0 TO max OVER ONE EQUAL SEGMENT PER LEVEL, EACH LABELLED WITH ITS TITLE
-function levelBar(scale, value) {
-	return barHtml(skillRating(scale, value),scale.levels.map(level => `<span>${level.title}</span>`).join(""));
+// THE STAT AGAINST ITS 100 MARK, CAPPED, SO THE TRADING CARD'S NUMBERS SHARE ONE SCALE (THINK FIFA CARD RATINGS)
+function statRating(max, value) {
+	return Math.min(value / max, 1) * 100;
 }
 
 // PROGRESS FROM THE SAME GAMES AS THE HISTORY (ALREADY WITHOUT THE ≤10 MIN ONES). DECLARED TIME ON COURT,
 // NOT TIME PLAYED: A WALK-IN LASTS WHAT THE PLAYER CHOSE UNLESS ENDED EARLY, AND A BOOKING DOESN'T PROVE A SHOW-UP
-// A teaser MAKES THIS THE VISITOR'S LOCKED PREVIEW: IT PINS THE TRADING CARD'S RATINGS AT 1 AND THE SKILL CARDS' NUMBERS AT 0 —
-// AN EMPTY STARTING POINT RATHER THAN THE DUMMY FIRST GAME'S REAL VALUES. THE LEVELS, BARS AND XP STILL COME FROM THAT GAME
+// A teaser MAKES THIS THE VISITOR'S LOCKED PREVIEW: IT PINS EVERY RATING AT 1 AND THE STAT CARDS' COUNTS AT 0 —
+// AN EMPTY STARTING POINT RATHER THAN THE DUMMY FIRST GAME'S REAL VALUES. THE XP STILL COMES FROM THAT GAME
 // xpPromise IS THE TRADING CARD'S TOTAL: THE GAMES' XP PLUS +3000 PER PASS EVER AWARDED, AS player_xp COUNTS IT
 async function loadProgress(container, gamesPromise, teaserPromise, xpPromise) {
 	const games = await gamesPromise;
@@ -182,52 +132,43 @@ async function loadProgress(container, gamesPromise, teaserPromise, xpPromise) {
 		return;
 	}
 
-	// GAMES, NOT MINUTES: A COUNT IS MORE TANGIBLE AND DOESN'T DEPEND ON THE WALK-IN DURATION THE PLAYER DECLARED.
-	// ROLLING 6 MONTHS, NOT A CALENDAR PERIOD, SO THE TOTAL NEVER RESETS TO ZERO ON A FIXED DATE AND DROPS THE PLAYER A LEVEL
+	// ALL THREE STATS SHARE ONE ROLLING 6-MONTH WINDOW — NOT A CALENDAR PERIOD, SO NOTHING RESETS TO ZERO ON A FIXED DATE
 	const now = new Date();
 	const recentStart = new Date(now);
 	recentStart.setMonth(recentStart.getMonth() - 6);
-	const gamesRecent = games.filter(game => new Date(game.start) >= recentStart && new Date(game.start) < now).length;
-
-	const streak = weeklyStreak(games);
-
-	// ONE COURT IS ALREADY LEVEL 1, SO THE LEVEL IS courts - 1; THE BAR USES courts ITSELF SO EACH REACHED LEVEL'S SEGMENT IS FULL
-	const courts = new Set(games.map(game => game.courtId)).size;
-
-	// LIFETIME, LIKE XP, SO IT NEVER DROPS. FILLS THE GAP MOMENTUM LEAVES: A 2h MATCH WEIGHS FOUR TIMES A 30 MIN HIT
-	const hours = Math.floor(games.filter(game => new Date(game.start) < now).reduce((sum, game) => sum + game.mins, 0) / 60);
-
-	// A DIAMOND PER SKILL WHOSE BAR WAS EVER FULL, KEPT FOREVER — SO THE ROLLING SKILLS CHECK THEIR BEST VALUE, NOT THE CURRENT ONE
 	const past = games.filter(game => new Date(game.start) < now);
+	const recent = past.filter(game => new Date(game.start) >= recentStart);
+	const gamesRecent = recent.length;
+	// WEEKS WITH A GAME, NOT A STREAK: ONE MISSED WEEK DOESN'T WIPE IT OUT. THE STREAK ONLY PAYS XP AND THE INQUEBRÁVEL DIAMOND
+	const weeks = new Set(recent.map(game => weekStart(game.start))).size;
+	const courts = new Set(recent.map(game => game.courtId)).size;
+
+	// LIFETIME FEATS, KEPT FOREVER. KEYED BY STAT SO EACH SHOWS ON ITS CARD
 	const diamonds = {
-		games: peakRecentGames(past) >= LEVELS_GAMES.max,
-		hours: hours >= LEVELS_TARIMBA.max,
-		streak: longestStreak(past) >= LEVELS_STREAK.max,
-		courts: courts >= LEVELS_TERRITORY.max,
+		games: past.length >= DIAMOND_GAMES,
+		weeks: longestStreak(past) >= DIAMOND_STREAK,
+		courts: new Set(past.map(game => game.courtId)).size >= DIAMOND_COURTS,
 	};
 
-	const statCard = (icon, metric, title, value, detail, bar, diamond) => `
+	// NO BAR: THE XP BAR IS THE ONLY ONE ON THE PROFILE, SO A STAT NEVER READS AS A SECOND PROGRESS
+	const rating = (max, value) => teaser ? 1 : Math.round(statRating(max, value));
+	const shown = value => teaser ? 0 : value;
+	const statCard = (icon, metric, max, value, count, diamond) => `
 		<div class="ticket">
-			<p class="skill-title"><img src="images/icon_${icon}.svg" class="link-icon" alt="">${metric}</p>
-			<p class="ticket-title margin-top-5" style="white-space: normal">${value}${diamond ? ` ${DIAMOND_ICON}` : ""}</p>
-			<div class="ticket-date">${detail}</div>
-			<p class="stat-level">${title}</p>
-			${bar}
+			<p class="stat-name"><img src="images/icon_${icon}.svg" class="link-icon" alt="">${metric}</p>
+			<p class="ticket-title margin-top-5">${MSG_STAT_RATING(rating(max, value))}${diamond ? ` ${DIAMOND_ICON}` : ""}</p>
+			<div class="ticket-date">${count} ${MSG_STAT_HINT}</div>
 		</div>
 	`;
-	const rating = (scale, value) => teaser ? 1 : Math.round(skillRating(scale, value));
-	const shown = value => teaser ? 0 : value;
 	container.innerHTML = [
 		xpCard(xp, Object.values(diamonds).filter(Boolean).length, [
-			{ icon: "fire_color", rating: rating(LEVELS_GAMES, gamesRecent) },
-			{ icon: "sheriff_color", rating: rating(LEVELS_TARIMBA, hours) },
-			{ icon: "repeat_color", rating: rating(LEVELS_STREAK, streak) },
-			{ icon: "globe_color", rating: rating(LEVELS_TERRITORY, courts) },
+			{ icon: "fire_color", rating: rating(STAT_GAMES, gamesRecent) },
+			{ icon: "repeat_color", rating: rating(STAT_WEEKS, weeks) },
+			{ icon: "globe_color", rating: rating(STAT_TERRITORY, courts) },
 		], teaser),
-		statCard("fire_color", "Momentum", levelTitle(LEVELS_GAMES, gamesRecent), MSG_STAT_GAMES_VALUE(shown(gamesRecent)), MSG_STAT_GAMES_HINT, levelBar(LEVELS_GAMES, gamesRecent), diamonds.games),
-		statCard("sheriff_color", "Tarimba", levelTitle(LEVELS_TARIMBA, hours), MSG_STAT_HOURS(shown(hours)), MSG_STAT_HOURS_HINT, levelBar(LEVELS_TARIMBA, hours), diamonds.hours),
-		statCard("repeat_color", "Consistência", levelTitle(LEVELS_STREAK, streak), MSG_STAT_STREAK(shown(streak)), MSG_STAT_STREAK_HINT, levelBar(LEVELS_STREAK, streak), diamonds.streak),
-		statCard("globe_color", MSG_TITLE_TERRITORY, levelTitle(LEVELS_TERRITORY, courts - 1), MSG_STAT_COURTS(shown(courts)), MSG_STAT_COURTS_HINT(shown(courts)), levelBar(LEVELS_TERRITORY, courts), diamonds.courts),
+		statCard("fire_color", "Frequência", STAT_GAMES, gamesRecent, MSG_STAT_GAMES_VALUE(shown(gamesRecent)), diamonds.games),
+		statCard("repeat_color", "Consistência", STAT_WEEKS, weeks, MSG_STAT_WEEKS(shown(weeks)), diamonds.weeks),
+		statCard("globe_color", MSG_TITLE_TERRITORY, STAT_TERRITORY, courts, MSG_STAT_COURTS(shown(courts)), diamonds.courts),
 	].join("");
 	appendRulesCard(container, MSG_PROGRESS_INFO, PROGRESS_RULES, MSG_PROGRESS_RULES, MSG_PROGRESS_INTRO);
 }
@@ -262,7 +203,7 @@ function appendRulesCard(container, title, rows, text, intro) {
 }
 
 
-// THE PLAYER'S WHOLE XP, PASSES INCLUDED (FROM pass_awards, SO REVOKING NEVER LOWERS IT)
+// THE PLAYER'S WHOLE XP, FROM player_xp (PASS XP POSTPONED)
 async function fetchXp() {
 	const { data } = await db.rpc("my_xp");
 	return data ?? 0;

@@ -19,7 +19,7 @@ court.html / js/court-stage.js    — court detail + walk-in flow
 admin.html / js/admin.js          — admin dashboard (members, rules, hours)
 login.html / js/login.js
 profile.html / js/profile.js     — post-login router, profile views (history, passes, info)
-                js/player_progress.js — the profile's progress tab: skill levels, streaks, diamonds, trading card (loaded before profile.js)
+                js/player_progress.js — the profile's progress tab: stats (Estilo de jogo), diamonds, trading card (loaded before profile.js)
                 js/ranking.js     — the profile's ranking tab: board, plaque updates, "Entende o ranking" (loaded before profile.js)
 onboarding.html / js/onboarding.js — first-login slideshow for players with no `profiles` row; back to profile.html when done
 info.html
@@ -100,11 +100,11 @@ One concept, one word per layer. **Code** is what identifiers, comments, docs an
 | Game | game | partida, jogo | Any walk-in or booking, as counted in history and stats. Copy uses both words |
 | Slot | slot | horário | One `slot_duration_minutes` cell of the slot picker |
 | XP | xp | XP | Lifetime points; never drops |
-| Level | level | nível | XP level 1–10 (trading card) or skill level 1–4 |
-| Skill | skill | Momentum, Tarimba, Consistência, Território | The four stats on the progress view |
-| Diamond | diamond | — (icon only) | A skill whose bar was ever full, kept forever |
+| Level | level | nível | XP level 1–10 (trading card) — the only level. Stats have titles, never levels |
+| Stat | stat | Estilo de jogo (the section); Frequência, Consistência, Território | A 0–100 reading of how the player has played in the last 6 months. Gives no XP. Replaced "skill" (a skill is something you own, like XP) |
+| Diamond | diamond | diamante | One of four lifetime feats (Centenário, Explorador, Inquebrável, Campeão), kept forever |
 | Trading card | trading card | — | The character card on the progress view |
-| Ticket | ticket | — | The generic card (`.ticket`, `.ticket-title`, `.ticket-line`, `.ticket-date`…) used for history, bookings, passes, skills and admin requests. Named for its look: notched divider, punched hole. Not a pass |
+| Ticket | ticket | — | The generic card (`.ticket`, `.ticket-title`, `.ticket-line`, `.ticket-date`…) used for history, bookings, passes, stats and admin requests. Named for its look: notched divider, punched hole. Not a pass |
 | Locked preview | locked, dummy | — | Example content for visitors and empty views; dummy dates are always 30/02 |
 | Teaser | teaser | — | The line inside a visitor's trading card ("Já tens N XP à tua espera") |
 | Claim | claim | — | Adopting a device's unclaimed walk-ins on login |
@@ -165,7 +165,7 @@ One concept, one word per layer. **Code** is what identifiers, comments, docs an
 
 **revealed_surprises** — `player_id uuid, kind text, ref text, revealed_at timestamptz`
 - One row per surprise a player has torn open, of any kind (see "Surprises"). Primary key `(player_id, kind, ref)`; `player_id` defaults to `auth.uid()`
-- `kind` says what happened, `ref` which one: `pass_approved` → the `passes.id`; `level_up` → the level number; `diamond` → the skill
+- `kind` says what happened, `ref` which one: `pass_approved` → the `passes.id`; `level_up` → the level number; `diamond` → which diamond
 - Backfilled with every pass approved before the feature, so no existing member gets a parcel for an old pass
 - RLS: players read and insert their own only. Faking a row only skips their own surprise
 
@@ -244,7 +244,7 @@ When a court's burocracia level requires document verification, documents are ne
 
 ### Activity stats — a reason to use Campo Livre beyond booking
 
-**First set implemented** (profile progress view, see Todo): games in the last 6 months (replaced hours in the last 30 days; the comparison with the previous period was dropped), weekly streak, distinct courts played ("Território", replaced the favourite court card). Cities collected was dropped. A rolling window rather than a calendar period, so the total doesn't reset to zero on a fixed date and knock the player down a level. All three carry a level title and a segmented progress bar (`LEVELS_GAMES` / `LEVELS_STREAK` / `LEVELS_TERRITORY` in `player_progress.js`). The rest below is still exploration.
+**First set implemented** (profile progress view, see Todo): games in the last 6 months (replaced hours in the last 30 days; the comparison with the previous period was dropped), weeks with a game, distinct courts played ("Território", replaced the favourite court card) — all three over the same rolling 6 months. Cities collected was dropped. A rolling window rather than a calendar period, so the total doesn't reset to zero on a fixed date. Now Estilo de jogo — see "The progress model" below. The rest below is still exploration.
 
 The chosen levels are listed under "Player progress" below, since they're the first piece of that progress layer.
 
@@ -280,56 +280,54 @@ Builds on activity stats. Short, interactive questions after each game collect t
   - Tone: too much confetti feels childish. The pig's cheeky voice ("batotas", "porreiríssimo") should carry it, not badges everywhere
 - **Where to start:** only the post-game card (duration, singles/doubles, result) stored on the game row, with no points or levels. It pays off alone by making stats more accurate, and it shows whether players actually answer before a progression system is built on top. Since stats are behind the login wall, answering is also the natural moment to prompt visitors to make an account ("guarda o teu progresso")
 
-**Levels already implemented** (progress view, `LEVELS_GAMES` / `LEVELS_STREAK` / `LEVELS_TERRITORY` in `player_progress.js`). Titles are ranks that grow with the number, so a low value never gets a mocking title. Each bar runs from 0 to its max in four equal segments, one per level, with the level title written inside. Each scale is defined as a step plus its titles (`levelScale(step, titles)`): every level spans the same step, so the segments are always equal. Games step: 5. Streak step: 2 weeks.
+**The progress model (built — see the "Simplify the progress model" todo).** The old model couldn't be explained: four skills shown four ways each (count, 1–4 skill level with title, segmented bar, 0–100 rating), three different time windows, and XP that "rode on" the skills without being paid by them. The rebuild keeps three separate things that never feed each other:
 
-| Games in the last 6 months ("Momentum") | Title |
+1. **XP** — the only progress. Games plus bonuses go into one lifetime pile that sets the level 1–10 (see "XP" below). It's the only bar on the profile
+2. **Estilo de jogo** (`stats`) — the thermometer: three readings worked out from the player's games, describing how they play. They give no XP and take none. Not "skills": a skill is something you own, like XP; a stat is a measurement
+3. **Diamonds** — the rarest feats, kept forever
+
+Rejected along the way: the **bucket method** (every XP gain lands in a skill, the skills add up to the total) — it needs a rule for every gain, an exception for gains that are no habit (passes, championships), and a recalibrated `games_xp`. "Lean on a skill to level up" goes with it; player expression survives as identity (the titles), not strategy.
+
+**Estilo de jogo** — one window for all three: the last 6 months, rolling (never tied to the ranking seasons, which reset on a fixed date). Each stat is a 0–100 rating (the count over its 100 mark, capped at 100), shown on its stat card as the name in the banner, then the score as a percentage ("54%", `MSG_STAT_RATING` — read better than "54/100"), then the count with the window, and as the bare number on the trading card (FIFA style — the common scale is what makes three different units comparable). No bars, no stars, no "nível", no titles.
+
+| Stat | Measures | 100 = |
+|---|---|---|
+| Frequência | games | 40 games |
+| Consistência | weeks with at least one game (not a streak) | 20 weeks |
+| Território | different courts | 5 courts |
+
+**Stat titles dropped** — nicknames per rating quarter (Frequência: Raquete de gaveta · Voltou da reforma · Cliente da casa · 24 sobre 7; Consistência: Só quer postar · Comprometido · Joga até na chuva · Força da natureza; Território: Gato de apartamento · Turista · Presidente da junta · Sem morada fixa). They carried the pig's voice, but even as a caption, then in the banner, they were one thing too many on a card that should read at a glance. Free to reuse elsewhere (diamonds, the trading card's characters).
+
+Frequência (formerly "Momentum" — the plain word reads instantly), Consistência and Território are the three staples, each on its own axis (how much, how regular, where). Consistência counts weeks, not a streak: 20 games in 5 weeks and 20 games in 20 weeks get the same Frequência but very different Consistência, and one missed week doesn't wipe it out. The weekly streak lives on only as an XP bonus and as a diamond.
+
+**Tarimba is dropped as a stat** — lifetime hours were "how much" again, moving with Frequência. Lifetime hours stay a stored metric (the ranking's tie-break) but aren't shown. Its titles (Ainda com etiqueta, Já tem calos, Mobília do clube, Património do ténis) are free to reuse.
+
+**Diamonds** (`icon_diamond_color.svg`) — four lifetime feats, each earned once and kept forever, no XP of their own. Not full bars (too easy with these marks, and it tied diamonds to arbitrary maxes). Each first one is a surprise.
+
+| Diamond | Feat |
 |---|---|
-| 0–4 | Raquete de gaveta |
-| 5–9 | Voltou da reforma |
-| 10–14 | Cliente da casa |
-| 15+ | 24 sobre 7 |
+| Centenário | 100 games |
+| Explorador | 10 different courts |
+| Inquebrável | a 26-week streak (every week for 6 months) |
+| Campeão | 1st place in a season (needs `league_results`, "em breve" until then) |
 
-Bar max: 20 games. Replaced hours in the last 30 days: a game count is more tangible, doesn't depend on the declared walk-in duration, and gives natural increments for XP. Trade-off: a 30-min hit weighs the same as a 2h match.
+**"Entende o progresso" copy (final):**
+> Cada partida dá-te XP, e o XP sobe o teu nível, do 1 ao 10. Nunca diminui. Partidas com menos de 10 min não contam.
+>
+> Cada partida · +500 XP / Cada campo novo · +500 XP / Cada semana seguida a jogar · +500 XP / Obter passe · +1000 XP · em breve
+>
+> **Estilo de jogo** mostra como tens jogado nos últimos 6 meses. Frequência, Consistência e Território são medidas aqui. Cada uma recebe uma nota de 0 a 100%. **Diamantes** são as conquistas mais valiosas do Campo Livre e não são para todos: 100 partidas, ou 10 campos diferentes, ou jogar todas as semanas durante 6 meses, ou vencer uma época.
 
-| Weekly streak | Title |
-|---|---|
-| 0–1 weeks | Só quer postar |
-| 2–3 weeks | Comprometido |
-| 4–5 weeks | Joga até na chuva |
-| 6+ weeks | Força da natureza |
+**Next stat candidate — Desportivismo:** walk-ins closed by hand with "Terminar jogo atual" (`manual_finished_at`), counting only games over 10 min. Rewards freeing the court for the next player, which keeps the live status honest. Not built yet; it would have to stay on its own axis, like the three staples.
 
-Bar max: 8 weeks.
+The 100 marks are a first guess, to be tuned once real play is known.
 
-| Distinct courts played ("Território") | Title |
-|---|---|
-| 1 | Gato de apartamento |
-| 2 | Turista |
-| 3 | Presidente da junta |
-| 4+ | Sem morada fixa |
-
-Bar max: 4 courts. Unlike the other two, one court is already level 1, so the level is `courts - 1` while the bar uses `courts` — each reached level's segment is full rather than filling gradually. Counts walk-ins and bookings alike.
-
-| Lifetime hours on court ("Tarimba", `LEVELS_TARIMBA`) | Title |
-|---|---|
-| 0–9h | Ainda com etiqueta |
-| 10–19h | Já tem calos |
-| 20–29h | Mobília do clube |
-| 30h+ | Património do ténis |
-
-Bar max: 40h. Lifetime, like XP, so it never drops. It fills the gap Momentum leaves (a 2h match weighs four times a 30 min hit). Declared hours, not measured: a walk-in counts what the player chose unless ended early. Named after "ter tarimba" (experience from years on the job); "Rodagem", "Estrada" and "Veterania" were the alternatives, "Resistência" was ruled out as physical/health-adjacent.
-
-**Diamonds** (`icon_diamond_color.svg`): one per skill whose bar was ever full (20 games in 6 months / 40h / 8 weeks / 4 courts), kept forever. So the rolling skills check their best value ever, not the current one (`peakRecentGames`, `longestStreak` in `player_progress.js`). Shown after the value on each skill card that earned one, and as the total next to the level in the trading card's banner (always shown, 0 included).
-
-**Next skill candidate — Desportivismo:** walk-ins closed by hand with "Terminar jogo atual" (`manual_finished_at`), counting only games over 10 min. Rewards freeing the court for the next player, which keeps the live status honest. Chosen over a plain "signals sent" count, which would just duplicate Momentum. Not built yet.
-
-The game thresholds are a first guess, to be tuned once real play is known.
-
-**XP** (computed in the database by `games_xp` / `player_xp`, read through `my_games_xp` / `my_xp`; drawn by `xpCard` in `player_progress.js`), shown on the **trading card** above the skill cards — its own `.trading-card*` classes (not `.ticket`), so it can evolve on its own: "Nível N" in the `.trading-card-level` banner, the pig for the current level as the player art (`.trading-card-art`, `XP_LEVEL_IMAGES`; width 90%, centred with 20px above and below, a plain image for now, not a pig appearance), the character name and flavour text (`XP_LEVEL_INFO`), the four skill ratings, then the XP bar. **Skill ratings** (`.trading-card-skills`, `skillRating`): each skill as a share of its bar max, 0–100, FIFA-card style — one scale for all four, so strengths read at a glance. Big number with the skill icon on the bottom-right corner; no diamonds here, only in the banner and on the skill cards. The rolling skills can drop (current form), while the XP level is permanent; the skill cards below are the breakdown behind each number. The idea is a Magic / Pokémon style character card. XP only ever grows, so it comes from lifetime events, never from the skills' rolling values (Momentum's 6-month count can drop). Every increment is +500 XP (`XP_PER_INCREMENT`):
+**XP** (computed in the database by `games_xp` / `player_xp`, read through `my_games_xp` / `my_xp`; drawn by `xpCard` in `player_progress.js`), shown on the **trading card** above the stat cards — its own `.trading-card*` classes (not `.ticket`), so it can evolve on its own: "Nível N" in the `.trading-card-level` banner, the pig for the current level as the player art (`.trading-card-art`, `XP_LEVEL_IMAGES`; width 90%, centred with 20px above and below, a plain image for now, not a pig appearance), the character name and flavour text (`XP_LEVEL_INFO`), the three stat ratings, then the XP bar. **Stat ratings** (`.trading-card-stats`, `statRating`): each stat against its 100 mark, 0–100, FIFA-card style — one scale for all three, so strengths read at a glance. Big number with the stat icon on the bottom-right corner; no diamonds here, only in the banner and on the stat cards. The stats can drop (the last 6 months), while the XP level is permanent; the stat cards below are the breakdown behind each number. The idea is a Magic / Pokémon style character card. XP only ever grows, so it comes from lifetime events, never from the stats' rolling values (Frequência's 6-month count can drop). Every increment is +500 XP (`XP_PER_INCREMENT`):
 - each past game
 - each distinct court played
 - each week with a game right after another week with a game (a lone week is already paid by its games)
 
-Plus **+3000 XP per pass** (`XP_PER_PASS`), shown as "+3000 XP" on each pass card (dummy pass included). A pass is a bigger step than a game: an admin vetted and approved the player. It's counted from `pass_awards`, never from `memberships`: revoking hard-deletes the pass row, and **XP never drops**. One award per scope, ever, so an admin revoking and re-approving can't farm it. The history cards no longer add up to the total for members — accepted, the difference is on the Passes tab.
+**Postponed, not paid today ("em breve"; see the "Pass postponed" todo):** **+1000 XP per pass** (`XP_PER_PASS`; was 3000 — postponed because no real private court has signed up yet, not over the value) (no longer shown on pass cards while postponed). A pass is a bigger step than a game: an admin vetted and approved the player. It's counted from `pass_awards`, never from `memberships`: revoking hard-deletes the pass row, and **XP never drops**. One award per scope, ever, so an admin revoking and re-approving can't farm it. The history cards no longer add up to the total for members — accepted, the difference is on the Passes tab.
 
 **XP per game** (the `xp` column of `games_xp`): the same total split across games, oldest first, so each history card shows what it earned ("+1000 XP", right of the court-type row) and the cards add up to the trading card. A court's bonus goes to its first game there, a streak week's bonus to that week's first game — so a card shows +500, +1000 or +1500. `player_xp` is the sum of `games_xp` plus the passes, so the two can't drift apart. The dummy game isn't in the database, so its +1000 is fixed in JS (`DUMMY_GAME_XP`).
 
@@ -352,7 +350,7 @@ Levels 1–10, each needing 500 XP more than the last (level n spans 1 500 + 500
 | 9 | 30 000–35 999 |
 | 10 | 36 000+ (bar full at 42 500) |
 
-Unlike the skill bars, the XP bar is relative: the fill only covers the current level. The player's total XP is written inside the bar; the level's max XP isn't shown. Past 42 500 the player stays level 10 with a full bar. Reuses `.level-bar` with a single segment plus the `.xp-bar` modifier (yellow fill, 1em text).
+The XP bar is the only bar on the profile, and it is relative: the fill only covers the current level. The player's total XP is written inside the bar; the level's max XP isn't shown. Past 42 500 the player stays level 10 with a full bar. Its own `.xp-bar` (yellow fill, the XP as one label).
 
 ### Leaderboards and social comparison
 
@@ -360,8 +358,8 @@ Being built — XP in the database, the opt-out, `season_ranking` and the rankin
 
 **Decided:**
 - **Rank activity, never results:** XP, games, streak and Território all come from recorded games, so they can be ranked. Self-reported wins and losses can't be (see "Honesty" under Player progress). The leaderboard measures who plays the most, not who plays the best, and the copy should say so. One exception: the visitor's teaser board ("Os melhores jogadores de cada época…", `MSG_VISITOR_RANKING`) — it's a pitch to make an account, not a description of the ranking
-- **Six-month seasons, not weeks:** players don't play often enough for a weekly table to mean anything. Fixed seasons, two a year, following the outdoor tennis year: **Época de Verão** (Apr–Sep) and **Época de Inverno** (Oct–Mar, labelled across two years: "Inverno 26/27"), in Lisbon time (`season_start` in `supabase/sql/ranking.sql`), rather than a rolling 6 months: a season *ends*, so it has a winner and results to keep. Aligned with Momentum, which already counts the last 6 months
-- **What's ranked: XP earned in the season** — every increment the trading card counts, earned inside the season: +500 per game, per court never played before, per streak week, and +3000 per pass approved in the season. Season points are always a slice of XP, never a separate scale
+- **Six-month seasons, not weeks:** players don't play often enough for a weekly table to mean anything. Fixed seasons, two a year, following the outdoor tennis year: **Época de Verão** (Apr–Sep) and **Época de Inverno** (Oct–Mar, labelled across two years: "Inverno 26/27"), in Lisbon time (`season_start` in `supabase/sql/ranking.sql`), rather than a rolling 6 months: a season *ends*, so it has a winner and results to keep. Aligned with Frequência (formerly Momentum), which already counts the last 6 months
+- **What's ranked: XP earned in the season** — every increment the trading card counts, earned inside the season: +500 per game, per court never played before, per streak week, and +1000 per pass approved in the season (postponed). Season points are always a slice of XP, never a separate scale
 - **Ties:** equal points share the place ("1, 2, 2, 4"); then lifetime **Tarimba** (hours on court) breaks the tie, rewarding loyalty
 - **One league for everyone** — no court-group, court or city leagues yet; the player base is too small to split. Visitors aren't ranked (they have no account — one more reason to log in); admins are left out
 - **No opt-in; an opt-out instead.** Every registered player is ranked, with a Participar / Recusar toggle in Dados (`profiles.hide_from_ranking`) and a line in the privacy policy (the app has none yet)
@@ -426,11 +424,11 @@ Decided, being built. The tear strip (`tear-reveal.js`) is a promise that someth
 - **Every scene ends in one next step** (e.g. "Reserva o teu primeiro jogo" to the group's court). A surprise that ends in a dead end wastes the moment. Always (decided)
 - **Detected on the next app open**, not in real time: one small query per page load. There are no push notifications, and players rarely watch at the moment an admin acts. Realtime (Supabase websocket) can come later on top if instant ever matters
 - **Played once per event:** marked revealed only after the strip is torn, so a parcel left unopened waits for the next visit. Recorded generically in `revealed_surprises` (`kind` + `ref`), not per feature — level ups and diamonds have no database row, they're computed in JS. For a pass the `ref` is the `passes.id`, not the group, so a pass revoked and later re-approved is a new row and plays again
-- **Keep it rare**, or it stops being special. Deserve a parcel: pass approved, level up, first diamond on a skill, end of a season (later). Don't: booking confirmed, walk-in started — those have their success screens
+- **Keep it rare**, or it stops being special. Deserve a parcel: pass approved, level up, a diamond, end of a season (later). Don't: booking confirmed, walk-in started — those have their success screens
 - **Tone:** the pig's voice carries it; no confetti (see "Tone" under Player progress)
 - **Motion:** plain CSS 3D, cheap on phones; a simpler version for players who ask their phone for reduced motion
 
-**First scene — pass approved: the pig lifts the prize.** A pig hand rises from the bottom of the screen and lifts the pass up like a champion lifting a medal, with excitement. It's Campo Livre's own voice — the cheeky pig, excited *for* the player — where a turning card was a generic effect. The same hand can lift every future prize (a level badge, a diamond, a season trophy), so one drawing becomes the signature of all surprises, and it's the natural first job for the Rive todo. Later: holding it by the lanyard like a medal ribbon, the badge swinging below the fist (left out for now, too complex); +3000 XP count-up and a level-up line; one pig line.
+**First scene — pass approved: the pig lifts the prize.** A pig hand rises from the bottom of the screen and lifts the pass up like a champion lifting a medal, with excitement. It's Campo Livre's own voice — the cheeky pig, excited *for* the player — where a turning card was a generic effect. The same hand can lift every future prize (a level badge, a diamond, a season trophy), so one drawing becomes the signature of all surprises, and it's the natural first job for the Rive todo. Later: holding it by the lanyard like a medal ribbon, the badge swinging below the fist (left out for now, too complex); +1000 XP count-up and a level-up line; one pig line.
 
 **Built so far:** "O teu passe foi aprovado" high on the screen, then a "Reserva o teu primeiro jogo" button (`icon_court`) to the group's first active court (no button if it has none), then the pass lifted by the pig hand (`images/pig_hand.svg`, `.prize-arm`) below them, and "Pra já não" as a fixed `.info-link` without its pink bar, so the hand shows behind it. A preset gives its `text` and `prize` separately and `showReveal` lays them out, so every scene keeps that order; the scene starts from the top rather than centring, leaving the lower screen for the prize and hand.
 
@@ -611,7 +609,7 @@ Sessions are kept alive indefinitely for active users. Supabase auto-refreshes t
     - [x] Check on open: court list, court page and profile compare the player's approved passes with their `pass_approved` rows in `revealed_surprises`; tearing inserts the row
     - [ ] Level-up and diamond surprises need a baseline: the first time their check runs, record the player's current level and diamonds silently, so nobody gets a parcel for something done months ago
     - [x] Reduced-motion version of the scene — the prize sits already in place, still, under `prefers-reduced-motion: reduce`
-    - [ ] Next surprises, one at a time: level up, first diamond on a skill; later end of a season
+    - [ ] Next surprises, one at a time: level up, a diamond; later end of a season
 - [ ] Support multiple admins per court group (receptionists)
   - [ ] Create `court_group_members (group_id UUID, user_id UUID)` table
   - [ ] Migrate existing `court_groups.admin_id` rows into `court_group_members`
@@ -664,8 +662,23 @@ Sessions are kept alive indefinitely for active users. Supabase auto-refreshes t
     - [x] XP bar above the skill cards: +500 XP per game / new court / streak week, levels 1–10 (see "XP")
     - [x] Character card art linked to the XP level: `XP_LEVEL_IMAGES` in `player_progress.js`, one entry per level (index 0 = level 1). Placeholders for now: `pig_sitting` (1–3), `pig_reaching` (4–6), `pig_serving` (7–10)
     - [ ] Draw progressively more "pro" pig images per level (gear, outfit, pose) and swap them into `XP_LEVEL_IMAGES`
-    - [ ] Tune the level thresholds (skills and XP) once real play is known
-    - [x] "Entende o progresso": the same collapsible card as "Entende o ranking" (both drawn by `appendRulesCard` in `player_progress.js`), under the progress view — one row per XP increment with the skill it rides on (`PROGRESS_RULES`, display only — keep in step with `games_xp`), then XP and levels (lifetime) versus the skills (current form), diamonds, and Tarimba as the one skill with no XP of its own
+    - [ ] Tune the level thresholds (stat 100 marks and XP) once real play is known
+    - [x] "Entende o progresso": the same collapsible card as "Entende o ranking" (both drawn by `appendRulesCard` in `player_progress.js`), under the progress view — the XP intro, one row per XP increment (`PROGRESS_RULES`, display only — keep in step with `games_xp`), then Estilo de jogo and diamonds (copy in "The progress model")
+    - [ ] Simplify the progress model (see "The progress model" under Player progress) — one step at a time, each confirmed before the next
+      - [x] "Entende o progresso": the final copy, rows without skill names; the pass row carries a `.badge` "Em breve"
+      - [x] Stats: drop Tarimba; Consistência becomes weeks with a game in the last 6 months; Território counts the last 6 months; 100 marks 40 / 20 / 5 (`STAT_GAMES` / `STAT_WEEKS` / `STAT_TERRITORY`: `max` + `titles`, title by the rating's quarter)
+      - [x] Stat cards: the name in the banner (`.stat-name`, one line), the score as a percentage (`MSG_STAT_RATING`, "54%"), then the count on one line with the window ("22 partidas nos últimos 6 meses", `MSG_STAT_HINT`, on every card — the window matters); no bars, stars or segment labels (the XP bar is the only bar)
+      - [x] Bar CSS cleanup: `.level-bar`, the white-clipped label copy, the segment dividers and `barHtml` are gone; the XP bar is plain `.xp-bar`
+      - [x] Trading card: three ratings instead of four
+      - [x] Diamonds: the lifetime feats instead of full bars (`DIAMOND_GAMES` / `DIAMOND_COURTS` / `DIAMOND_STREAK`), each on its stat's card. Campeão waits for `league_results`
+      - [x] The visitor teaser's dummy first game: check the trading card and stat cards still read as an empty starting point
+      - [x] Rename skill → stat in code and CSS: `statRating`, `statTitle`, `STAT_GAMES` / `STAT_WEEKS` / `STAT_TERRITORY`, `.stat-name` (the banner), `.stat-title` (the caption), `.trading-card-stats` / `.trading-card-stat`
+      - [ ] Pass postponed — nobody earns XP for something marked coming soon
+        - [x] "Obter passe" row with an "Em breve" badge, in Entende o progresso and Entende o ranking
+        - [x] Pass XP off: `player_xp` (xp.sql) and `season_ranking` (ranking.sql) no longer add `pass_awards`; the "+XP" label is gone from pass cards. `pass_awards` keeps recording, so turning it back on pays every pass ever approved
+        - [x] Run the new `player_xp` and `season_ranking` in the Supabase SQL editor
+        - [x] Pass-approved surprise stays as it is: with no real private court signed up, no pass gets approved, so it never plays
+      - [ ] "Vencer uma época" diamond is "em breve" too: season winners aren't recorded until `league_results` exists (see "End of season")
     - [ ] Visitor teaser (see "Visitor teaser" under Authentication)
       - [x] Visitor history shows unclaimed walk-ins only (`player_id IS NULL`)
       - [x] XP gained on each history card, players and visitors (`games_xp`)

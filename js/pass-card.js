@@ -10,8 +10,9 @@ const MSG_NO_NEXT_GAME = "Sem jogos agendados";
 // "NENHUMA" FOR ZERO: SPACE GROTESK'S ROUND 0 READ AS AN "o", AND IT HAS NO SLASHED ZERO
 const MSG_BOOKING_COUNT = n => n === 0 ? "Nenhuma reserva" : `${n} ${n === 1 ? "reserva" : "reservas"}`;
 
-// A PASS IS A BIGGER STEP THAN A GAME: IT MEANS THE PLAYER WAS VETTED AND APPROVED BY A COURT'S ADMIN
-const XP_PER_PASS = 3000;
+// A PASS IS A BIGGER STEP THAN A GAME: IT MEANS THE PLAYER WAS VETTED AND APPROVED BY A COURT'S ADMIN. POSTPONED: THE DATABASE
+// DOESN'T PAY IT (player_xp), SO IT'S ONLY SHOWN AS "EM BREVE" IN THE RULES CARDS, NEVER ON A PASS
+const XP_PER_PASS = 1000;
 
 // WRAPPED SO THE HOLE ISN'T A DIRECT CHILD OF THE CARD, WHICH WOULD TURN IT INTO THE BADGE SLOT
 const PADLOCK_HTML = `<div class="padlock"><div class="ticket-hole"></div><img src="images/icon_padlock_color_cut.svg" alt=""></div>`;
@@ -23,10 +24,7 @@ function passCard({ name, since, expires, nextGame, bookings, locked }) {
 			${locked ? PADLOCK_HTML : ""}
 			<div class="ticket-hole"></div>
 			<p class="ticket-title">${name}</p>
-			<div class="ticket-date-row">
-				<p class="ticket-date">${MSG_MEMBER_SINCE(since)}</p>
-				<span class="game-xp">${MSG_GAME_XP(XP_PER_PASS)}</span>
-			</div>
+			<p class="ticket-date">${MSG_MEMBER_SINCE(since)}</p>
 			<div class="divider"></div>
 			<div class="ticket-data">
 				<p class="ticket-date">${expires ? `<img src="images/icon_trash.svg" class="link-icon" alt=""> ${expires}` : MSG_NO_EXPIRY}</p>

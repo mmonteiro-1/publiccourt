@@ -23,7 +23,7 @@ const POINTS_RULES = [
 	["Cada partida", 500],
 	["Primeira partida num campo novo", 500],
 	["Semana com partida novamente", 500],
-	["Passe aprovado", XP_PER_PASS],
+	[`Obter passe <span class="badge">Em breve</span>`, XP_PER_PASS],
 ];
 // IN THE BOARD'S "R. BARBOSA" FORMAT, SO IT READS LIKE A NAME ALREADY ON A PLAQUE
 const MSG_VISITOR_RANK_NAME = "O. Teu Nome";
