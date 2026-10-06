@@ -14,17 +14,11 @@ const MSG_RANKING_DROPPED = "Tragédia anunciada: caíste de posição. Não dei
 const MSG_RANKING_ZERO = "Nenhum jogo na época? Tás a gozar.";
 // "BORA PARTICIPAR" OPENS DADOS (data-pane-link), WHERE THE PARTICIPAR / RECUSAR TOGGLE IS
 const MSG_RANKING_OUT = `Não te deixes intimidar, somos todos amadores. <a href="#" data-pane-link="info">Bora participar</a>.`;
-// THE WHOLE TEXT UNDER THE POINTS ROWS IN "ENTENDE O RANKING": THE SEASONS, THE RESET AND WHY THE BOARD CAN SHOW LESS THAN THE
-// TRADING CARD (IT ONLY COUNTS THIS SEASON'S XP), WHAT DOESN'T COUNT, AND THE OPT-OUT. "DADOS" OPENS THAT TAB (data-pane-link)
-const MSG_RANKING_INFO = `Há duas épocas por ano: Época de Verão: de 01/04 a 30/09. Época de Inverno: de 01/10 a 31/03<br><br>Os pontos voltam a zero no início de cada época. O teu XP de progresso geral nunca diminui. Se não vês todo o teu XP no ranking, é porque parte dele foi ganho em épocas anteriores.<br><br>Partidas com menos de 10 minutos não contam.<br><br>O ranking mostra todos os jogadores do Campo Livre. Se preferires ficar de fora, podes sair em <a href="#" data-pane-link="info">Dados</a>.`;
+// "ENTENDE O RANKING": ABOVE THE POINTS ROWS, THE SEASONS AND THE RESET (AND WHY THE BOARD CAN SHOW LESS THAN THE TRADING CARD — IT
+// ONLY COUNTS THIS SEASON'S XP); BELOW THEM, WHAT DOESN'T COUNT AND THE OPT-OUT. "DADOS" OPENS THAT TAB (data-pane-link)
+const MSG_RANKING_INTRO = `Há duas épocas por ano: Época de Verão: de 01/04 a 30/09. Época de Inverno: de 01/10 a 31/03<br><br>Os pontos voltam a zero no início de cada época. O teu XP de progresso geral nunca diminui. Se não vês todo o teu XP no ranking, é porque parte dele foi ganho em épocas anteriores.`;
+const MSG_RANKING_INFO = `Partidas com menos de 10 minutos não contam.<br><br>O ranking mostra todos os jogadores do Campo Livre. Se preferires ficar de fora, podes sair em <a href="#" data-pane-link="info">Dados</a>.`;
 const MSG_POINTS_INFO = "Entende o ranking";
-// DISPLAY ONLY — THE RULES THEMSELVES LIVE IN games_xp / season_ranking (supabase/sql), SO KEEP THESE IN STEP WITH THEM
-const POINTS_RULES = [
-	["Cada partida", 500],
-	["Primeira partida num campo novo", 500],
-	["Semana com partida novamente", 500],
-	[`Obter passe <span class="badge">Em breve</span>`, XP_PER_PASS],
-];
 // IN THE BOARD'S "R. BARBOSA" FORMAT, SO IT READS LIKE A NAME ALREADY ON A PLAQUE
 const MSG_VISITOR_RANK_NAME = "O. Teu Nome";
 // 1000 IS THE FIRST GAME'S XP (+500 FOR THE GAME, +500 FOR THE NEW COURT), THE SAME AS DUMMY_GAME_XP IN profile.js
@@ -265,9 +259,6 @@ async function loadRanking(container, user, preset) {
 	}
 
 	const line = document.createElement("p");
-	// ABOVE THE BOARD, LIKE EVERY OTHER PANE'S DESCRIPTION: 10px ABOVE IT AND 10px BETWEEN IT AND THE BOARD
-	line.className = "card-sub margin-top-10";
-	line.style.fontSize = ".7em";
 	// THE LINE TELLS THE NEWS STRAIGHT AWAY, WITHOUT WAITING FOR THE PLAQUES: WHAT HAPPENED SINCE THE LAST LOOK, THEN WHERE THE
 	// PLAYER STANDS NOW. A GAIN, AND WHO THEY PASSED IF THEY MOVED UP (TOLD APART BY ref); AFTER A DROP THE PIG TEASES — NEVER SHAMES
 	const meBefore = before.findIndex(row => row.is_me);
@@ -277,9 +268,19 @@ async function loadRanking(container, user, preset) {
 	const overtook = meIndex !== -1 && passedBefore !== -1 && passedBefore < meBefore;
 	const lead = dropped ? MSG_RANKING_DROPPED : gained > 0 ? (overtook ? MSG_RANKING_OVERTAKE(gained, passed.name) : MSG_RANKING_GAINED(gained)) : "";
 	if (preset) {
-		// THE VISITOR'S LINE, WITH ITS LOGIN LINK — NO PLAYER NAMES IN IT, SO IT CAN GO IN AS HTML
+		// THE VISITOR'S LOGIN NUDGE IS A DESCRIPTION, ABOVE THE BOARD LIKE EVERY OTHER PANE'S: SMALL, 10px ABOVE IT AND 10px BELOW.
+		// NO PLAYER NAMES IN IT, SO IT CAN GO IN AS HTML
+		line.className = "card-sub margin-top-10";
+		line.style.fontSize = ".7em";
 		line.innerHTML = MSG_VISITOR_RANKING;
-	} else if (meIndex === -1) {
+		container.before(line);
+		container.classList.replace("margin-top-20", "margin-top-10");
+		return appendRulesCard(container, MSG_POINTS_INFO, XP_RULES, MSG_RANKING_INFO, MSG_RANKING_INTRO);
+	}
+	// A PLAYER'S LINE IS THE BOARD'S PUNCHLINE, IN THE PIG'S VOICE: UNDER THE SIGN, BIG AND BOLD, SO IT DOESN'T READ AS A DESCRIPTION
+	line.className = "info-sub1 margin-top-20";
+	sign.after(line);
+	if (meIndex === -1) {
 		// OPTED OUT: THE ONE LINE WITH A LINK, AND NO PLAYER NAMES IN IT, SO IT CAN GO IN AS HTML
 		line.innerHTML = MSG_RANKING_OUT;
 		line.querySelector("a").addEventListener("click", event => {
@@ -290,8 +291,6 @@ async function loadRanking(container, user, preset) {
 		// NAMES ARE TYPED BY PLAYERS, SO EVERY OTHER LINE GOES IN AS TEXT
 		line.textContent = (lead ? `${lead} ` : "") + rankingLine(after);
 	}
-	container.before(line);
-	container.classList.replace("margin-top-20", "margin-top-10");
 
 	// THE SNAPSHOT IS SAVED ONLY ONCE THE PLAYER HAS SEEN THE UPDATE, SO A BOARD NEVER OPENED STILL PLAYS NEXT TIME. ONLY WHAT
 	// season_ranking ALREADY SHOWED THEM. NEVER IN DEBUG, AND NEVER FOR THE VISITOR'S EXAMPLE BOARD
@@ -304,7 +303,7 @@ async function loadRanking(container, user, preset) {
 	const changed = indices.some(i => start(i).name !== after[i].name || start(i).points !== after[i].points);
 	if (!changed) {
 		if (before === after) save();
-		return appendRulesCard(container, MSG_POINTS_INFO, POINTS_RULES, MSG_RANKING_INFO);
+		return appendRulesCard(container, MSG_POINTS_INFO, XP_RULES, MSG_RANKING_INFO, MSG_RANKING_INTRO);
 	}
 
 	// THE UPDATE PLAYS THE FIRST TIME THE BOARD IS ACTUALLY SEEN (THE RANKING TAB OPENED), NOT WHEN IT'S RENDERED HIDDEN. EVERY
@@ -317,5 +316,5 @@ async function loadRanking(container, user, preset) {
 			.then(save);
 	});
 	observer.observe(board);
-	appendRulesCard(container, MSG_POINTS_INFO, POINTS_RULES, MSG_RANKING_INFO);
+	appendRulesCard(container, MSG_POINTS_INFO, XP_RULES, MSG_RANKING_INFO, MSG_RANKING_INTRO);
 }

@@ -18,16 +18,18 @@ const MSG_VISITOR_INTRO = `Estes são os jogos começados neste dispositivo. ${M
 const MSG_VISITOR_LOGIN = "Fazer login";
 const MSG_DUMMY_TITLE = "Minha primeira partida";
 const MSG_DUMMY_PASS = "Meu primeiro passe";
+const MSG_DUMMY_PASS_EXPIRY = "1 ano";
 const MSG_VISITOR_PROGRESS = `Vais ver o teu ténis progredir aqui. Usa o Campo Livre quando jogares para acumular XP. ${MSG_LOGIN_LINK} para não perderes o progresso.`;
 const MSG_VISITOR_INFO = "Dá o próximo passo no ténis: acompanha a tua evolução e joga em campos privados.";
-const MSG_VISITOR_PASSES = `Passes são permissões para jogares em campos privados. É necessário <a href="login.html">login</a> e envio de informações aos administradores do campo.`;
+// PASSES ARE POSTPONED UNTIL REAL PRIVATE COURTS SIGN UP: ONE TEASER LINE FOR PLAYERS AND VISITORS ALIKE, ABOVE THE LOCKED DUMMY PASS. THE
+// "EM BREVE" PILL SITS ON THE DUMMY PASS ITSELF (passCard soon)
+const MSG_PASSES_SOON = `Em breve poderás solicitar um passe junto dos administradores de um campo para poderes reservar horários e jogar em campos privados sem burocracia.`;
 // LOSS AVERSION FOR A VISITOR WITH WALK-INS; A CONCRETE NEXT STEP FOR A BLANK ONE, WHO HAS NOTHING TO LOSE YET
 const MSG_TEASER_XP = xp => `Já tens ${MSG_XP(xp)} à tua espera. ${MSG_LOGIN_LINK} para não os perderes.`;
 const MSG_TEASER_FIRST = xp => `O teu primeiro jogo vai valer logo ${MSG_XP(xp)}.`;
 
 const MSG_VIEW_PROGRESS = "Progresso";
 const MSG_VIEW_RANKING = "Ranking";
-const MSG_NO_PASSES = "Não és membro de nenhum campo, infelizmente. Bora mudar isso com o teu primeiro passe!";
 const MSG_PASS_REQUESTED = date => `Pedido a ${date}`;
 const MSG_PASS_PENDING = "Solicitação enviada. Aguarda aprovação dos administradores do campo.";
 const MSG_PASS_DENIED = reason => reason ? `Solicitação recusada. Motivo: ${reason}` : "Solicitação recusada.";
@@ -183,7 +185,7 @@ async function loadPasses(container, user, passesPromise) {
 	// NO PASS YET: THE SAME LOCKED DUMMY TICKET VISITORS GET, SO THE VIEW SHOWS WHAT A PASS LOOKS LIKE INSTEAD OF A LONE PIG.
 	// THE MESSAGE GOES ABOVE THE LIST, 10px EACH, LIKE EVERY OTHER PANE WITH A DESCRIPTION
 	if (!passes.length) {
-		container.insertAdjacentHTML("beforebegin", `<p class="card-sub margin-top-10" style="font-size: .7em">${MSG_NO_PASSES}</p>`);
+		container.insertAdjacentHTML("beforebegin", `<p class="card-sub margin-top-10" style="font-size: .7em">${MSG_PASSES_SOON}</p>`);
 		container.classList.replace("margin-top-20", "margin-top-10");
 		container.innerHTML = dummyPassCard();
 		return;
@@ -242,7 +244,7 @@ function requestCard(name, request, requested, courtId) {
 
 // THE VISITOR'S EXAMPLE PASS. DATES ARE 30/02, A DAY THAT DOESN'T EXIST, SO IT READS AS AN EXAMPLE
 function dummyPassCard() {
-	return passCard({ name: MSG_DUMMY_PASS, since: "30/02", expires: null, nextGame: "SAB, 30/02, 18:00-19:00", bookings: 1, locked: true });
+	return passCard({ name: MSG_DUMMY_PASS, since: "30/02", expires: MSG_DUMMY_PASS_EXPIRY, nextGame: "SAB, 30/02, 18:00-19:00", bookings: 1, locked: true, soon: true });
 }
 
 // VISITORS SEE THEIR DEVICE'S WALK-IN HISTORY INSTEAD OF BEING BOUNCED TO THE LOGIN PAGE — SOMEONE WHO
@@ -254,7 +256,7 @@ function showVisitor() {
 		${FOLDER_TABS_HTML}
 		<!-- PASSES SHARE THE GAMES' TAB, ON TOP: POSTPONED, THEY'RE A TEASER OF WHAT'S COMING, NOT WORTH A TAB OF THEIR OWN -->
 		<div data-pane-body="history" hidden>
-			<p class="card-sub margin-top-10" style="font-size: .7em">${MSG_VISITOR_PASSES}</p>
+			<p class="card-sub margin-top-10" style="font-size: .7em">${MSG_PASSES_SOON}</p>
 			<div class="bookings-list margin-top-10">${dummyPassCard()}</div>
 			<div class="divider"></div>
 			<div class="bookings-list margin-top-20 margin-bottom-20" id="history-list"></div>

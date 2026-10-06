@@ -24,9 +24,9 @@ const MSG_PROGRESS_INFO = "Entende o progresso";
 // EACH OTHER (SEE "THE PROGRESS MODEL" IN CLAUDE.md)
 const MSG_PROGRESS_INTRO = `Cada partida dá-te XP, e acumular XP faz-te subir do nível 1 ao 10. Estas são as formas de ganhar XP:`;
 const MSG_PROGRESS_RULES = `<b>Estilo de jogo:</b> mostra como tens jogado nos últimos 6 meses. <img src="images/icon_fire_color.svg" class="link-icon" alt="">Frequência, <img src="images/icon_repeat_color.svg" class="link-icon" alt="">Consistência e <img src="images/icon_globe_color.svg" class="link-icon" alt="">Território são medidos aqui. Cada um recebe uma nota de 0 a 100%.<br><br><b>Diamantes:</b> são as conquistas mais valiosas do Campo Livre: 100 partidas, ou 10 campos diferentes, ou jogar todas as semanas durante 6 meses, ou vencer uma <a href="#" data-pane-link="ranking">época</a>.<br><br>Partidas com menos de 10 min não são registadas.`;
-// DISPLAY ONLY — THE RULES THEMSELVES LIVE IN games_xp (supabase/sql/xp.sql), SO KEEP THESE IN STEP WITH IT (AND WITH
-// POINTS_RULES IN ranking.js). THE PASS IS POSTPONED, SO ITS ROW SAYS "EM BREVE"
-const PROGRESS_RULES = [
+// THE WAYS TO EARN XP, ONE LIST FOR BOTH "ENTENDE O PROGRESSO" AND "ENTENDE O RANKING" (ranking.js), SO THE TWO CAN NEVER WORD THEM
+// DIFFERENTLY. DISPLAY ONLY — THE RULES LIVE IN games_xp (supabase/sql/xp.sql). THE PASS IS POSTPONED, SO ITS ROW SAYS "EM BREVE"
+const XP_RULES = [
 	["Cada partida", 500],
 	["Cada campo novo", 500],
 	["Cada semana seguida a jogar", 500],
@@ -135,7 +135,7 @@ async function loadProgress(container, gamesPromise, teaserPromise, xpPromise) {
 	const xp = await xpPromise;
 	if (!games.length) {
 		setPigAppearance(container, MSG_PROGRESS_EMPTY, "pig_reaching");
-		appendRulesCard(container, MSG_PROGRESS_INFO, PROGRESS_RULES, MSG_PROGRESS_RULES, MSG_PROGRESS_INTRO);
+		appendRulesCard(container, MSG_PROGRESS_INFO, XP_RULES, MSG_PROGRESS_RULES, MSG_PROGRESS_INTRO);
 		return;
 	}
 
@@ -177,7 +177,7 @@ async function loadProgress(container, gamesPromise, teaserPromise, xpPromise) {
 		statCard("repeat_color", "Consistência", STAT_WEEKS, weeks, MSG_STAT_WEEKS(shown(weeks)), diamonds.weeks),
 		statCard("globe_color", MSG_TITLE_TERRITORY, STAT_TERRITORY, courts, MSG_STAT_COURTS(shown(courts)), diamonds.courts),
 	].join("");
-	appendRulesCard(container, MSG_PROGRESS_INFO, PROGRESS_RULES, MSG_PROGRESS_RULES, MSG_PROGRESS_INTRO);
+	appendRulesCard(container, MSG_PROGRESS_INFO, XP_RULES, MSG_PROGRESS_RULES, MSG_PROGRESS_INTRO);
 }
 
 // "ENTENDE O …": THE RULES OF A TAB, FOLDED AWAY UNTIL ASKED FOR — THE SAME COLLAPSIBLE CARD AS THE ADMIN'S COURT RULES
