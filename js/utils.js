@@ -3,6 +3,10 @@ const MSG_LOGIN_LINK = `<a href="login.html">Faz login</a>`;
 // SHOWN BOTH DURING ONBOARDING AND ON THE PROFILE'S DADOS, NEXT TO WHERE THE DATA IS ENTERED
 const MSG_DATA_DISCLAIMER = "Estas informações são relevantes para o administrador do campo quando pedes um passe. Por este motivo o Campo Livre irá guardar os teus dados, embora não tenha interesse neles.";
 
+// THE DEV SERVER (localhost OR THE LAN IP, FOR TESTING ON A PHONE). DEBUG SWITCHES (?surprise, ?board) ONLY WORK HERE, NEVER IN
+// PRODUCTION OR ON VERCEL PREVIEWS
+const IS_DEV = /^(localhost|127\.0\.0\.1|192\.168\.)/.test(location.hostname);
+
 // PENDING AND REFUSED PASS REQUESTS DROP OUT OF VIEW — ADMIN AND PLAYER ALIKE — A MONTH AFTER THEY WERE MADE. HIDDEN ONLY:
 // THE ROW STAYS IN THE DATABASE. COUNTED FROM created_at FOR BOTH, SINCE passes HAS NO COLUMN FOR WHEN A REQUEST WAS REFUSED
 const REQUEST_EXPIRY_MONTHS = 1;

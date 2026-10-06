@@ -16,7 +16,6 @@ const MSG_KIND_WALKIN = "Jogo público";
 const MSG_KIND_BOOKING = "Jogo reservado";
 const MSG_VISITOR_INTRO = `Estes são os jogos começados neste dispositivo. ${MSG_LOGIN_LINK} para os guardares na tua conta e os veres em qualquer lado.`;
 const MSG_VISITOR_LOGIN = "Fazer login";
-const MSG_LINK_FAILED = "Este link de login já não funciona. Cada link só serve uma vez e expira ao fim de algum tempo. Pede um novo e abre-o logo.";
 const MSG_DUMMY_TITLE = "Minha primeira partida";
 const MSG_DUMMY_PASS = "Meu primeiro passe";
 const MSG_VISITOR_PROGRESS = `Vais ver o teu ténis progredir aqui. Usa o Campo Livre quando jogares para acumular XP. ${MSG_LOGIN_LINK} para não perderes o progresso.`;
@@ -44,9 +43,8 @@ function takeOnce(key) {
 	}
 }
 
-// AFTER A MAGIC LINK: BACK TO THE COURT LOGIN STARTED FROM (returnTo, SET BY court-bookable.js), ELSE THE COURT LIST.
-// justLoggedIn (SET BY login.js) TELLS A LOGIN LANDING APART FROM OPENING THE PROFILE VIA THE HEADER AVATAR.
-// A LINK OPENED IN ANOTHER BROWSER HAS NEITHER FLAG AND STAYS ON THE PROFILE
+// AFTER LOGGING IN: BACK TO THE COURT LOGIN STARTED FROM (returnTo, SET BY court-bookable.js), ELSE THE COURT LIST.
+// justLoggedIn (SET BY login.js ONCE THE CODE IS ACCEPTED) TELLS A LOGIN LANDING APART FROM OPENING THE PROFILE VIA THE AVATAR
 function redirectAfterLogin() {
 	const returnTo = takeOnce("returnTo");
 	const justLoggedIn = takeOnce("justLoggedIn");
@@ -433,12 +431,6 @@ function showProfile(user, profile) {
 }
 
 // USE onAuthStateChange SO WE RECEIVE THE SESSION ONLY AFTER ANY PENDING TOKEN REFRESH RESOLVES.
-function showLinkFailed() {
-	setPigAppearance(app, MSG_LINK_FAILED);
-	app.insertAdjacentHTML("beforeend", `<button id="new-link-btn" class="margin-top-20"><img src="images/icon_login.svg" class="link-icon" alt="">Pedir novo link</button>`);
-	document.getElementById("new-link-btn").addEventListener("click", () => { location.href = "login.html"; });
-}
-
 // getSession() CAN RETURN null DURING A REFRESH, CAUSING A REDIRECT LOOP WITH login.html.
 // THE loaded FLAG PREVENTS loadProfile FROM BEING CALLED TWICE (e.g. INITIAL_SESSION + TOKEN_REFRESHED).
 let loaded = false;
@@ -450,14 +442,8 @@ db.auth.onAuthStateChange((event, session) => {
 		}
 	} else if (event === 'SIGNED_OUT') {
 		location.href = 'login.html';
-	} else if (event === 'INITIAL_SESSION' && !location.hash.includes('access_token')) {
-		// A MAGIC LINK THAT FAILED (EXPIRED, ALREADY USED — EMAIL APPS THAT PREVIEW LINKS CAN USE THEM UP) ARRIVES WITH AN
-		// error INSTEAD OF A TOKEN. SAY SO RATHER THAN QUIETLY SHOWING THE VISITOR PROFILE, WHICH READS AS "LOGIN IS BROKEN"
-		if (/[#&?]error=/.test(location.hash + location.search)) {
-			showLinkFailed();
-			return;
-		}
-		// INITIAL_SESSION WITH NO SESSION AND NO MAGIC LINK TOKEN → A VISITOR
+	} else if (event === 'INITIAL_SESSION') {
+		// NO SESSION → A VISITOR. LOGIN IS A CODE TYPED ON login.html, SO NO TOKEN EVER ARRIVES IN THIS PAGE'S URL
 		showVisitor();
 	}
 });

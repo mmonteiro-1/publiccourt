@@ -16,27 +16,21 @@ Deno.serve(async (req) => {
 
   try {
 
-  console.log("notify-pass invoked");
   const { passId } = await req.json();
-  console.log("passId:", passId);
 
-  console.log("url ok:", !!SUPABASE_URL, "key ok:", !!SUPABASE_SERVICE_KEY);
   const db = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
-  console.log("db created");
 
-  const { data: pass, error: passError } = await db
+  const { data: pass } = await db
     .from("passes")
     .select("status, denied_reason, player_id, group_id, court_id")
     .eq("id", passId)
     .single();
-  console.log("pass:", pass, "error:", passError);
 
   if (!pass) {
     return new Response(JSON.stringify({ error: "Pass not found" }), { status: 404 });
   }
 
   const { data: userData, error: userError } = await db.auth.admin.getUserById(pass.player_id);
-  console.log("userData:", userData, "userError:", userError);
   if (userError || !userData?.user) {
     console.error("getUserById failed:", userError);
     return new Response(JSON.stringify({ error: "User not found" }), { status: 500, headers: corsHeaders });
@@ -72,7 +66,7 @@ Deno.serve(async (req) => {
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      from: "Campo Livre <onboarding@resend.dev>",
+      from: "Campo Livre <passes@campolivre.app>",
       to: user!.email,
       subject,
       text,

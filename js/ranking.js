@@ -165,7 +165,7 @@ function visitorRanking(xp) {
 async function loadRanking(container, user, preset) {
 	const season = currentSeason();
 	const { data } = preset ? { data: preset } : await db.rpc("season_ranking");
-	const debug = new URLSearchParams(location.search).get("board");
+	const debug = IS_DEV && new URLSearchParams(location.search).get("board");
 	// before IS THE BOARD AS THE PLAYER LAST SAW IT THIS SEASON (ranking_views), after THE LIVE RANKING. NO SNAPSHOT YET (FIRST
 	// LOOK THIS SEASON) MEANS NOTHING TO ANIMATE: THE BOARD JUST SHOWS
 	let before, after;

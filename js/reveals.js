@@ -98,7 +98,7 @@ function rainPeanuts(layer) {
 	drop(10, 0.8, 1, "in-front");
 }
 
-// DEBUG: PLAYS A SURPRISE WITH DUMMY DATA, ON DEMAND — ADD ?surprise TO ANY PAGE THAT LOADS THIS FILE (?surprise=passApproved
+// DEBUG (DEV SERVER ONLY, IS_DEV): PLAYS A SURPRISE WITH DUMMY DATA, ON DEMAND — ADD ?surprise TO ANY PAGE THAT LOADS THIS FILE (?surprise=passApproved
 // TO PICK ONE), OR CALL debugSurprise() FROM THE CONSOLE. NEVER RECORDED, SO IT REPLAYS EVERY TIME AND REAL SURPRISES STAY
 // UNTOUCHED. DUMMY DATES ARE 30/02, A DAY THAT DOESN'T EXIST. "Reserva o teu primeiro jogo" GOES TO THE FIRST BOOKABLE COURT, SO THE NEXT
 // STEP CAN BE TRIED TOO
@@ -114,6 +114,7 @@ const DEBUG_SURPRISES = {
 };
 
 async function debugSurprise(kind = "passApproved") {
+	if (!IS_DEV) return;
 	showReveal(await DEBUG_SURPRISES[kind](), { record: false });
 }
 
@@ -156,6 +157,6 @@ async function checkSurprises() {
 	}));
 }
 
-const debugKind = new URLSearchParams(location.search).get("surprise");
+const debugKind = IS_DEV ? new URLSearchParams(location.search).get("surprise") : null;
 if (debugKind !== null) debugSurprise(debugKind || undefined);
 else checkSurprises();

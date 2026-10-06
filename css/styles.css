@@ -918,7 +918,8 @@ button .link-icon {
 	margin-bottom: auto;
 }
 
-#login-form {
+#login-form,
+#code-form {
 	display: flex;
 	flex-direction: column;
 	gap: 10px;

@@ -210,13 +210,12 @@ npx supabase functions deploy notify-pass
 - **Vercel Web Analytics:** `/_vercel/insights/script.js` on every page (cookieless). Page views on court pages versus walk-ins in `weekly_metrics` is the funnel. Needs Analytics switched on in the Vercel project; the script 404s on the local dev server, which is harmless
 
 ### Resend
-Used exclusively inside edge functions. Not called from the frontend.
-- From address: `Campo Livre <onboarding@resend.dev>` (Resend sandbox domain — intentional, app has no public domain yet)
-- Sends approval/denial emails in Portuguese to the player's auth email
-- Email content: plain text only, no HTML
-- More email flows are planned beyond pass notify (booking confirmation, etc.)
-- **When a custom domain is set up:** update the Resend from-address AND add the domain to the Supabase auth Redirect URLs and Site URL (see "Redirect URL allowlist")
-- **Email notifications currently broken:** Resend sandbox only sends to the Resend account owner's email — arbitrary player emails are rejected. Fix: add a verified domain in Resend, update `from` address in the edge function. `notify-pass` also has debug `console.log` statements that should be cleaned up when this is addressed.
+Sends every email the app sends, on the domain **`campolivre.app`** (bought 10/2026 through Vercel, so its DNS lives in Vercel; verified in Resend, region Ireland `eu-west-1`). The domain only sends email — the site stays at `publiccourt.vercel.app`, which every printed QR code points to.
+- **Auth emails (login codes):** Supabase sends them through Resend as custom SMTP — Supabase → Authentication → Emails → SMTP Settings: host `smtp.resend.com`, port 465, user `resend`, password a Resend API key, sender `Campo Livre <entrar@campolivre.app>`. Supabase's built-in email can't be used: it only delivers to the project team's addresses, ~2 an hour, and custom SMTP is what unlocks editing the templates
+- **Templates** ("Magic Link" for returning players, "Confirm signup" for new emails): Portuguese, the code (`{{ .Token }}`) and no link; OTP length 6, expiry 10 min
+- **Edge functions** (`notify-pass`) call Resend's API directly with the `RESEND_API_KEY` secret, from `Campo Livre <passes@campolivre.app>` (was the sandbox `onboarding@resend.dev`, which only reached the Resend account owner). Debug `console.log`s removed. Deploy by pasting the file in the dashboard
+- Pass emails: approval/denial in Portuguese, plain text only. More flows planned (booking confirmation, etc.)
+- **If the site ever moves to `campolivre.app`:** add it to Supabase's Site URL and Redirect URLs, and keep `publiccourt.vercel.app` working (or redirecting) for the QR codes
 
 ## Conventions
 
@@ -531,7 +530,9 @@ Future exploration, not planned yet. Finding someone to play with is the main ba
 
 ### Authentication
 
-Supabase Auth is already included — magic link is a built-in provider, no extra infrastructure needed.
+Supabase Auth is already included — email OTP is a built-in provider, no extra infrastructure needed.
+
+**Login is a code, not a magic link (10/2026).** The email carries a 6-digit code the player types on `login.html`, so the session lands exactly where they asked for it. A link opened in whatever browser the mail app picks — on iOS never the installed PWA, which keeps its own storage apart from Safari's — so installed-app players could never log in. The Supabase email templates **"Magic Link"** and **"Confirm signup"** (Authentication → Emails; brand-new emails get "Confirm signup") must show `{{ .Token }}` and no link, in Portuguese.
 
 **What Supabase manages automatically:**
 - `auth.users` — email, session tokens, last login. Not touched directly.
@@ -544,16 +545,16 @@ Supabase Auth is already included — magic link is a built-in provider, no extr
 **Roles:** one email = one role. An account is either a **player** or an **admin**, never both (an admin who also plays is too rare to design for). Admin = owns at least one `court_groups` row.
 
 **Login flow:**
-1. `login.html` — player submits email only (`signInWithOtp`, `emailRedirectTo: profile.html`). Already logged in → straight to `profile.html`
-2. Magic link lands on `profile.html`, which is also the post-login router (`js/profile.js`):
+1. `login.html` — player submits their email (`signInWithOtp`), then types the code from the email on the same screen (`verifyOtp`, type `email`); "Pedir novo código" resends it. Already logged in → straight to `profile.html`
+2. Once the code is accepted, `login.js` sets a one-shot `localStorage.justLoggedIn` and goes to `profile.html`, which is also the post-login router (`js/profile.js`):
    - **Admin** → `admin.html` (admins have no `profile.html`; their profile is a view inside the dashboard)
    - **No `profiles` row** → `onboarding.html` (`js/onboarding.js`): 3-step onboarding (name required; phone, NIF optional), then back to `profile.html`, which continues below
    - **Came from a court page** → back to that court (see "Return to court")
-   - **Otherwise, landing from a magic link** → the court list. `login.js` sets a one-shot `localStorage.justLoggedIn` when the link is sent, so this doesn't fire when the profile is opened from the header avatar
-   - **Otherwise** (avatar visit, or a link opened in another browser) → the player profile
+   - **Otherwise, just logged in** (`justLoggedIn`) → the court list. The flag is set only after a real login, so it never lingers
+   - **Otherwise** (avatar visit) → the player profile
 3. `admin.html` bounces anyone who owns no group back to `profile.html`
 
-**Return to court:** "Fazer login" on a court page stores that page in `localStorage.returnTo`; `profile.js` reads and clears it once the session exists (after onboarding for new players). One-shot, and only works if the magic link is opened in the **same browser** that requested it — a link opened on another device lands on the profile instead.
+**Return to court:** "Fazer login" on a court page stores that page in `localStorage.returnTo`; `profile.js` reads and clears it once the session exists (after onboarding for new players). One-shot. Known gap: a player who taps "Fazer login" and backs out keeps a stale `returnTo` until their next login.
 
 **Profile entry points:** avatar icon (`icon_avatar.svg`) in the header — court list and court pages link to `profile.html`; in `admin.html` it opens the dashboard's own profile view (replaced the old gear tab in the nav).
 
@@ -576,7 +577,7 @@ Supabase Auth is already included — magic link is a built-in provider, no extr
 - **The dummy progress is the dummy first game** (the same "Minha primeira partida" as the history card), so the XP is 1000 and every level is 1, for every visitor. On top of it, `loadProgress`'s teaser mode pins the trading card's ratings and the stat cards' numbers at 0 — an empty starting point. The trading card shows the level-1 character, Raquete emprestada, like a real level-1 player's (the character arc decided visitors are level 1); the teaser sits inside it, under the XP bar
 - **The XP bar is static** — a looping fill (`fill-grow`) was tried and removed. It had taught one rule that still holds: animating `width` forced a layout on every frame, and animating `--fill` needs `@property` and jumped. **Rule for any looping or long animation: only `transform` and `opacity`**
 
-**Redirect URL allowlist:** Supabase only returns magic links to URLs listed in Authentication → URL Configuration → Redirect URLs; anything else falls back to the Site URL. Site URL is `https://publiccourt.vercel.app`. The list (`*` matches anything except `.` and `/`):
+**Redirect URL allowlist:** no longer used by login (codes don't redirect) — kept for any future email link. Supabase only returns links to URLs listed in Authentication → URL Configuration → Redirect URLs; anything else falls back to the Site URL. Site URL is `https://publiccourt.vercel.app`. The list (`*` matches anything except `.` and `/`):
 
 ```
 http://localhost:3000/**
@@ -587,20 +588,18 @@ https://publiccourt.vercel.app/**
 https://publiccourt-*-public-court.vercel.app/**
 ```
 
-The LAN patterns survive a new IP on either network; the last line covers every branch preview (e.g. `publiccourt-git-bookable-mvp-public-court.vercel.app`). A link always returns to the origin it was requested from, so request and open it on the same address. A link that arrives with an `error=` (expired, or already used — email apps that preview links can use them up) shows `MSG_LINK_FAILED` with a "Pedir novo link" button instead of the visitor profile.
+The LAN patterns survive a new IP on either network; the last line covers every branch preview (e.g. `publiccourt-git-bookable-mvp-public-court.vercel.app`).
 
-**Testing a logged-in walk-in locally — the localhost/LAN-IP trap:** geolocation needs a secure context, so the walk-in check-in only works on `localhost`, never on `192.168.x.x` over HTTP. But magic links redirect to the LAN IP, which stores the session on *that* origin. Sessions and `device_id` are per-origin, so a check-in done on `localhost` sees no session (`player_id` stays null) and a different `device_id` (the "is this my game?" check fails, showing the visitor copy). Neither is a bug — it's two origins.
-
-To test properly, log in from `localhost` (already on the Redirect URLs, both ports), so login and check-in share one origin. Use the LAN IP only for testing on a real phone, where the walk-in's location step won't work anyway.
+**Testing a logged-in walk-in locally — one origin:** geolocation needs a secure context, so the walk-in check-in only works on `localhost`, never on `192.168.x.x` over HTTP. Sessions and `device_id` are per-origin, so log in on the same address you check in on — a session on the LAN IP isn't seen on `localhost` (`player_id` stays null, and the "is this my game?" check fails). With codes this is just "type the code on the address you're testing"; use the LAN IP only for a real phone, where the location step won't work anyway.
 
 ### Sessions
 
 Sessions are kept alive indefinitely for active users. Supabase auto-refreshes tokens in the background.
 
-- Magic links only needed on first login, after explicit logout, or after session expiry
+- A login code is only needed on first login, after explicit logout, or after session expiry
 - Session expiry window is configurable (e.g. 30 or 90 days of inactivity)
 - If an admin revokes a player's access, their session is invalidated server-side via the Supabase admin API
-- New devices always require a new magic link — sessions don't transfer across devices
+- New devices (and the installed app vs the browser) always need their own login code — sessions don't transfer
 
 ### Todo
 
@@ -611,20 +610,23 @@ Sessions are kept alive indefinitely for active users. Supabase auto-refreshes t
     - [x] Service worker: `SHELL` still pre-caches the deleted `/js/court.js`, so `cache.addAll` fails and the worker never installs. Drop it (or list the new court scripts) and bump `CACHE` to `campo-livre-v9`
     - [x] `.vercelignore`: without it the deploy serves `CLAUDE.md` (schema, RLS notes, project ref), `flows.md`, `js/db_fill.md` and `supabase/` as public URLs
     - [x] `success.js`: `MSG_BOOKING_CANCELLED` was the placeholder "Tu finish" — now "Cancelaste o jogo marcado para …", mirroring `MSG_BOOKED`
-    - [ ] Decide: login from the installed PWA on iOS. The app keeps its own storage apart from Safari's, and the magic link opens in Safari, so the session lands there and the app stays logged out — and the install nudge pushes players into this. Fix: also accept the 6-digit code from the same email (`verifyOtp`; the email template needs `{{ .Token }}`). Or ship and accept it for now
+    - [x] Login from the installed PWA on iOS: the magic link opened in Safari, never the app. Login is now a code typed on `login.html` (`verifyOtp`) — see "Login is a code" under Authentication
+    - [x] Custom SMTP for Supabase Auth — it also unlocks editing the email templates, which the login code needs. **Tried Gmail (10/2026), dead end:** app passwords weren't available on the new account even with 2-Step Verification and a phone. A free `@gmail.com` sender through Brevo or similar fails Gmail's 2024 sender authentication and lands in spam. `vercel.app` can't send email (no DNS access). So: buy a domain
+    - [x] Bought `campolivre.app` (Vercel, €9.99) — see "Resend" under Backend Services. Buy a domain (~€10–20/yr, Vercel → Domains, so its DNS lives in Vercel), verify it in Resend (paste its DNS records into Vercel), create a Resend API key, and set the SMTP to Resend. Supabase's built-in email is a test service: a few emails per hour, and it may only deliver to the project team's addresses — public registration breaks on it. Needs a domain verified in Resend (DNS records), then Supabase → Authentication → SMTP Settings: host `smtp.resend.com`, port 465, user `resend`, password a Resend API key, sender on the verified domain (e.g. `Campo Livre <entrar@…>`). Then raise the auth email rate limit (Authentication → Rate Limits). The same verified domain unblocks `notify-pass` (its `from` is still the sandbox `onboarding@resend.dev`, see "Email notifications currently broken")
+    - [ ] Supabase URLs to the real ones: Authentication → URL Configuration → Site URL to the production address (`https://publiccourt.vercel.app`, or the custom domain if one comes with the Resend domain), and the Redirect URLs to match (keep `localhost` / LAN for development). Login no longer redirects, but the Site URL still appears in auth emails and any future link
   - **Character arc for levels 1–10** (trading card)
     - [x] Names and flavour texts: all ten in `XP_LEVEL_INFO` from the "Character arc" under Player progress; visitors show level 1, Raquete emprestada (`XP_VISITOR_INFO` and "Apanha-bolas" gone)
     - [x] Real names (level 10, brands in 1, 3, 7): kept as written, no legal check — decided 10/2026, fallback for 10 "Lenda do bairro" if anyone objects
     - [ ] Pig images per level: `XP_LEVEL_IMAGES` uses 3 placeholders for 10 levels — fine for shipping, drawings later
   - **Check in the dashboards**
     - [ ] Supabase has every SQL file live: `xp.sql`, `ranking.sql` (incl. `profiles.hide_from_ranking`), `court_groups.sql`, `metrics.sql`
-    - [ ] The "Confirm signup" email template is in Portuguese — brand-new emails get it, not the "Magic Link" one
+    - [x] Email templates "Magic Link" and "Confirm signup" (brand-new emails get the second): show `{{ .Token }}`, no link, in Portuguese — login breaks without the code in the email
     - [ ] Vercel Analytics is switched on
   - **Should fix (can follow right after)**
-    - [ ] Debug switches anyone can trigger: `?surprise` (`reveals.js`) plays a fake pass parcel, `?board=` (`ranking.js`) a fake ranking. Nothing is saved; limit them to localhost
-    - [ ] Stale `localStorage` flags: `justLoggedIn` is set before the email is sent and only cleared once a session exists, so a link opened elsewhere later sends an avatar tap to the court list; `returnTo` (set by "Fazer login" on a court) can return a much later login to an old court
+    - [x] Debug switches (`?surprise`, `debugSurprise()`, `?board=`) work only on the dev server (`IS_DEV` in `utils.js`: localhost or a 192.168 LAN IP), never in production or on Vercel previews
+    - [ ] Stale `localStorage` flag: (`justLoggedIn` fixed — now set only after the code is accepted) `returnTo` (set by "Fazer login" on a court) can return a much later login to an old court
     - [ ] Leaving onboarding halfway: logged in with no `profiles` row — "jogador" on court pages, `player_name` null on walk-ins, out of the ranking, and `hasLoggedIn` already set so the next login says "Bom tê-lo de volta"
-    - [ ] `notify-pass`: debug `console.log`s print the auth user (email, metadata) to the logs, and it doesn't check who calls it. Low impact while passes are postponed
+    - [ ] `notify-pass`: sender now `passes@campolivre.app` and the debug logs are gone (redeploy from the dashboard). Still open: it doesn't check who calls it — low impact while passes are postponed
   - **Can wait**
     - [ ] Court pages can stack two nudges (visitor + install); a blank visitor is told to see "o teu progresso" before having any
     - [ ] Nudge close controls are `<div>`s, not buttons (keyboard / screen readers can't close them)
