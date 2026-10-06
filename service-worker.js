@@ -1,5 +1,7 @@
-const CACHE = "campo-livre-v8";
+const CACHE = "campo-livre-v9";
 
+// EVERY ENTRY MUST EXIST: addAll FAILS ON A SINGLE 404 AND THE WORKER NEVER INSTALLS. A RENAMED OR DELETED FILE GOES HERE TOO,
+// AND THE CACHE NAME GETS BUMPED
 const SHELL = [
   "/",
   "/court",
@@ -8,8 +10,18 @@ const SHELL = [
   "/css/styles.css",
   "/js/config.js",
   "/js/utils.js",
-  "/js/court.js",
   "/js/court-list.js",
+  "/js/court-stage.js",
+  "/js/court-walkin.js",
+  "/js/court-bookable.js",
+  "/js/secondary-card.js",
+  "/js/slot-picker.js",
+  "/js/weather.js",
+  "/js/success.js",
+  "/js/ball-animation.js",
+  "/js/pass-card.js",
+  "/js/reveals.js",
+  "/js/tear-reveal.js",
   "/images/pig.svg",
   "/images/app_icon_192.png",
   "/images/app_icon_512.png",

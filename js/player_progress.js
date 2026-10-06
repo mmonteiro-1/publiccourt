@@ -75,22 +75,29 @@ const XP_LEVEL_IMAGES = [
 	"pig_serving", "pig_serving", "pig_serving", "pig_serving",
 ];
 
-// CHARACTER NAME + FLAVOUR TEXT PER XP LEVEL (INDEX 0 = LEVEL 1). ONLY ONE FOR TESTING — UNTIL EVERY LEVEL HAS ITS OWN,
-// A MISSING ENTRY FALLS BACK TO THE FIRST
+// CHARACTER NAME + FLAVOUR TEXT PER XP LEVEL (INDEX 0 = LEVEL 1) — THE CHARACTER ARC IN CLAUDE.md, ONE JOKE PER CARD.
+// VISITORS ARE LEVEL 1 TOO: THEIR LOCKED CARD SHOWS RAQUETE EMPRESTADA, LIKE A REAL LEVEL-1 PLAYER'S.
+// LEVEL 10 AND THE BRANDS IN 1, 3 AND 7 ARE KEPT AS WRITTEN; IF ANYONE OBJECTS, 10 BECOMES "LENDA DO BAIRRO"
 const XP_LEVEL_INFO = [
-	{ title: "Apanha-bolas", description: "Passa mais tempo a apanhar bolas do que a batê-las. Chega a casa com dores nas costas de tanto que se dobra." },
+	{ title: "Raquete emprestada", description: "Aparece para jogar com a raquete do primo e sapatilhas da Vans. Ainda tá a descobrir se é destro ou canhoto." },
+	{ title: "Pega de frigideira", description: "Segura a raquete como quem vai estrelar um ovo. Acerta na bola uma vez em cada cinco, e às vezes é com a cabeça." },
+	{ title: "Influenciador de campo", description: "Se não há post, não há ténis. Os followers acreditam que tem patrocínio da Lacoste." },
+	{ title: "O Aquecedor", description: "Faz quarenta minutos de aquecimento e joga dez. Diz que o segredo está na preparação." },
+	{ title: "Pavio curto", description: "Acha que devia jogar como na televisão. Cada bola na rede é uma ofensa pessoal." },
+	{ title: "Juiz de linha", description: "Nenhuma bola do adversário cai dentro. Tem vista de águia, mas só para um dos lados." },
+	{ title: "Cortador de fiambre", description: "Desde que aprendeu o slice não bate outra coisa. Era perfeito para cortar jamón no Mercadona." },
+	{ title: "Servidor público", description: "Serve tão rápido que ninguém lhe devolve uma bola. Perde os jogos todos por duplas faltas." },
+	{ title: "Supersticioso", description: "Ajeita a fita, limpa os punhos e bate a bola sete vezes antes de cada serviço. Em equipa que ganha não se mexe." },
+	{ title: "Roger Manel Federer", description: "Joga de olhos fechados e ainda dá conselhos a quem não pediu. Diz a lenda que já lhe pediram um autógrafo." },
 ];
 
-// THE VISITOR'S DUMMY CARD GETS ITS OWN CHARACTER, SO IT NEVER PASSES FOR A REAL LEVEL-1 PLAYER'S
-const XP_VISITOR_INFO = { title: "Raquete emprestada", description: "Aparece para jogar com a raquete do primo e sapatilhas da Vans. Ainda tá a descobrir se é destro ou canhoto." };
-
 // THE TRADING CARD (THINK MAGIC / POKÉMON): LEVEL IN THE BANNER, PLAYER ART, CHARACTER NAME AND FLAVOUR TEXT,
-// THE THREE STAT RATINGS, THEN THE XP BAR. A teaser MAKES IT THE VISITOR'S LOCKED PREVIEW: ITS OWN CHARACTER, THE FILL
+// THE THREE STAT RATINGS, THEN THE XP BAR. A teaser MAKES IT THE VISITOR'S LOCKED PREVIEW: THE FILL
 // GROWING IN (.locked), AND THE TEASER UNDER THE BAR
 function xpCard(xp, diamonds, stats, teaser) {
 	const { level, fill } = xpLevel(xp);
 	const index = level - 1;
-	const info = teaser ? XP_VISITOR_INFO : XP_LEVEL_INFO[index] ?? XP_LEVEL_INFO[0];
+	const info = XP_LEVEL_INFO[index];
 	return `
 		<div class="trading-card${teaser ? " locked" : ""}">
 			<p class="trading-card-level">${MSG_XP_LEVEL(index + 1)}<span>${DIAMOND_ICON} ${diamonds}</span></p>
@@ -119,7 +126,7 @@ function statRating(max, value) {
 
 // PROGRESS FROM THE SAME GAMES AS THE HISTORY (ALREADY WITHOUT THE ≤10 MIN ONES). DECLARED TIME ON COURT,
 // NOT TIME PLAYED: A WALK-IN LASTS WHAT THE PLAYER CHOSE UNLESS ENDED EARLY, AND A BOOKING DOESN'T PROVE A SHOW-UP
-// A teaser MAKES THIS THE VISITOR'S LOCKED PREVIEW: IT PINS EVERY RATING AT 1 AND THE STAT CARDS' COUNTS AT 0 —
+// A teaser MAKES THIS THE VISITOR'S LOCKED PREVIEW: IT PINS EVERY RATING AND THE STAT CARDS' COUNTS AT 0 —
 // AN EMPTY STARTING POINT RATHER THAN THE DUMMY FIRST GAME'S REAL VALUES. THE XP STILL COMES FROM THAT GAME
 // xpPromise IS THE TRADING CARD'S TOTAL: THE GAMES' XP PLUS +3000 PER PASS EVER AWARDED, AS player_xp COUNTS IT
 async function loadProgress(container, gamesPromise, teaserPromise, xpPromise) {
@@ -151,7 +158,7 @@ async function loadProgress(container, gamesPromise, teaserPromise, xpPromise) {
 	};
 
 	// NO BAR: THE XP BAR IS THE ONLY ONE ON THE PROFILE, SO A STAT NEVER READS AS A SECOND PROGRESS
-	const rating = (max, value) => teaser ? 1 : Math.round(statRating(max, value));
+	const rating = (max, value) => teaser ? 0 : Math.round(statRating(max, value));
 	const shown = value => teaser ? 0 : value;
 	const statCard = (icon, metric, max, value, count, diamond) => `
 		<div class="ticket">

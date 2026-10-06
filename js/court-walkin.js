@@ -9,6 +9,9 @@ export function init(id) {
 const MAX_DISTANCE_METERS = 500;
 const MAX_ACCURACY_ALLOWANCE = 500;
 const MSG_LOCATION_FAILED = "Parece que não estás no campo, ou então a localização falhou. Tenta ler o QR Code fixado na entrada do campo.";
+// TWO PLACES CAN BLOCK LOCATION ON EACH SYSTEM — THE BROWSER AND THE PHONE ITSELF — SO BOTH ARE LISTED
+const MSG_LOCATION_HINT_IOS = "Se o telefone não pede permissão, o bloqueio pode estar em 2 sítios: 1) Definições → Safari → Localização. 2) Definições → Privacidade → Serviços de Localização → Websites do Safari.";
+const MSG_LOCATION_HINT_ANDROID = "Se o telefone não pede permissão, o bloqueio pode estar em 2 sítios: 1) Definições → Aplicações → Chrome → Permissões → Localização. 2) Chrome → ⋮ → Definições → Definições de sites → Localização.";
 
 function distanceMeters(lat1, lon1, lat2, lon2) {
 	const R = 6371000;
@@ -133,11 +136,7 @@ export function renderPreview(court, active) {
 function renderLocationBlocked(court, message) {
 	const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
 	const isAndroid = /android/i.test(navigator.userAgent);
-	const locationHint = isIOS
-		? "Se negaste a localização, vai a Definições → Safari/Chrome → Localização e permite o acesso."
-		: isAndroid
-		? "Se negaste a localização, vai às Definições do browser → Permissões → Localização e permite o acesso."
-		: "";
+	const locationHint = isIOS ? MSG_LOCATION_HINT_IOS : isAndroid ? MSG_LOCATION_HINT_ANDROID : "";
 
 	app.innerHTML = `
 		<p class="court-label">${court.name}</p>
@@ -146,7 +145,7 @@ function renderLocationBlocked(court, message) {
 		<button id="retry-btn"><img src="images/icon_location_exclamation.svg" class="link-icon" alt=""> Tentar outra vez</button>
 		<button class="margin-top-10" id="hint-btn"><img src="images/icon_siren.svg" class="link-icon" alt=""> Não há QR Code na entrada</button>
 		<button class="button-shallow margin-top-10" id="back-btn">Voltar</button>
-		${locationHint ? `<p class="card-sub margin-top-10" style="font-size: 0.75em">${locationHint}</p>` : ""}
+		${locationHint ? `<p class="card-sub margin-top-10" style="font-size: 0.7em">${locationHint}</p>` : ""}
 	`;
 	document.getElementById("retry-btn").addEventListener("click", () => verifyLocationAndProceed(court));
 	document.getElementById("back-btn").addEventListener("click", () => { location.href = "index.html"; });

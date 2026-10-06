@@ -358,6 +358,33 @@ Levels 1–10, each needing 500 XP more than the last (level n spans 1 500 + 500
 
 The XP bar is the only bar on the profile, and it is relative: the fill only covers the current level. The player's total XP is written inside the bar; the level's max XP isn't shown. Past 42 500 the player stays level 10 with a full bar. Its own `.xp-bar` (yellow fill, the XP as one label).
 
+**Character arc** — one pig character per XP level on the trading card (`XP_LEVEL_INFO` name + flavour text, `XP_LEVEL_IMAGES` art). Names and flavour texts are locked, pending the name and brand checks below. Each card is one joke: name, flavour text and (later) animation work together. First written in the `pig-animations` workspace, removed in ee12f7e; this is now the copy of record.
+
+| Levels | Band | The joke | The motion |
+|---|---|---|---|
+| 1–4 | Clueless | Failure, confusion | Off-balance, wobbly holds, things go wrong |
+| 5–6 | Keen amateur | A habit or an attitude | Eager, sloppy timing |
+| 7–8 | Competent | A skill overdone | Strong, snappy |
+| 9–10 | Pro | Swagger | Precise, confident holds, the cleanest loops |
+
+| Lvl | Name | Flavour text | Animation seed |
+|---|---|---|---|
+| 1 | Raquete emprestada | Aparece para jogar com a raquete do primo e sapatilhas da Vans. Ainda tá a descobrir se é destro ou canhoto. | Passes the racket to his other hoof and stares at it, confused; shrugs; passes it back and settles in the start pose |
+| 2 | Pega de frigideira | Segura a raquete como quem vai estrelar um ovo. Acerta na bola uma vez em cada cinco, e às vezes é com a cabeça. | Holds the racket flat like a frying pan, tosses the ball, swings, misses; the ball bonks the headband |
+| 3 | Influenciador de campo | Se não há post, não há ténis. Os followers acreditam que tem patrocínio da Lacoste. | Holds a phone out, strikes a stiff "pro" pose with the racket, a flash, checks the phone, frowns, poses again |
+| 4 | O Aquecedor | Faz quarenta minutos de aquecimento e joga dez. Diz que o segredo está na preparação. | Stiff windmill arms, side tilts, a tiny bounce on the spot — all very serious. Never touches the racket |
+| 5 | Pavio curto | Acha que devia jogar como na televisão. Cada bola na rede é uma ofensa pessoal. | Swings with confidence, the ball clips the frame and flies straight up; he shakes a hoof in anger |
+| 6 | Juiz de linha | Nenhuma bola do adversário cai dentro. Tem vista de águia, mas só para um dos lados. | Eyes track an invisible ball, then a hoof snaps out pointing — "fora!". A smug little nod |
+| 7 | Cortador de fiambre | Desde que aprendeu o slice não bate outra coisa. Era perfeito para cortar jamón no Mercadona. | Crouches almost to the ground, the racket sweeping flat side to side like a deli slicer; the ball skims out low with backspin lines |
+| 8 | Servidor público | Serve tão rápido que ninguém lhe devolve uma bola. Perde os jogos todos por duplas faltas. | A clean serve: toss, racket up, snap, follow-through; the ball leaves with speed lines |
+| 9 | Supersticioso | Ajeita a fita, limpa os punhos e bate a bola sete vezes antes de cada serviço. Em equipa que ganha não se mexe. | A pro ritual: headband, wristband, crisp identical bounces, then the ready stance |
+| 10 | Roger Manel Federer | Joga de olhos fechados e ainda dá conselhos a quem não pediu. Diz a lenda que já lhe pediram um autógrafo. | Twirls the racket, catches it without looking, stops the ball dead on the strings, winks |
+
+- **Visitors are level 1 (decided):** the visitor's locked card shows Raquete emprestada, the same character as a real level-1 player — `XP_VISITOR_INFO`'s separate character and "Apanha-bolas" both go
+- **Level 1 wears trainers** instead of hooves (the "sapatilhas da Vans"): generic, no logo — for the drawings
+- **Real names — kept (decided 10/2026):** level 10 "Roger Manel Federer" (a real athlete) and the brands in levels 1, 3 and 7 (Vans, Lacoste, Mercadona) ship as written, without a legal check. Known risk: a famous person's name in a commercial product is protected as a personality right (Código Civil art. 72+) and can read as endorsement. If anyone objects, level 10 falls back to "Lenda do bairro"
+- **Props and effects** for the drawings: a phone and a camera flash (3), backspin lines (7), speed lines (8)
+
 ### Leaderboards and social comparison
 
 Being built — XP in the database, the opt-out, `season_ranking` and the ranking tab exist (see the Leaderboards todo); end of season doesn't yet. XP and the skill levels give every player a number, and numbers can be ranked. Comparing yourself with others is the strongest motivator in Duolingo (its leagues) and Strava (segment rankings), and it gives solo progress a reason to come back.
@@ -546,7 +573,7 @@ Supabase Auth is already included — magic link is a built-in provider, no extr
 - **Blank, a concrete next step:** they have nothing to lose yet, and an empty account gains nothing. 1000 XP is exact: a first game always earns +500 for the game and +500 for the new court
 - **No buttons on the previews:** the progress view has none, and the blank history has none either — an "Encontrar campo" under the dummy card made the card itself look clickable. The only button is "Fazer login" under a visitor's real history
 - **The history proves the number:** each card shows the XP it earned, so the teaser total can be traced game by game. The single dummy card shows +1000, matching the blank visitor's promise
-- **The dummy progress is the dummy first game** (the same "Minha primeira partida" as the history card), so the XP is 1000 and every level is 1, for every visitor. On top of it, `loadProgress`'s teaser mode pins the trading card's four ratings at 1 and the skill cards' numbers at 0 — an empty starting point. The trading card gets its own character, `XP_VISITOR_INFO` ("Raquete emprestada"), so it never passes for a real level-1 player's "Apanha-bolas"; the teaser sits inside it, under the XP bar
+- **The dummy progress is the dummy first game** (the same "Minha primeira partida" as the history card), so the XP is 1000 and every level is 1, for every visitor. On top of it, `loadProgress`'s teaser mode pins the trading card's ratings and the stat cards' numbers at 0 — an empty starting point. The trading card shows the level-1 character, Raquete emprestada, like a real level-1 player's (the character arc decided visitors are level 1); the teaser sits inside it, under the XP bar
 - **The XP bar is static** — a looping fill (`fill-grow`) was tried and removed. It had taught one rule that still holds: animating `width` forced a layout on every frame, and animating `--fill` needs `@property` and jumped. **Rule for any looping or long animation: only `transform` and `opacity`**
 
 **Redirect URL allowlist:** Supabase only returns magic links to URLs listed in Authentication → URL Configuration → Redirect URLs; anything else falls back to the Site URL. Site URL is `https://publiccourt.vercel.app`. The list (`*` matches anything except `.` and `/`):
@@ -577,6 +604,34 @@ Sessions are kept alive indefinitely for active users. Supabase auto-refreshes t
 
 ### Todo
 
+- [ ] **Ship `bookable-mvp` to `main` (week of 2026-10-06).** From the readiness review (public court pages, account flows, deploy). The walk-in flow — the live feature — matches `main`. Passes and bookings ship as "em breve" teasers; the test group (10) is reachable only by manual URL, accepted
+  - **Must fix before shipping**
+    - [x] Merge `main` into the branch. Conflicts: `js/court.js` (stays deleted — split into `court-stage.js` / `court-walkin.js`…) and `js/court-list.js` (keep the branch's; `main`'s fix was the `reservations` → `walk_ins` rename, already done here)
+    - [x] Port `main`'s location-permission hint (commit 62a517f, "Se o telefone não pede permissão, o bloqueio pode estar em 2 sítios…", iOS and Android, 0.7em) into `court-walkin.js`, which still has the old "Se negaste a localização…"
+    - [x] Service worker: `SHELL` still pre-caches the deleted `/js/court.js`, so `cache.addAll` fails and the worker never installs. Drop it (or list the new court scripts) and bump `CACHE` to `campo-livre-v9`
+    - [x] `.vercelignore`: without it the deploy serves `CLAUDE.md` (schema, RLS notes, project ref), `flows.md`, `js/db_fill.md` and `supabase/` as public URLs
+    - [x] `success.js`: `MSG_BOOKING_CANCELLED` was the placeholder "Tu finish" — now "Cancelaste o jogo marcado para …", mirroring `MSG_BOOKED`
+    - [ ] Decide: login from the installed PWA on iOS. The app keeps its own storage apart from Safari's, and the magic link opens in Safari, so the session lands there and the app stays logged out — and the install nudge pushes players into this. Fix: also accept the 6-digit code from the same email (`verifyOtp`; the email template needs `{{ .Token }}`). Or ship and accept it for now
+  - **Character arc for levels 1–10** (trading card)
+    - [x] Names and flavour texts: all ten in `XP_LEVEL_INFO` from the "Character arc" under Player progress; visitors show level 1, Raquete emprestada (`XP_VISITOR_INFO` and "Apanha-bolas" gone)
+    - [x] Real names (level 10, brands in 1, 3, 7): kept as written, no legal check — decided 10/2026, fallback for 10 "Lenda do bairro" if anyone objects
+    - [ ] Pig images per level: `XP_LEVEL_IMAGES` uses 3 placeholders for 10 levels — fine for shipping, drawings later
+  - **Check in the dashboards**
+    - [ ] Supabase has every SQL file live: `xp.sql`, `ranking.sql` (incl. `profiles.hide_from_ranking`), `court_groups.sql`, `metrics.sql`
+    - [ ] The "Confirm signup" email template is in Portuguese — brand-new emails get it, not the "Magic Link" one
+    - [ ] Vercel Analytics is switched on
+  - **Should fix (can follow right after)**
+    - [ ] Debug switches anyone can trigger: `?surprise` (`reveals.js`) plays a fake pass parcel, `?board=` (`ranking.js`) a fake ranking. Nothing is saved; limit them to localhost
+    - [ ] Stale `localStorage` flags: `justLoggedIn` is set before the email is sent and only cleared once a session exists, so a link opened elsewhere later sends an avatar tap to the court list; `returnTo` (set by "Fazer login" on a court) can return a much later login to an old court
+    - [ ] Leaving onboarding halfway: logged in with no `profiles` row — "jogador" on court pages, `player_name` null on walk-ins, out of the ranking, and `hasLoggedIn` already set so the next login says "Bom tê-lo de volta"
+    - [ ] `notify-pass`: debug `console.log`s print the auth user (email, metadata) to the logs, and it doesn't check who calls it. Low impact while passes are postponed
+  - **Can wait**
+    - [ ] Court pages can stack two nudges (visitor + install); a blank visitor is told to see "o teu progresso" before having any
+    - [ ] Nudge close controls are `<div>`s, not buttons (keyboard / screen readers can't close them)
+    - [ ] The header pig's eye animation no longer replays on load (the inline-SVG swap from `main` is gone)
+    - [ ] `court-stage.js` imports `court-bookable.js`, `slot-picker.js` and `weather.js` statically: a load error in any blanks the walk-in page. A lazy `import()` in the bookable branch would decouple them
+    - [ ] Lost back icon on the check-in screen's "Voltar"; a name with `"` breaks going back in onboarding; a page can hang on "A carregar..." if `access_token` comes without a session
+    - [ ] Already on `main`: a court with no walk-ins in 15 days shows a made-up occupancy chart; `court.html` with no `?court=` shows English debug text
 - [x] Get the player to login and land on profile page
   - [x] Differentiate first login (sign up — player chooses a name) from returning login (sign in — just requests a magic link) — no `profiles` row routes to onboarding; `login.html` shows newcomer or returning copy based on a per-device `localStorage.hasLoggedIn` flag set by `profile.js`
     - [x] Newcomers get `pig_reaching` ("Bora usar o Campo Livre a sério?"), the account pitch and a "login is optional for public courts" note; returning players get a single line
@@ -616,6 +671,7 @@ Sessions are kept alive indefinitely for active users. Supabase auto-refreshes t
     - [ ] Level-up and diamond surprises need a baseline: the first time their check runs, record the player's current level and diamonds silently, so nobody gets a parcel for something done months ago
     - [x] Reduced-motion version of the scene — the prize sits already in place, still, under `prefers-reduced-motion: reduce`
     - [ ] Next surprises, one at a time: level up, a diamond; later end of a season
+- [ ] After shipping `bookable-mvp`: tease the slot picker while bookings are "em breve". Never on a court page — no fake court on the list, and no real court advertising bookings it doesn't have. Options weighed: a read-only demo grid (`renderSlotPicker` `readOnly`, dummy hours and bookings) in a collapsible card by the dummy pass — dropped as too hidden; the info page as "Como funciona" — more discoverable, further from the pass. Until then the dummy pass's "próximo jogo" line is the only booking hint
 - [ ] Support multiple admins per court group (receptionists)
   - [ ] Create `court_group_members (group_id UUID, user_id UUID)` table
   - [ ] Migrate existing `court_groups.admin_id` rows into `court_group_members`

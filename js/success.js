@@ -4,7 +4,7 @@
 const MSG_WALKIN_STARTED = "Obrigado por avisar os outros jogadores.";
 const MSG_WALKIN_FINISHED = "Por avisar que o campo ficou livre.";
 const MSG_BOOKED = gameText => `Tens jogo marcado para ${gameText}.`;
-const MSG_BOOKING_CANCELLED = gameText => `Tu finish`;
+const MSG_BOOKING_CANCELLED = gameText => `Cancelaste o jogo marcado para ${gameText}.`;
 const MSG_BOOKING_CANCELLED_FREED = "O horário volta a ficar livre para outro jogador.";
 
 // ONE PRESET PER SCREEN. sub2 IS OPTIONAL; animation IS "ball" OR OMITTED
