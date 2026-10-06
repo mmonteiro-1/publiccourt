@@ -144,7 +144,7 @@ One concept, one word per layer. **Code** is what identifiers, comments, docs an
 - `player_id` → `auth.users.id`
 - RLS: players read own; admins read/update via court_groups join; admins DELETE via group ownership; players can DELETE when `status = 'denied'` (unused since re-requests revive the row)
   - **Players can never approve themselves.** "Players request own passes" (INSERT) only allows `status = 'pending'` with `approved_at`, `expires_at` and `denied_reason` all null. "Players re-request own passes" (UPDATE) only touches their own `pending` / `denied` row and only turns it back into that same fresh request. Both replaced policies that checked `auth.uid() = player_id` alone, which let a player insert or update their own row to `approved` from the console
-- **Request expiry:** a `pending` or `denied` row drops out of view — admin Pendentes tab, player Passes tab, court page — a month after its `created_at` (`REQUEST_EXPIRY_MONTHS` / `requestExpired` in `utils.js`, hardcoded). The row stays. Each request card shows its expiry date (trash icon)
+- **Request expiry:** a `pending` or `denied` row drops out of view — admin Pendentes tab, player passes (top of Meus jogos), court page — a month after its `created_at` (`REQUEST_EXPIRY_MONTHS` / `requestExpired` in `utils.js`, hardcoded). The row stays. Each request card shows its expiry date (trash icon)
 - **Re-requesting revives the row** (`requestPass` in `court-bookable.js`): a refused request, or any pending/refused one past its month, is updated back to `pending` with a fresh `created_at` and the reason cleared — never deleted and re-inserted. The one-row-per-scope unique constraint holds, and an expired pending request (which a player couldn't delete) no longer blocks asking again. The previous refusal reason is overwritten
 
 **bookings** — `id uuid, group_id int4, player_id uuid, court_id int8, start_at timestamptz, end_at timestamptz, status text, created_at timestamptz`
@@ -332,7 +332,7 @@ The 100 marks are a first guess, to be tuned once real play is known.
 - each distinct court played
 - each week with a game right after another week with a game (a lone week is already paid by its games)
 
-**Postponed, not paid today ("em breve"; see the "Pass postponed" todo):** **+1000 XP per pass** (`XP_PER_PASS`; was 3000 — postponed because no real private court has signed up yet, not over the value) (no longer shown on pass cards while postponed). A pass is a bigger step than a game: an admin vetted and approved the player. It's counted from `pass_awards`, never from `memberships`: revoking hard-deletes the pass row, and **XP never drops**. One award per scope, ever, so an admin revoking and re-approving can't farm it. The history cards no longer add up to the total for members — accepted, the difference is on the Passes tab.
+**Postponed, not paid today ("em breve"; see the "Pass postponed" todo):** **+1000 XP per pass** (`XP_PER_PASS`; was 3000 — postponed because no real private court has signed up yet, not over the value) (no longer shown on pass cards while postponed). A pass is a bigger step than a game: an admin vetted and approved the player. It's counted from `pass_awards`, never from `memberships`: revoking hard-deletes the pass row, and **XP never drops**. One award per scope, ever, so an admin revoking and re-approving can't farm it. The history cards no longer add up to the total for members — accepted, the difference is in the passes on top of Meus jogos.
 
 **XP per game** (the `xp` column of `games_xp`): the same total split across games, oldest first, so each history card shows what it earned ("+1000 XP", right of the court-type row) and the cards add up to the trading card. A court's bonus goes to its first game there, a streak week's bonus to that week's first game — so a card shows +500, +1000 or +1500. `player_xp` is the sum of `games_xp` plus the passes, so the two can't drift apart. The dummy game isn't in the database, so its +1000 is fixed in JS (`DUMMY_GAME_XP`).
 
@@ -600,7 +600,7 @@ Sessions are kept alive indefinitely for active users. Supabase auto-refreshes t
   - [x] Admin can revoke access from this view (hard-delete `memberships` row)
   - [ ] Email notification to player when revoked — send before deleting the row so we still have their email
   - [ ] Allow admin to set pass duration per member on approval (override the group default)
-  - [ ] In-app notification card for pass status changes (accept, deny, revoke) — dedicated card UI, not just inline state on court page. Accept is covered by the pass-approved surprise; deny by the orange refused card on the Passes tab. Revoke is still silent: the row is deleted, so the pass just disappears
+  - [ ] In-app notification card for pass status changes (accept, deny, revoke) — dedicated card UI, not just inline state on court page. Accept is covered by the pass-approved surprise; deny by the orange refused card on top of Meus jogos. Revoke is still silent: the row is deleted, so the pass just disappears
   - [x] Tear-strip reveal (tear-to-open) for important notifications: the notification arrives sealed like an Amazon-style parcel, and as the player drags up they pull the tear strip away to open it (the tear follows the finger; releasing early snaps it back) — built as `tear-reveal.js`, now the wrapper for surprises
   - [ ] Surprises (see "Surprises — tear-strip reveals for important moments" under High Level Thoughts)
     - [x] SQL: generic `revealed_surprises` table, backfilled with every pass approved before the feature
@@ -692,7 +692,7 @@ Sessions are kept alive indefinitely for active users. Supabase auto-refreshes t
       - [ ] Dados: locked dummy version for visitors
       - [ ] Padlocks on the progress cards? Their `overflow: hidden` and top banners clip and cover the history card's padlock
       - [x] History: 1 locked dummy card ("Minha primeira partida", +1000 XP) for blank visitors and players with no games, replacing the pig, with "Teu histórico de jogos ficará guardado aqui." above it. `.locked` card with a `.padlock` in the top-right corner: the round `.ticket-hole` plus `icon_padlock_color_cut.svg`, whose shackle is already cut where it runs behind the card — so it only works at its exact hand-tuned position
-  - [x] Passes view: the player's approved passes, shown as the admin's member card with the group name in place of the player name and no revoke link
+  - [x] Passes view (since 10/2026 no longer a tab: the pass section sits on top of Meus jogos (the games tab, formerly "Histórico"), a divider above the games (tab icon `icon_ball`) — passes are postponed, so it's a teaser; the four tabs fit small phones): the player's approved passes, shown as the admin's member card with the group name in place of the player name and no revoke link
     - [x] Fix the player member card — title falls back to the group's court names, courts line removed, expiry uses `icon_trash.svg`
     - [ ] Give every court group a name, so passes stop reading as "Court X, Court Y" — `court_groups.name` is `null` on every row today, so cards fall back to the court names. Fill it in Supabase, or let the admin set it in the dashboard
     - [x] Show pending and refused requests there too, not only approved passes (one list, no toggle — a player never has many; pending first, then passes, then refusals; `requestCard` in `profile.js`, the same ticket and badge slot as a pass): pending as a card marked "aguarda aprovação" (ties into the pending approval UX under Open Questions), refused with its reason and a way to ask again
@@ -716,13 +716,13 @@ Sessions are kept alive indefinitely for active users. Supabase auto-refreshes t
 - [ ] The install nudge's "Saiba como" (`court.html`, links to `info.html#panel-download`) takes the player away from the court page — show the how-to without leaving it
 - [ ] Get the admin to see the player booking and modify it
   - [x] Admin queries `bookings` for courts in their `court_groups` (bookings tab, default view)
-  - [x] Admin sees the exact same availability calendar as the player (read-only picker in each court-rules-card, player names on occupied slots)
+  - [x] Admin sees the exact same availability calendar as the player (read-only picker in each card-collapsible, player names on occupied slots)
   - [x] Admin can cancel a booking (Cancelar/Voltar confirm on the bookings card)
   - [x] Admin picker shows the whole group: "HH:MM (1/2)" = courts taken / active courts, orange as soon as any court is booked, every booked player's short name beneath
   - [x] Tapping a booked slot in the admin picker jumps to that booking's card (first booking only when several share the slot)
   - [ ] Admin can add a booking on behalf of a player, or edit one
 - [x] Player picker stays single-court; greeting points to the group's other courts ("Se não encontrares horário aqui, também podes reservar no …", `MSG_SIBLINGS`)
-- [x] Group stats for the admin, shown just above the slot picker in each court-rules-card (calculated in JS from the admin's bookings, whole group not per court)
+- [x] Group stats for the admin, shown just above the slot picker in each card-collapsible (calculated in JS from the admin's bookings, whole group not per court)
   - [x] This month: bookings, unique players, newcomers, estimated revenue, cancellations
   - [ ] Move to a Postgres RPC if a group's booking history gets large enough to slow the dashboard
 - [ ] Booking gaps (found after the booking back-and-forth)

@@ -446,7 +446,7 @@ header {
 }
 
 /* AN ICON INSIDE RUNNING TEXT ("ENTENDE O …" CARDS) HAS NO FLEX gap TO SPACE IT FROM ITS WORD */
-.court-rules-body .card-sub .link-icon {
+.card-collapsible-body .card-sub .link-icon {
 	margin-right: 5px;
 }
 
@@ -1788,7 +1788,7 @@ input[type="time"]::-webkit-date-and-time-value {
 .trading-card-stats {
 	display: grid;
 	grid-template-columns: repeat(3, 1fr);
-	gap: 20px;
+	gap: 10px;
 	margin: 10px 0;
 }
 
@@ -1853,7 +1853,7 @@ input[type="time"]::-webkit-date-and-time-value {
 	margin-bottom: 0;
 }
 
-.court-rules-card {
+.card-collapsible {
 	display: flex;
 	flex-direction: column;
 	gap: 5px;
@@ -1862,10 +1862,9 @@ input[type="time"]::-webkit-date-and-time-value {
 	padding: 10px;
 	font-size: 0.8em;
 	font-weight: 400;
-	box-shadow: 4px 4px 0 var(--black);
 }
 
-.court-rules-toggle {
+.card-collapsible-toggle {
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
@@ -1880,56 +1879,52 @@ input[type="time"]::-webkit-date-and-time-value {
 	text-transform: uppercase;
 }
 
-.court-rules-toggle .court-rules-title {
-	font-size: 1.5em;
-}
-
 .court-rules-title .link-icon {
 	flex-shrink: 0;
 }
 
-.court-rules-body {
+.card-collapsible-body {
 	margin-top: 15px;
 }
 
-.court-rules-body .day-strip {
+.card-collapsible-body .day-strip {
 	margin: 0 -10px;
 	padding: 0 10px;
 }
 
-.court-rules-body .chart-legend {
+.card-collapsible-body .chart-legend {
 	margin: 10px 0;
 }
 
 /* GROUP STATS REUSE THE COURT PAGE'S rules-grid, WHOSE WHITE TEXT IS MEANT FOR THE GREEN CARD */
-.court-rules-body .rules-grid {
+.card-collapsible-body .rules-grid {
 	flex-wrap: wrap;
 	gap: 10px;
 	margin-top: 5px;
 }
 
-.court-rules-body .rules-value,
-.court-rules-body .rules-label {
+.card-collapsible-body .rules-value,
+.card-collapsible-body .rules-label {
 	color: var(--black);
 }
 
-.court-rules-body .slot-cell {
+.card-collapsible-body .slot-cell {
 	background: var(--white);
 	/* GROWS TO FIT THE 1/2 COUNT PLUS ONE NAME PER BOOKED COURT */
 	height: auto;
 	min-height: 40px;
 }
 
-.court-rules-body .legend-slot-free {
+.card-collapsible-body .legend-slot-free {
 	background: var(--white);
 }
 
-.court-rules-body .slot-cell.slot-occupied {
+.card-collapsible-body .slot-cell.slot-occupied {
 	background: var(--orange);
 	color: var(--white);
 }
 
-.court-rules-body .slot-cell.slot-break {
+.card-collapsible-body .slot-cell.slot-break {
 	background: repeating-linear-gradient(-45deg,
 				#ffffff6a 0px,
 				#ffffff6a 3px,

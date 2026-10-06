@@ -178,12 +178,12 @@ async function loadProgress(container, gamesPromise, teaserPromise, xpPromise) {
 // A data-pane-link IN THE TEXT OPENS THAT PROFILE TAB. AN intro GOES ABOVE THE ROWS. SHARED WITH THE RANKING TAB (ranking.js)
 function appendRulesCard(container, title, rows, text, intro) {
 	container.insertAdjacentHTML("beforeend", `
-		<div class="court-rules-card">
-			<div class="court-rules-toggle">
+		<div class="card-collapsible">
+			<div class="card-collapsible-toggle">
 				<p class="court-rules-title"><img src="images/icon_info.svg" class="link-icon" alt="">${title}</p>
 				<img src="images/icon_triangle.svg" class="card-toggle-icon" alt="" style="transform: rotate(-90deg)">
 			</div>
-			<div class="court-rules-body" hidden>
+			<div class="card-collapsible-body" hidden>
 				${intro ? `<p class="card-sub">${intro}</p>` : ""}
 				${rows.map(([label, xp]) => `<p class="ranking-row"><span>${label}</span><span>+${MSG_XP(xp)}</span></p>`).join("")}
 				<p class="card-sub margin-top-10">${text}</p>
@@ -195,8 +195,8 @@ function appendRulesCard(container, title, rows, text, intro) {
 		event.preventDefault();
 		document.querySelector(`.folder-tab[data-pane="${link.dataset.paneLink}"]`).click();
 	}));
-	card.querySelector(".court-rules-toggle").addEventListener("click", () => {
-		const body = card.querySelector(".court-rules-body");
+	card.querySelector(".card-collapsible-toggle").addEventListener("click", () => {
+		const body = card.querySelector(".card-collapsible-body");
 		body.hidden = !body.hidden;
 		card.querySelector(".card-toggle-icon").style.transform = body.hidden ? "rotate(-90deg)" : "";
 	});

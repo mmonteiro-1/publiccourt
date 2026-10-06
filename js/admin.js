@@ -621,12 +621,12 @@ function renderRulesView() {
 		const priceEuros = group.price_per_slot_cents != null ? (group.price_per_slot_cents / 100).toFixed(2) : "";
 
 		return `
-			<div class="court-rules-card" data-group-id="${group.id}">
-				<div class="court-rules-toggle">
+			<div class="card-collapsible" data-group-id="${group.id}">
+				<div class="card-collapsible-toggle">
 					<p class="court-rules-title"><img src="images/icon_court.svg" class="link-icon" alt="">${courtNames}</p>
 					<img src="images/icon_triangle.svg" class="card-toggle-icon" alt="">
 				</div>
-				<div class="court-rules-body">
+				<div class="card-collapsible-body">
 
 				${renderGroupStats(group)}
 				<div id="admin-slot-picker-${group.id}"></div>
@@ -683,9 +683,9 @@ function renderRulesView() {
 		});
 	});
 
-	container.querySelectorAll(".court-rules-card").forEach(card => {
-		card.querySelector(".court-rules-toggle").addEventListener("click", () => {
-			const body = card.querySelector(".court-rules-body");
+	container.querySelectorAll(".card-collapsible").forEach(card => {
+		card.querySelector(".card-collapsible-toggle").addEventListener("click", () => {
+			const body = card.querySelector(".card-collapsible-body");
 			const icon = card.querySelector(".card-toggle-icon");
 			const collapsed = body.hidden;
 			body.hidden = !collapsed;

@@ -2,7 +2,6 @@
 // OTHER FILES ONLY PICK A PRESET AND PASS ITS DYNAMIC PARTS: showSuccess(SUCCESS.booked(gameLabel(start, end)))
 
 const MSG_WALKIN_STARTED = "Obrigado por avisar os outros jogadores.";
-const MSG_WALKIN_TIMER_HINT = mins => `Se quiseres ser porreiríssimo, coloca também um timer de ${mins}min a contar.`;
 const MSG_WALKIN_FINISHED = "Por avisar que o campo ficou livre.";
 const MSG_BOOKED = gameText => `Tens jogo marcado para ${gameText}.`;
 const MSG_BOOKING_CANCELLED = gameText => `Tu finish`;
@@ -10,7 +9,7 @@ const MSG_BOOKING_CANCELLED_FREED = "O horário volta a ficar livre para outro j
 
 // ONE PRESET PER SCREEN. sub2 IS OPTIONAL; animation IS "ball" OR OMITTED
 const SUCCESS = {
-	walkInStarted: mins => ({ pig: "pig_sitting", header: "Bom jogo", sub1: MSG_WALKIN_STARTED, sub2: MSG_WALKIN_TIMER_HINT(mins), seconds: 10, animation: "ball" }),
+	walkInStarted: () => ({ pig: "pig_sitting", header: "Bom jogo", sub1: MSG_WALKIN_STARTED, seconds: 10, animation: "ball" }),
 	walkInFinished: () => ({ pig: "pig_serving", header: "Obrigado", sub1: MSG_WALKIN_FINISHED, seconds: 6 }),
 	booked: gameText => ({ pig: "pig_sitting", header: "Jogo reservado", sub1: MSG_BOOKED(gameText), seconds: 10, animation: "ball" }),
 	// NO BALL: A CELEBRATION WOULD CLASH WITH THE SAD TONE

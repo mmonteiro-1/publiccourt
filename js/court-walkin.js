@@ -303,7 +303,7 @@ async function checkIn(court) {
 		return;
 	}
 
-	showSuccess(SUCCESS.walkInStarted(selectedDuration));
+	showSuccess(SUCCESS.walkInStarted());
 }
 
 async function verifyLocationAndProceed(court) {

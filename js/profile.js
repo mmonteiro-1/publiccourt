@@ -28,7 +28,6 @@ const MSG_TEASER_FIRST = xp => `O teu primeiro jogo vai valer logo ${MSG_XP(xp)}
 
 const MSG_VIEW_PROGRESS = "Progresso";
 const MSG_VIEW_RANKING = "Ranking";
-const MSG_VIEW_PASSES = "Os teus passes";
 const MSG_NO_PASSES = "Não és membro de nenhum campo, infelizmente. Bora mudar isso com o teu primeiro passe!";
 const MSG_PASS_REQUESTED = date => `Pedido a ${date}`;
 const MSG_PASS_PENDING = "Solicitação enviada. Aguarda aprovação dos administradores do campo.";
@@ -255,8 +254,12 @@ function showVisitor() {
 	const loginBtn = `<button data-action="login" class="margin-top-20"><img src="images/icon_login.svg" class="link-icon" alt="">${MSG_VISITOR_LOGIN}</button>`;
 	app.innerHTML = `
 		${FOLDER_TABS_HTML}
+		<!-- PASSES SHARE THE GAMES' TAB, ON TOP: POSTPONED, THEY'RE A TEASER OF WHAT'S COMING, NOT WORTH A TAB OF THEIR OWN -->
 		<div data-pane-body="history" hidden>
-			<div class="bookings-list margin-top-20 margin-bottom-20"></div>
+			<p class="card-sub margin-top-10" style="font-size: .7em">${MSG_VISITOR_PASSES}</p>
+			<div class="bookings-list margin-top-10">${dummyPassCard()}</div>
+			<div class="divider"></div>
+			<div class="bookings-list margin-top-20 margin-bottom-20" id="history-list"></div>
 			<!-- HIDDEN UNTIL THE HISTORY LOADS, AND FOR A BLANK VISITOR FOR GOOD: AN EMPTY ACCOUNT GAINS THEM NOTHING, AND A BUTTON
 			     UNDER THE DUMMY CARD MADE THE CARD ITSELF LOOK CLICKABLE -->
 			<div id="visitor-history-extra" hidden>
@@ -273,10 +276,6 @@ function showVisitor() {
 		<div data-pane-body="ranking" hidden>
 			<div class="bookings-list margin-top-20"></div>
 		</div>
-		<div data-pane-body="passes" hidden>
-			<p class="card-sub margin-top-10" style="font-size: .7em">${MSG_VISITOR_PASSES}</p>
-			<div class="bookings-list margin-top-10">${dummyPassCard()}</div>
-		</div>
 		<div data-pane-body="info" hidden>
 			<p class="card-sub margin-top-10" style="font-size: .7em">${MSG_VISITOR_INFO}</p>
 			${loginBtn}
@@ -284,7 +283,7 @@ function showVisitor() {
 	`;
 
 	const games = fetchHistory(null);
-	loadHistory(app.querySelector('[data-pane-body="history"] .bookings-list'), games, MSG_VISITOR_HISTORY_EMPTY).then(count => {
+	loadHistory(document.getElementById("history-list"), games, MSG_VISITOR_HISTORY_EMPTY).then(count => {
 		document.getElementById("visitor-history-extra").hidden = !count;
 	});
 	// WAITS FOR THE WALK-INS ONLY TO PICK THE TEASER — THE CARDS THEMSELVES ARE ALWAYS THE DUMMY FIRST GAME'S
@@ -301,8 +300,7 @@ const FOLDER_TABS_HTML = `
 	<div class="folder-tabs">
 		<button class="folder-tab active" data-pane="progress" aria-label="${MSG_VIEW_PROGRESS}"><img src="images/icon_medal.svg" alt=""><span>Progresso</span></button>
 		<button class="folder-tab" data-pane="ranking" aria-label="${MSG_VIEW_RANKING}"><img src="images/icon_ranking.svg" alt=""><span>Ranking</span></button>
-		<button class="folder-tab" data-pane="history" aria-label="${MSG_HISTORY_TITLE}"><img src="images/icon_history.svg" alt=""><span>Histórico</span></button>
-		<button class="folder-tab" data-pane="passes" aria-label="${MSG_VIEW_PASSES}"><img src="images/icon_id.svg" alt=""><span>Passes</span></button>
+		<button class="folder-tab" data-pane="history" aria-label="${MSG_HISTORY_TITLE}"><img src="images/icon_ball.svg" alt=""><span>Meus jogos</span></button>
 		<button class="folder-tab" data-pane="info" aria-label="${MSG_VIEW_INFO}"><img src="images/icon_gear.svg" alt=""><span>Dados</span></button>
 	</div>
 `;
@@ -323,7 +321,7 @@ const PROFILE_FIELDS = [
 	{ field: "nif", label: "NIF", type: "number", autocomplete: "off" },
 ];
 
-// RENDERS THE PLAYER PROFILE: A TOGGLE BETWEEN FOUR PANES — PAST GAMES, PROGRESS, PASSES, AND INFO
+// RENDERS THE PLAYER PROFILE: A TOGGLE BETWEEN FOUR PANES — PROGRESS, RANKING, PAST GAMES (WITH THE PASSES UNDER THEM), AND INFO
 // (GREETING, EMAIL READ-ONLY SINCE IT'S THE LOGIN, EDITABLE FIELDS + LOGOUT)
 function showProfile(user, profile) {
 	app.innerHTML = `
@@ -355,8 +353,11 @@ function showProfile(user, profile) {
 				<button id="logout-btn" class="button-shallow">Terminar sessão</button>
 			</div>
 		</div>
+		<!-- PASSES SHARE THE GAMES' TAB, ON TOP: POSTPONED, THEY'RE A TEASER OF WHAT'S COMING, NOT WORTH A TAB OF THEIR OWN -->
 		<div data-pane-body="history" hidden>
-			<div class="bookings-list margin-top-20"></div>
+			<div class="bookings-list margin-top-20" id="passes-list"></div>
+			<div class="divider"></div>
+			<div class="bookings-list margin-top-20" id="history-list"></div>
 		</div>
 		<div data-pane-body="progress">
 			<div class="bookings-list margin-top-20"></div>
@@ -364,16 +365,13 @@ function showProfile(user, profile) {
 		<div data-pane-body="ranking" hidden>
 			<div class="bookings-list margin-top-20"></div>
 		</div>
-		<div data-pane-body="passes" hidden>
-			<div class="bookings-list margin-top-20"></div>
-		</div>
 	`;
 
 	const games = fetchHistory(user);
-	loadHistory(app.querySelector('[data-pane-body="history"] .bookings-list'), games);
+	loadHistory(document.getElementById("history-list"), games);
 	loadProgress(app.querySelector('[data-pane-body="progress"] .bookings-list'), games, undefined, fetchXp());
 	loadRanking(app.querySelector('[data-pane-body="ranking"] .bookings-list'), user);
-	loadPasses(app.querySelector('[data-pane-body="passes"] .bookings-list'), user, fetchPasses(user));
+	loadPasses(document.getElementById("passes-list"), user, fetchPasses(user));
 
 	wireFolderTabs();
 
