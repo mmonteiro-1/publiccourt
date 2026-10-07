@@ -376,7 +376,7 @@ The XP bar is the only bar on the profile, and it is relative: the fill only cov
 | 1 | Raquete emprestada | Aparece para jogar com a raquete do primo e sapatilhas da Vans. Não tem absoluta certeza se aceitou o convite para jogar ténis ou padel. | Passes the racket to his other hoof and stares at it, confused; shrugs; passes it back and settles in the start pose |
 | 2 | Pega de frigideira | Segura a raquete como quem vai estrelar um ovo. É comum parar o jogo para ir buscar bolas ao terreno vizinho. | Holds the racket flat like a frying pan, tosses the ball, swings, misses; the ball bonks the headband |
 | 3 | Influencer de campo | Se não há post, não há ténis. Os followers acreditam que tem patrocínio da Lacoste. | Holds a phone out, strikes a stiff "pro" pose with the racket, a flash, checks the phone, frowns, poses again |
-| 4 | O Aquecedor | Faz quarenta minutos de aquecimento e joga dez. Diz que o segredo está na preparação. | Stiff windmill arms, side tilts, a tiny bounce on the spot — all very serious. Never touches the racket |
+| 4 | O Aquecedor | Começa a aquecer em frente ao campo ocupado, como quem não quer nada. Faz quarenta minutos de aquecimento e joga dez. Diz que o segredo está na preparação. | Stiff windmill arms, side tilts, a tiny bounce on the spot — all very serious. Never touches the racket |
 | 5 | Pavio curto | Acha que devia jogar como na televisão. Cada bola na rede é uma ofensa pessoal. | Swings with confidence, the ball clips the frame and flies straight up; he shakes a hoof in anger |
 | 6 | Juiz de linha | Nenhuma bola do adversário cai dentro. Tem vista de águia, mas só para um dos lados. | Eyes track an invisible ball, then a hoof snaps out pointing — "fora!". A smug little nod |
 | 7 | Cortador de fiambre | Desde que aprendeu o slice não bate outra coisa. Era perfeito para cortar jamón no Mercadona. | Crouches almost to the ground, the racket sweeping flat side to side like a deli slicer; the ball skims out low with backspin lines |
@@ -624,7 +624,7 @@ Sessions are kept alive indefinitely for active users. Supabase auto-refreshes t
   - **Character arc for levels 1–10** (trading card)
     - [x] Names and flavour texts: all ten in `XP_LEVEL_INFO` from the "Character arc" under Player progress; visitors show level 1, Raquete emprestada (`XP_VISITOR_INFO` and "Apanha-bolas" gone)
     - [x] Real names (level 10, brands in 1, 3, 7): kept as written, no legal check — decided 10/2026, fallback for 10 "Lenda do bairro" if anyone objects
-    - [ ] Pig images per level: `XP_LEVEL_IMAGES` uses 3 placeholders for 10 levels — fine for shipping, drawings later. The newer `pig_master.svg` (the base drawing) is on the PC — bring it in; the one in git (ee12f7e^) is an older version
+    - [ ] Pig images per level: levels 1–4 drawn, each with its own background (`XP_LEVEL_BACKGROUNDS`); 5–10 still placeholders — fine for shipping. The newer `pig_master.svg` (the base drawing) is on the PC — bring it in; the one in git (ee12f7e^) is an older version
   - **Check in the dashboards**
     - [x] Supabase has every SQL file live (checked 10/2026 with one query: functions, ranking_views, hide_from_ranking, weekly_metrics + courts, pass XP off, name locked): `xp.sql`, `ranking.sql` (incl. `profiles.hide_from_ranking`), `court_groups.sql`, `metrics.sql`
     - [x] Email templates "Magic Link" and "Confirm signup" (brand-new emails get the second): show `{{ .Token }}`, no link, in Portuguese — login breaks without the code in the email
@@ -731,7 +731,7 @@ Sessions are kept alive indefinitely for active users. Supabase auto-refreshes t
     - [x] Segment titles are black on the empty track and white over the fill: the labels are rendered twice (`barHtml` in `player_progress.js`), with the white copy on top clipped to the fill width via `clip-path` and a `--fill` variable. The XP bar keeps both copies black, which reads better on its yellow fill
     - [x] ~~Stars next to the level title~~ — removed; the level title and the bar are enough
     - [x] XP bar above the skill cards: +500 XP per game / new court / streak week, levels 1–10 (see "XP")
-    - [x] Character card art linked to the XP level: `XP_LEVEL_IMAGES` in `player_progress.js`, one entry per level (index 0 = level 1). Placeholders for now: `pig_sitting` (1–3), `pig_reaching` (4–6), `pig_serving` (7–10)
+    - [x] Character card art linked to the XP level: `XP_LEVEL_IMAGES` in `player_progress.js`, one entry per level (index 0 = level 1). Drawn: `pig_vans`, `pig_egg`, `pig_selfie`, `pig_stretching` (1–4); placeholders `pig_sitting` (5–6), `pig_serving` (7–10)
     - [ ] Draw progressively more "pro" pig images per level (gear, outfit, pose) and swap them into `XP_LEVEL_IMAGES`
     - [ ] Tune the level thresholds (stat 100 marks and XP) once real play is known
     - [x] "Entende o progresso": the same collapsible card as "Entende o ranking" (both drawn by `appendRulesCard` in `player_progress.js`), under the progress view — the XP intro, one row per XP increment (`XP_RULES`, shared with Entende o ranking — display only, keep in step with `games_xp`), then Estilo de jogo and diamonds (copy in "The progress model")

@@ -71,14 +71,14 @@ function sumXp(games) {
 // PLACEHOLDERS FOR NOW — ONE ENTRY PER LEVEL SO EACH CAN GET ITS OWN IMAGE LATER WITHOUT TOUCHING THE LOGIC
 const XP_LEVEL_IMAGES = [
 	"pig_vans", "pig_egg", "pig_selfie",
-	"pig_sitting", "pig_sitting", "pig_sitting",
+	"pig_stretching", "pig_sitting", "pig_sitting",
 	"pig_serving", "pig_serving", "pig_serving", "pig_serving",
 ];
 
 // THE FRAME BEHIND THE ART PER XP LEVEL (INDEX 0 = LEVEL 1); null KEEPS THE PLAIN YELLOW
 const XP_LEVEL_BACKGROUNDS = [
 	"bg_level1_loop", "bg_level2", "bg_level3",
-	null, null, null,
+	"bg_level4", null, null,
 	null, null, null, null,
 ];
 
@@ -89,7 +89,7 @@ const XP_LEVEL_INFO = [
 	{ title: "Raquete emprestada", description: "Aparece para jogar com a raquete do primo e sapatilhas da Vans. Não tem absoluta certeza se aceitou o convite para jogar ténis ou padel." },
 	{ title: "Pega de frigideira", description: "Segura a raquete como quem vai estrelar um ovo. É comum parar o jogo para ir buscar bolas ao terreno vizinho." },
 	{ title: "Influencer de campo", description: "Se não há post, não há ténis. Os followers acreditam que tem patrocínio da Lacoste." },
-	{ title: "O Aquecedor", description: "Faz quarenta minutos de aquecimento e joga dez. Diz que o segredo está na preparação." },
+	{ title: "O Aquecedor", description: "Começa a aquecer em frente ao campo ocupado, como quem não quer nada. Faz quarenta minutos de aquecimento e joga dez. Diz que o segredo está na preparação." },
 	{ title: "Pavio curto", description: "Acha que devia jogar como na televisão. Cada bola na rede é uma ofensa pessoal." },
 	{ title: "Juiz de linha", description: "Nenhuma bola do adversário cai dentro. Tem vista de águia, mas só para um dos lados." },
 	{ title: "Cortador de fiambre", description: "Desde que aprendeu o slice não bate outra coisa. Era perfeito para cortar jamón no Mercadona." },
