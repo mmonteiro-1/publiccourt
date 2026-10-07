@@ -16,8 +16,8 @@ const MSG_RANKING_ZERO = "Nenhum jogo na época? Tás a gozar.";
 const MSG_RANKING_OUT = `Não te deixes intimidar, somos todos amadores. <a href="#" data-pane-link="info">Bora participar</a>.`;
 // "ENTENDE O RANKING": ABOVE THE POINTS ROWS, THE SEASONS AND THE RESET (AND WHY THE BOARD CAN SHOW LESS THAN THE TRADING CARD — IT
 // ONLY COUNTS THIS SEASON'S XP); BELOW THEM, WHAT DOESN'T COUNT AND THE OPT-OUT. "DADOS" OPENS THAT TAB (data-pane-link)
-const MSG_RANKING_INTRO = `Há duas épocas por ano: Época de Verão: de 01/04 a 30/09. Época de Inverno: de 01/10 a 31/03<br><br>Os pontos voltam a zero no início de cada época. O teu XP de progresso geral nunca diminui. Se não vês todo o teu XP no ranking, é porque parte dele foi ganho em épocas anteriores.`;
-const MSG_RANKING_INFO = `Partidas com menos de 10 minutos não contam.<br><br>O ranking mostra todos os jogadores do Campo Livre. Se preferires ficar de fora, podes sair em <a href="#" data-pane-link="info">Dados</a>.`;
+const MSG_RANKING_INTRO = `Há duas épocas por ano: Época de Verão: de 01/04 a 30/09. Época de Inverno: de 01/10 a 31/03.<br><br>O ranking mostra apenas o XP adquirido dentro da época atual, e retorna a zero no final desta.`;
+const MSG_RANKING_INFO = `Partidas com menos de 10 minutos não contam.<br><br>Se não vês todo o teu XP no ranking, é porque parte dele foi ganho em épocas anteriores.<br><br>O ranking mostra todos os jogadores do Campo Livre. Se preferires ficar de fora, podes sair em <a href="#" data-pane-link="info">Dados</a>.`;
 const MSG_POINTS_INFO = "Entende o ranking";
 // IN THE BOARD'S "R. BARBOSA" FORMAT, SO IT READS LIKE A NAME ALREADY ON A PLAQUE
 const MSG_VISITOR_RANK_NAME = "O. Teu Nome";

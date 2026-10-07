@@ -26,7 +26,7 @@ const MSG_VISITOR_INFO = "Dá o próximo passo no ténis: acompanha a tua evolu�
 const MSG_PASSES_SOON = `Em breve poderás solicitar um passe junto dos administradores de um campo para poderes reservar horários e jogar em campos privados sem burocracia.`;
 // LOSS AVERSION FOR A VISITOR WITH WALK-INS; A CONCRETE NEXT STEP FOR A BLANK ONE, WHO HAS NOTHING TO LOSE YET
 const MSG_TEASER_XP = xp => `Já tens ${MSG_XP(xp)} à tua espera. ${MSG_LOGIN_LINK} para não os perderes.`;
-const MSG_TEASER_FIRST = xp => `O teu primeiro jogo vai valer logo ${MSG_XP(xp)}.`;
+const MSG_TEASER_FIRST = xp => `O teu primeiro jogo vai valer logo ${MSG_XP(xp)}`;
 
 const MSG_VIEW_PROGRESS = "Progresso";
 const MSG_VIEW_RANKING = "Ranking";

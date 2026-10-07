@@ -373,9 +373,9 @@ The XP bar is the only bar on the profile, and it is relative: the fill only cov
 
 | Lvl | Name | Flavour text | Animation seed |
 |---|---|---|---|
-| 1 | Raquete emprestada | Aparece para jogar com a raquete do primo e sapatilhas da Vans. Ainda tá a descobrir se é destro ou canhoto. | Passes the racket to his other hoof and stares at it, confused; shrugs; passes it back and settles in the start pose |
-| 2 | Pega de frigideira | Segura a raquete como quem vai estrelar um ovo. Acerta na bola uma vez em cada cinco, e às vezes é com a cabeça. | Holds the racket flat like a frying pan, tosses the ball, swings, misses; the ball bonks the headband |
-| 3 | Influenciador de campo | Se não há post, não há ténis. Os followers acreditam que tem patrocínio da Lacoste. | Holds a phone out, strikes a stiff "pro" pose with the racket, a flash, checks the phone, frowns, poses again |
+| 1 | Raquete emprestada | Aparece para jogar com a raquete do primo e sapatilhas da Vans. Não tem absoluta certeza se aceitou o convite para jogar ténis ou padel. | Passes the racket to his other hoof and stares at it, confused; shrugs; passes it back and settles in the start pose |
+| 2 | Pega de frigideira | Segura a raquete como quem vai estrelar um ovo. É comum parar o jogo para ir buscar bolas ao terreno vizinho. | Holds the racket flat like a frying pan, tosses the ball, swings, misses; the ball bonks the headband |
+| 3 | Influencer de campo | Se não há post, não há ténis. Os followers acreditam que tem patrocínio da Lacoste. | Holds a phone out, strikes a stiff "pro" pose with the racket, a flash, checks the phone, frowns, poses again |
 | 4 | O Aquecedor | Faz quarenta minutos de aquecimento e joga dez. Diz que o segredo está na preparação. | Stiff windmill arms, side tilts, a tiny bounce on the spot — all very serious. Never touches the racket |
 | 5 | Pavio curto | Acha que devia jogar como na televisão. Cada bola na rede é uma ofensa pessoal. | Swings with confidence, the ball clips the frame and flies straight up; he shakes a hoof in anger |
 | 6 | Juiz de linha | Nenhuma bola do adversário cai dentro. Tem vista de águia, mas só para um dos lados. | Eyes track an invisible ball, then a hoof snaps out pointing — "fora!". A smug little nod |
@@ -580,7 +580,7 @@ Supabase Auth is already included — email OTP is a built-in provider, no extra
 - **No buttons on the previews:** the progress view has none, and the blank history has none either — an "Encontrar campo" under the dummy card made the card itself look clickable. The only button is "Fazer login" under a visitor's real history
 - **The history proves the number:** each card shows the XP it earned, so the teaser total can be traced game by game. The single dummy card shows +1000, matching the blank visitor's promise
 - **The dummy progress is the dummy first game** (the same "Minha primeira partida" as the history card), so the XP is 1000 and every level is 1, for every visitor. On top of it, `loadProgress`'s teaser mode pins the trading card's ratings and the stat cards' numbers at 0 — an empty starting point. The trading card shows the level-1 character, Raquete emprestada, like a real level-1 player's (the character arc decided visitors are level 1); the teaser sits inside it, under the XP bar
-- **The XP bar is static** — a looping fill (`fill-grow`) was tried and removed. It had taught one rule that still holds: animating `width` forced a layout on every frame, and animating `--fill` needs `@property` and jumped. **Rule for any looping or long animation: only `transform` and `opacity`**
+- **The XP bar loops** (`fill-grow`, on `.locked` only): it grows from empty to its value, holds, then runs back down, forever; still under reduced motion. It scales the fill with `transform: scaleX` from its left edge — the first version animated `width`, which forced a layout on every frame, and animating `--fill` needs `@property` and jumped. **Rule for any looping or long animation: only `transform` and `opacity`**
 
 **Redirect URL allowlist:** no longer used by login (codes don't redirect) — kept for any future email link. Supabase only returns links to URLs listed in Authentication → URL Configuration → Redirect URLs; anything else falls back to the Site URL. Site URL is `https://publiccourt.vercel.app`. The list (`*` matches anything except `.` and `/`):
 
@@ -630,7 +630,7 @@ Sessions are kept alive indefinitely for active users. Supabase auto-refreshes t
     - [x] Email templates "Magic Link" and "Confirm signup" (brand-new emails get the second): show `{{ .Token }}`, no link, in Portuguese — login breaks without the code in the email
     - [x] Vercel Analytics is switched on (ad blockers hide some visits — see "Usage metrics")
   - **Should fix (can follow right after)**
-    - [x] Debug switches (`?surprise`, `debugSurprise()`, `?board=`) work only on the dev server (`IS_DEV` in `utils.js`: localhost or a 192.168 LAN IP), never in production or on Vercel previews
+    - [x] Debug switches (`?surprise`, `debugSurprise()`, `?board=`, `?level=`) work only on the dev server (`IS_DEV` in `utils.js`: localhost or a 192.168 LAN IP), never in production or on Vercel previews
     - [ ] Stale `localStorage` flag: (`justLoggedIn` fixed — now set only after the code is accepted) `returnTo` (set by "Fazer login" on a court) can return a much later login to an old court
     - [ ] Leaving onboarding halfway: logged in with no `profiles` row — "jogador" on court pages, `player_name` null on walk-ins, out of the ranking, and `hasLoggedIn` already set so the next login says "Bom tê-lo de volta"
     - [ ] `notify-pass`: sender now `passes@campolivre.app` and the debug logs are gone (redeploy from the dashboard). Still open: it doesn't check who calls it — low impact while passes are postponed

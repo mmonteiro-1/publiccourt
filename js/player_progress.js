@@ -70,18 +70,25 @@ function sumXp(games) {
 // CHARACTER ART PER XP LEVEL (INDEX 0 = LEVEL 1), GETTING MORE "PRO" AS THE PLAYER LEVELS UP.
 // PLACEHOLDERS FOR NOW — ONE ENTRY PER LEVEL SO EACH CAN GET ITS OWN IMAGE LATER WITHOUT TOUCHING THE LOGIC
 const XP_LEVEL_IMAGES = [
-	"pig_reaching", "pig_reaching", "pig_reaching",
+	"pig_vans", "pig_egg", "pig_selfie",
 	"pig_sitting", "pig_sitting", "pig_sitting",
 	"pig_serving", "pig_serving", "pig_serving", "pig_serving",
+];
+
+// THE FRAME BEHIND THE ART PER XP LEVEL (INDEX 0 = LEVEL 1); null KEEPS THE PLAIN YELLOW
+const XP_LEVEL_BACKGROUNDS = [
+	"bg_level1_loop", "bg_level2", "bg_level3",
+	null, null, null,
+	null, null, null, null,
 ];
 
 // CHARACTER NAME + FLAVOUR TEXT PER XP LEVEL (INDEX 0 = LEVEL 1) — THE CHARACTER ARC IN CLAUDE.md, ONE JOKE PER CARD.
 // VISITORS ARE LEVEL 1 TOO: THEIR LOCKED CARD SHOWS RAQUETE EMPRESTADA, LIKE A REAL LEVEL-1 PLAYER'S.
 // LEVEL 10 AND THE BRANDS IN 1, 3 AND 7 ARE KEPT AS WRITTEN; IF ANYONE OBJECTS, 10 BECOMES "LENDA DO BAIRRO"
 const XP_LEVEL_INFO = [
-	{ title: "Raquete emprestada", description: "Aparece para jogar com a raquete do primo e sapatilhas da Vans. Ainda tá a descobrir se é destro ou canhoto." },
-	{ title: "Pega de frigideira", description: "Segura a raquete como quem vai estrelar um ovo. Acerta na bola uma vez em cada cinco, e às vezes é com a cabeça." },
-	{ title: "Influenciador de campo", description: "Se não há post, não há ténis. Os followers acreditam que tem patrocínio da Lacoste." },
+	{ title: "Raquete emprestada", description: "Aparece para jogar com a raquete do primo e sapatilhas da Vans. Não tem absoluta certeza se aceitou o convite para jogar ténis ou padel." },
+	{ title: "Pega de frigideira", description: "Segura a raquete como quem vai estrelar um ovo. É comum parar o jogo para ir buscar bolas ao terreno vizinho." },
+	{ title: "Influencer de campo", description: "Se não há post, não há ténis. Os followers acreditam que tem patrocínio da Lacoste." },
 	{ title: "O Aquecedor", description: "Faz quarenta minutos de aquecimento e joga dez. Diz que o segredo está na preparação." },
 	{ title: "Pavio curto", description: "Acha que devia jogar como na televisão. Cada bola na rede é uma ofensa pessoal." },
 	{ title: "Juiz de linha", description: "Nenhuma bola do adversário cai dentro. Tem vista de águia, mas só para um dos lados." },
@@ -91,6 +98,32 @@ const XP_LEVEL_INFO = [
 	{ title: "Roger Manel Federer", description: "Joga de olhos fechados e ainda dá conselhos a quem não pediu. Diz a lenda que já lhe pediram um autógrafo." },
 ];
 
+// THE CAMERA FLASH ON THE INFLUENCER'S CARD (LEVEL 3): THE CARD GOES WHITE AND, WHILE IT IS, THE ART SWAPS TO THIS ONE
+const XP_FLASH_LEVEL = 3;
+const XP_FLASH_IMAGE = "pig_selfie2";
+// THE PHONE'S FLASH IN THE FIRST IMAGE, AS A SHARE OF ITS SIZE: THE #flash CIRCLE IN pig_selfie.svg (92.33, 24.81 OF 677.85 × 858.1)
+const XP_FLASH_SOURCE = { x: 92.33 / 677.85, y: 24.81 / 858.1, ratio: 677.85 / 858.1 };
+
+// CENTRES THE BURST ON THE PHONE. MEASURED WHEN THE FLASH STARTS, NOT ON RENDER: THE PROGRESS TAB MAY BE HIDDEN THEN, AND
+// object-fit: contain MAKES THE DRAWING SMALLER THAN THE <img> BOX, SO THE POINT COMES FROM THE DRAWN AREA
+function aimCameraFlash(card) {
+	const img = card.querySelector(".trading-card-art img");
+	const box = img.getBoundingClientRect();
+	// THE DRAWING'S OWN RATIO, NOT naturalWidth: AN SVG WITH ONLY A viewBox HAS NO RELIABLE NATURAL SIZE
+	const width = Math.min(box.width, box.height * XP_FLASH_SOURCE.ratio);
+	const height = width / XP_FLASH_SOURCE.ratio;
+	// ::after SITS IN THE PADDING BOX, INSIDE THE CARD'S BORDER
+	const origin = card.getBoundingClientRect();
+	const x = box.left + (box.width - width) / 2 + XP_FLASH_SOURCE.x * width - origin.left - card.clientLeft;
+	const y = box.top + (box.height - height) / 2 + XP_FLASH_SOURCE.y * height - origin.top - card.clientTop;
+	// THE SOLID WHITE IS 60% OF THE RADIUS, AND IT HAS TO REACH THE FARTHEST CORNER
+	const reach = Math.max(...[[0, 0], [card.clientWidth, 0], [0, card.clientHeight], [card.clientWidth, card.clientHeight]]
+		.map(([cx, cy]) => Math.hypot(cx - x, cy - y)));
+	card.style.setProperty("--flash-x", `${x}px`);
+	card.style.setProperty("--flash-y", `${y}px`);
+	card.style.setProperty("--flash-r", `${reach / 0.6}px`);
+}
+
 // THE TRADING CARD (THINK MAGIC / POKÉMON): LEVEL IN THE BANNER, PLAYER ART, CHARACTER NAME AND FLAVOUR TEXT,
 // THE THREE STAT RATINGS, THEN THE XP BAR. A teaser MAKES IT THE VISITOR'S LOCKED PREVIEW: THE FILL
 // GROWING IN (.locked), AND THE TEASER UNDER THE BAR
@@ -99,11 +132,12 @@ function xpCard(xp, diamonds, stats, teaser) {
 	const index = level - 1;
 	const info = XP_LEVEL_INFO[index];
 	return `
-		<div class="trading-card${teaser ? " locked" : ""}">
+		<div class="trading-card${teaser ? " locked" : ""}${level === XP_FLASH_LEVEL ? " flash" : ""}">
 			<p class="trading-card-level">${MSG_XP_LEVEL(index + 1)}<span>${DIAMOND_ICON} ${diamonds}</span></p>
 			<div class="trading-card-art">
-				<div class="trading-card-frame"></div>
+				<div class="trading-card-frame"${XP_LEVEL_BACKGROUNDS[index] ? ` style="background-image: url('images/${XP_LEVEL_BACKGROUNDS[index]}.svg')"` : ""}></div>
 				<img src="images/${XP_LEVEL_IMAGES[index]}.svg" alt="">
+				${level === XP_FLASH_LEVEL ? `<img src="images/${XP_FLASH_IMAGE}.svg" alt="">` : ""}
 			</div>
 			<p class="trading-card-name">${info.title}</p>
 			<p class="trading-card-text">${info.description}</p>
@@ -119,6 +153,15 @@ function xpCard(xp, diamonds, stats, teaser) {
 	`;
 }
 
+// DEBUG (DEV SERVER ONLY, IS_DEV): ?level=N ON profile.html DRAWS THE TRADING CARD AT LEVEL N (1–10), HALFWAY THROUGH IT —
+// ITS PIG, CHARACTER, BACKGROUND AND XP. ONLY THE XP IS FAKED, NOTHING IS SAVED; THE STATS STAY THE PLAYER'S OWN
+const DEBUG_LEVEL = IS_DEV ? Math.min(Math.max(parseInt(new URLSearchParams(location.search).get("level")) || 0, 0), 10) : 0;
+
+function debugLevelXp(level) {
+	const from = level > 1 ? XP_LEVEL_ENDS[level - 2] : 0;
+	return Math.round((from + XP_LEVEL_ENDS[level - 1]) / 2);
+}
+
 // THE STAT AGAINST ITS 100 MARK, CAPPED, SO THE TRADING CARD'S NUMBERS SHARE ONE SCALE (THINK FIFA CARD RATINGS)
 function statRating(max, value) {
 	return Math.min(value / max, 1) * 100;
@@ -132,7 +175,7 @@ function statRating(max, value) {
 async function loadProgress(container, gamesPromise, teaserPromise, xpPromise) {
 	const games = await gamesPromise;
 	const teaser = await teaserPromise;
-	const xp = await xpPromise;
+	const xp = DEBUG_LEVEL ? debugLevelXp(DEBUG_LEVEL) : await xpPromise;
 	if (!games.length) {
 		setPigAppearance(container, MSG_PROGRESS_EMPTY, "pig_reaching");
 		appendRulesCard(container, MSG_PROGRESS_INFO, XP_RULES, MSG_PROGRESS_RULES, MSG_PROGRESS_INTRO);
@@ -177,6 +220,8 @@ async function loadProgress(container, gamesPromise, teaserPromise, xpPromise) {
 		statCard("repeat_color", "Consistência", STAT_WEEKS, weeks, MSG_STAT_WEEKS(shown(weeks)), diamonds.weeks),
 		statCard("globe_color", MSG_TITLE_TERRITORY, STAT_TERRITORY, courts, MSG_STAT_COURTS(shown(courts)), diamonds.courts),
 	].join("");
+	const flashCard = container.querySelector(".trading-card.flash");
+	flashCard?.addEventListener("animationstart", () => aimCameraFlash(flashCard));
 	appendRulesCard(container, MSG_PROGRESS_INFO, XP_RULES, MSG_PROGRESS_RULES, MSG_PROGRESS_INTRO);
 }
 
