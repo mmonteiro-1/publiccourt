@@ -96,6 +96,8 @@ One concept, one word per layer. **Code** is what identifiers, comments, docs an
 | Court | court | campo | One playable court (`courts`) |
 | Court group | court group, group | — | Courts sharing one admin, one set of rules and one pass |
 | Walk-in | walk-in | jogo público | A game on a public court, checked in on site |
+| Partner | partner | parceiro | The other player in a match, linked by joining the game through the court QR (see "Partners"). Only "partner" — never "partnered" or "partnering" |
+| Match | match | confronto | A game with two or more players active in Campo Livre: players who got into the same game through the court QR, two or more of them with an account linked to it — no host, no roles. Every match is a game; a game with one account is a solo game ("solo game" only for contrast, never its own concept). "Confronto direto" is the head-to-head record |
 | Booking | booking | reserva, jogo reservado | A reserved slot on a private court |
 | Game | game | partida, jogo | Any walk-in or booking, as counted in history and stats. Copy uses both words |
 | Slot | slot | horário | One `slot_duration_minutes` cell of the slot picker |
@@ -506,6 +508,65 @@ Future exploration, not planned yet. Finding someone to play with is the main ba
   - Needs blocking and reporting, which is a moderation burden. Minors complicate everything.
 - **Chicken and egg:** matching needs density. Start inside one court group's member base, where players already share a court and an admin who vouches for them. That solves density and trust together.
 - **First step:** an opt-in "falta 1" spot on a booking, visible only to that group's members. Least moderation, most existing trust.
+
+### Partners — joining a game through the court QR
+
+Future exploration, not planned yet. Today a walk-in belongs to one phone. Letting a second player into the same game turns it into a **match** (*confronto*): it records who played with whom, and lets both report the result afterwards. A result both players agree on is much harder to fake than one player's word, which is what "Honesty" under Player progress said was missing.
+
+**Amateur tennis is simple, so the model is too: a game has players.** No host, no roles. Who scanned first only decides who created the row; nothing after that remembers it.
+
+**What players can do, at a glance:**
+- **At the court:** join a game already running ("Juntar-me ao jogo"); end someone else's game, as today
+- **After the game:** answer the result (ganhei / perdi / só treino / não jogámos juntos); see the showdown once every answer is in; see the partner's name ("R. Barbosa" or "Parceiro sem conta"); log in later to turn a game into a match
+- **Over time:** keep a head-to-head record (*confronto direto*); a rematch nudge ("Há 3 semanas que não jogas com…"); send an invite with a personal message; earn a recruiter reward; a diamond for playing with many different partners
+- **For us and admins:** real player counts per game; confirmed matches as hard-to-fake games (event bonuses)
+- **Later:** a private skill rating for matchmaking; a partner on a booking, then a split payment
+
+**The court is the rendezvous.** Both players are at the same court, which already has its QR code and the location step. The partner scans the same QR, finds the game running, and joins it. No QR on the other player's phone, no coordinated button presses (the Bump-style "both tap at once" was weighed: awkward, two walk-ins to merge, a timing window either too loose or too strict).
+
+**Three rules — every scenario follows from them, none needs a special case:**
+1. **Scanning a court QR puts you in the game.** A free court: a new game, as today. A court taken less than 10 minutes ago (a first guess): **Juntar-me ao jogo**, with "Terminar jogo atual" still below it for someone waiting for the court. Past the window, only "Terminar jogo atual", as today. Joining passes the same location step, then a success screen of its own (a `SUCCESS` preset)
+2. **Every player in a game is a row, the same shape as a walk-in:** `device_id` always, `player_id` when logged in. Logging in at any time — before the game, at the court, a week later — fills `player_id` on that device's rows (the existing claim, extended). So registering before or after the game ends in the same place
+3. **What's shown is worked out from how many players have an account:**
+
+| Accounts in the game | What it is | What players see |
+|---|---|---|
+| 0 | A game with players, not a match | Visitors get the teaser: "Jogaste com alguém. Faz login para descobrires com quem e quem ganhou." |
+| 1 | Not a match yet | The registered player gets the post-game card; the partner shows as "Parceiro sem conta". Their answer waits for a showdown that may never come |
+| 2+ | **Match** | Names, the result question, the showdown, the head-to-head |
+
+- **The login wall stands after the game, not at the court:** joining is one tap after the location step, with no email or code while the partner waits racket in hand. Everything that needs an identity — names, the questions, the showdown, the head-to-head — sits behind login, at a calm moment, with something concrete waiting (the visitor teaser's loss aversion, and "history open, stats behind the login wall" again)
+- **No QR on the court (torn off, never stuck):** the QR is only a shortcut to `court.html?court=N` — the proof is the location step, which runs however the page was reached. So joining works the same through the **court list** (tap the court, "Juntar-me ao jogo", same window and location step) or a **shared link** (a "Partilhar jogo" on the game sends the court page on WhatsApp — the same URL the QR holds). The existing "Não há QR Code na entrada" button still counts the report (`courts.missing_qr_hint`), so we know which court to re-stick
+- **Fixes a hostile default:** today the only action a second phone has on a taken court is "Terminar jogo atual" (`court-walkin.js`), so a partner scanning the QR would most likely end the game. Joining is the first friendly action on a taken court
+- **Data:** `walk_in_players` (`walk_in_id`, `device_id`, `player_id` nullable, `joined_at`); whoever creates the game gets a row too, at check-in. The walk-in stays one row, so the court's live status and occupancy don't change. One row per device per game; the claim skips a game the account is already in. The window and "not already in this game" are enforced in the insert policy, not only in JS
+- **XP, history and stats count player rows, not `walk_ins.player_id`:** otherwise a registered player who joined a visitor's game earns nothing for it. Everyone in a game earns the same, however they got in. `isMine` becomes "this device or account is in this game", so every player gets the extend buttons and "Terminar"
+- **Partner names:** always "R. Barbosa", the one form the ranking already uses — enough for two people who just played, and safe when the partner was a stranger. A partner without an account is "Parceiro sem conta". Read through a `security definer` function (e.g. `match_partners(walk_in_id)`) that returns names only to a player in that game, the same pattern as `season_ranking`; `profiles` stays readable by its owner only
+  - **Before joining:** only the start time ("Começou às 18:02"), never a name — anyone can scan a court QR, so a name there tells any passer-by who's playing
+  - **After joining, post-game card, showdown, history:** "R. Barbosa" (or "Parceiro sem conta")
+- **Existing leak to fix first:** `walk_ins.player_name` holds a registered player's full name and `walk_ins` is readable by anyone, so every court page already downloads the full name of whoever is playing (`fetchActiveReservation` selects `*`), and the whole table — names, courts, times — can be read from the console. The routine exposure the ranking rules forbid. Fix by the safe-rename rule: stop writing it, select only the needed columns, null the old names, drop the column once nothing reads it (check `main` and the metrics first)
+
+**After the game — the same question for everyone, never a validation.** On each player's next open, one tap: **ganhei / perdi / só treino / não jogámos juntos** (one `match_reports` row each). The last answer drops that player from the game — no separate "Jogaste com…?" question. Validating someone else's answers would be a chore; giving your own take on the game is the fun part. Blind answers are also the stronger proof: shown the other's answer first, a player would just tap confirm. Whoever opens the app first answers first; nobody waits on anyone. The card is offered for 7 days after the game — a player who logs in months later sees the match in their history, but isn't asked about it. Set scores maybe later — tennis scoring is heavy to type
+- **Facts are compared, opinions aren't:** the result, singles vs doubles and "played the whole time" decide confirmed — answers that agree make the match confirmed (worked out, never stored), answers that clash leave it unconfirmed, with no arbitration. Opinions (a 1–5 "Como foi o jogo?") are personal and never compared
+- **The showdown:** answers stay sealed until all are in, then they're revealed together — a small reward of its own, in the pig's voice. Agree: "Concordam: vitória do R. Barbosa. Fica registado." Clash: "Tu dizes que ganhaste. O R. Barbosa diz o mesmo. Alguém anda a fazer batota." — the clash becomes a joke, not a dispute. Not answered yet: "À espera do R. Barbosa", and the reveal waits for a later open
+
+**What it's for — knowing players chose to play together:**
+1. **Follow-up questions:** the result, singles or doubles, played the whole time — agreeing answers make it confirmed data instead of one player's word
+2. **Rivalry, head to head:** "Confronto com R. Barbosa" on the history card and a running record on the profile, the *confronto direto* ("3–2 contra R. Barbosa"). A personal rival motivates more than a public table, and it stays private to the two players. Room for the pig's voice ("Outra vez o R. Barbosa? Este já te conhece o backhand.")
+3. **Hard to fake:** a confirmed match — accounts agreeing, all on location — is the strongest proof without an admin; what event bonuses should require (see "Risks" under Seasons and events)
+4. **Honest numbers:** every walk-in counts as one player today, so `weekly_metrics` undercounts real players. The player rows and singles vs doubles give true player counts and court use — what an admin or a municipality wants to see. Visitors count too, by device
+5. **Invites and recruiters:** a player sends an invite link with a personal message of their own ("Bora jogar sábado? Desta vez não há desculpas."), meeting players on WhatsApp, where tennis is arranged. Invites aren't tied to a game, a court or a host — they only bring people in. **Recruiter:** an invite whose recipient makes an account from the link and then plays their first game. Rare and valuable, so it earns a reward — a diamond, a title, maybe XP. One credit per player recruited, ever, so friends can't farm it. Data: `invites` (`id`, `from_player`, `message`, `accepted_by`, `created_at`, `accepted_at`)
+   - **Rematch:** "Há 3 semanas que não jogas com R. Barbosa" is the natural moment to send one
+   - **Paid courts later:** adding a partner to a booking can reuse the same invite
+6. **Playing with new people:** distinct partners could reward variety the way Território rewards new courts — as a diamond, not a fourth stat, since the three stats are each on their own axis
+
+- **Later:** confirmed results feed a private Elo-style rating, the missing skill signal for Player matchmaking; both names on a booking, then a split payment
+- **Avoid:** a public social graph. Who plays with whom stays between the players of the game (same routine concern as matchmaking)
+- **Keeps "rank activity, never results":** confirmed results never enter the ranking. A future skill rating would be separate, private or matchmaking-only
+- **Risks:**
+  - Players need the app at the same moment, while most players today are visitors who scanned a court QR. The biggest unknown — which is why joining needs no account
+  - A link stays anonymous forever if a visitor clears storage or logs in on another phone — the same accepted gap as walk-ins
+  - Friends confirming fake wins: harmless while results earn nothing, so no XP or ranking weight for results at first
+- **First version:** singles only. "Juntar-me ao jogo" on a taken court, the result question and the showdown on the next open, "Confronto com R. Barbosa" on the history card. No XP for results, no rating, no invites yet. Watch how often a second player joins and how often both answer before building more
 
 ## Open Questions
 

@@ -1754,6 +1754,26 @@ input[type="time"]::-webkit-date-and-time-value {
 	box-shadow: 4px 4px 0 var(--black);
 }
 
+/* THE CARD TILTS UNDER THE FINGER ON A SPRING (tiltCard IN player_progress.js). pan-y KEEPS THE PAGE SCROLLING: A VERTICAL
+   DRAG HANDS THE TOUCH BACK TO THE BROWSER, AND THE CARD SPRINGS BACK */
+.trading-card {
+	touch-action: pan-y;
+}
+
+/* THE GLARE: ONE WIDE SOFT BAND, LIKE LIGHT ON A PLASTIC CARD, MOVED AND SHOWN BY THE TILT (--glare-x, --glare-o).
+   SOFT ON PURPOSE — HARD EDGES READ AS GLASS. A GRADIENT AGAINST THE FLAT-COLOUR RULE, THE SAME EXCEPTION AS THE CAMERA
+   FLASH: IT'S LIGHT, NOT A SURFACE. THE CARD'S overflow: hidden CLIPS IT TO THE ROUNDED CORNERS */
+.trading-card::before {
+	content: "";
+	position: absolute;
+	inset: 0;
+	z-index: 1;
+	background: linear-gradient(115deg, transparent 20%, var(--white) 50%, transparent 80%);
+	opacity: var(--glare-o, 0);
+	pointer-events: none;
+	transform: translateX(var(--glare-x, 0%));
+}
+
 .trading-card-level {
 	text-align: center;
 	text-transform: uppercase;
@@ -1802,6 +1822,8 @@ input[type="time"]::-webkit-date-and-time-value {
 	max-height: 210px;
 	object-fit: contain;
 	margin: 0 auto;
+	/* THE TILT'S PARALLAX (tiltCard) */
+	transform: translate(var(--pig-x, 0px), var(--pig-y, 0px));
 }
 
 /* THE LEVEL-3 CAMERA FLASH (xpCard): 2.5s AFTER THE CARD SHOWS, WHITE BURSTS OUT OF THE PIG'S PHONE AND FILLS THE CARD

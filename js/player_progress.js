@@ -124,6 +124,82 @@ function aimCameraFlash(card) {
 	card.style.setProperty("--flash-r", `${reach / 0.6}px`);
 }
 
+// THE CARD TILTS LIKE A REAL ONE: A PRESS PUSHES THAT SPOT AWAY, AND LETTING GO DROPS IT BACK ON A SPRING, SO IT WOBBLES
+// AND SETTLES. EACH TIME IT COMES INTO VIEW IT GETS A FLICK, SO PLAYERS SEE IT MOVES. THE GLARE RIDES ON THE ANGLE.
+// THE LOOP ONLY RUNS UNTIL THE CARD IS STILL
+const TILT_MAX = 15;
+const TILT_STIFFNESS = 120;
+const TILT_DAMPING = 8;
+const TILT_FLICK = 150;
+// PX OF SHADOW PER DEGREE OF TILT: AT 15deg THE 4px SHADOW REACHES 10px, OR VANISHES
+const TILT_SHADOW = 0.4;
+// PX THE PIG SLIDES PER DEGREE OF TILT (THE PARALLAX): AT 15deg, 3px
+const TILT_DEPTH = 0.2;
+
+function tiltCard(card) {
+	const axes = { x: { angle: 0, speed: 0, target: 0 }, y: { angle: 0, speed: 0, target: 0 } };
+	let frame = null;
+	let last = 0;
+
+	function step(time) {
+		// CAPPED SO A BACKGROUND TAB COMING BACK DOESN'T FLING THE CARD
+		const dt = Math.min((time - last) / 1000, 0.05);
+		last = time;
+		for (const axis of Object.values(axes)) {
+			axis.speed += (TILT_STIFFNESS * (axis.target - axis.angle) - TILT_DAMPING * axis.speed) * dt;
+			axis.angle += axis.speed * dt;
+		}
+		const { x, y } = axes;
+		card.style.transform = `perspective(800px) rotateX(${x.angle}deg) rotateY(${y.angle}deg)`;
+		// THE SHADOW GROWS UNDER THE EDGE THAT LIFTS TOWARDS THE PLAYER AND SHRINKS UNDER THE ONE THAT SINKS, NEVER PAST 0 —
+		// A SHADOW ON THE LIT SIDE WOULD MOVE THE LIGHT. box-shadow REPAINTS EVERY FRAME, BUT ONLY UNTIL THE CARD IS STILL
+		card.style.boxShadow = `${Math.max(4 - y.angle * TILT_SHADOW, 0)}px ${Math.max(4 + x.angle * TILT_SHADOW, 0)}px 0 var(--black)`;
+		// THE PIG STANDS IN FRONT OF THE CARD, SO IT SLIDES TOWARDS THE EDGE THAT SINKS
+		card.style.setProperty("--pig-x", `${y.angle * TILT_DEPTH}px`);
+		card.style.setProperty("--pig-y", `${-x.angle * TILT_DEPTH}px`);
+		card.style.setProperty("--glare-x", `${-(x.angle + y.angle) / TILT_MAX * 60}%`);
+		card.style.setProperty("--glare-o", Math.min(Math.hypot(x.angle, y.angle) / TILT_MAX, 1) * 0.4);
+		const still = Object.values(axes).every(axis => Math.abs(axis.target - axis.angle) < 0.05 && Math.abs(axis.speed) < 0.05);
+		frame = still ? null : requestAnimationFrame(step);
+	}
+
+	function wake() {
+		if (frame) return;
+		last = performance.now();
+		frame = requestAnimationFrame(step);
+	}
+
+	function press(event) {
+		const box = card.getBoundingClientRect();
+		axes.x.target = (0.5 - (event.clientY - box.top) / box.height) * 2 * TILT_MAX;
+		axes.y.target = ((event.clientX - box.left) / box.width - 0.5) * 2 * TILT_MAX;
+		wake();
+	}
+
+	function release() {
+		axes.x.target = 0;
+		axes.y.target = 0;
+		wake();
+	}
+
+	card.addEventListener("pointerdown", event => {
+		card.setPointerCapture(event.pointerId);
+		press(event);
+	});
+	card.addEventListener("pointermove", event => {
+		if (card.hasPointerCapture(event.pointerId)) press(event);
+	});
+	card.addEventListener("pointerup", release);
+	card.addEventListener("pointercancel", release);
+
+	if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+	new IntersectionObserver(entries => {
+		if (!entries[0].isIntersecting) return;
+		axes.y.speed += TILT_FLICK;
+		wake();
+	}, { threshold: 0.5 }).observe(card);
+}
+
 // THE TRADING CARD (THINK MAGIC / POKÉMON): LEVEL IN THE BANNER, PLAYER ART, CHARACTER NAME AND FLAVOUR TEXT,
 // THE THREE STAT RATINGS, THEN THE XP BAR. A teaser MAKES IT THE VISITOR'S LOCKED PREVIEW: THE FILL
 // GROWING IN (.locked), AND THE TEASER UNDER THE BAR
@@ -220,6 +296,7 @@ async function loadProgress(container, gamesPromise, teaserPromise, xpPromise) {
 		statCard("repeat_color", "Consistência", STAT_WEEKS, weeks, MSG_STAT_WEEKS(shown(weeks)), diamonds.weeks),
 		statCard("globe_color", MSG_TITLE_TERRITORY, STAT_TERRITORY, courts, MSG_STAT_COURTS(shown(courts)), diamonds.courts),
 	].join("");
+	tiltCard(container.querySelector(".trading-card"));
 	const flashCard = container.querySelector(".trading-card.flash");
 	flashCard?.addEventListener("animationstart", () => aimCameraFlash(flashCard));
 	appendRulesCard(container, MSG_PROGRESS_INFO, XP_RULES, MSG_PROGRESS_RULES, MSG_PROGRESS_INTRO);
