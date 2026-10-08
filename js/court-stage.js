@@ -14,6 +14,10 @@ import { init as initWalkin, fetchActiveReservation, renderPreview } from './cou
 // EACH WITH ITS OWN LINK TO THE PROFILE, ON THE SAME LINE. NO PLAYER DATA IN THEM, SO THEY GO IN AS HTML
 const MSG_NUDGE_FIRST = `<a href="profile.html">Anda cá</a> ver o teu progresso`;
 const MSG_NUDGE_WAITING = xp => `Tens ${MSG_XP(xp)} à tua espera. <a href="profile.html">Anda cá ver</a>`;
+// UNDER BOTH VERSIONS, IN THE PIG'S VOICE ("TÁS A GOZAR"): PROGRESS FOR AMATEURS, TAKEN SERIOUSLY
+const MSG_NUDGE_SUB = "Somos todos amadores, mas não tamos cá para brincar.";
+// THE SAME STEPS AS info.html'S "COMO VOLTAR CÁ" — KEEP THE TWO IN STEP
+const MSG_INSTALL_HOWTO = "No iOS: Partilhar > Adicionar ao Ecrã de Início.<br>No Android: Menu > Adicionar ao Ecrã Principal.";
 
 const app = document.getElementById("app");
 const courtId = new URLSearchParams(location.search).get("court");
@@ -93,6 +97,12 @@ document.getElementById("install-nudge-close")?.addEventListener("click", () => 
 	installNudge.hidden = true;
 	snoozeNudge("installNudgeSnooze");
 });
+// "SAIBA COMO" SWAPS THE PITCH FOR THE STEPS IN PLACE, SO THE PLAYER NEVER LEAVES THE COURT
+const installHowto = document.getElementById("install-howto-link");
+installHowto.addEventListener("click", event => {
+	event.preventDefault();
+	installHowto.parentElement.innerHTML = MSG_INSTALL_HOWTO;
+});
 
 // VISITORS ONLY: THE XP THIS DEVICE'S UNCLAIMED WALK-INS HOLD (my_xp BY device_id), OR AN INVITATION TO SEE THEIR PROGRESS IF THERE
 // ARE NONE. CLOSING IT SNOOZES THAT VERSION: A BLANK VISITOR WHO CLOSES IT STILL SEES THE OTHER ONE AS SOON AS THEY HAVE XP WAITING
@@ -104,6 +114,7 @@ async function showVisitorNudge() {
 	if (snoozedNudge("visitorNudgeSnooze") === kind) return;
 	const nudge = document.getElementById("visitor-nudge");
 	nudge.querySelector(".uppercase").innerHTML = xp ? MSG_NUDGE_WAITING(xp) : MSG_NUDGE_FIRST;
+	nudge.querySelector(".card-sub").textContent = MSG_NUDGE_SUB;
 	nudge.hidden = false;
 	document.getElementById("visitor-nudge-close").addEventListener("click", () => {
 		nudge.hidden = true;
