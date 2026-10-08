@@ -64,8 +64,6 @@ async function claimDeviceWalkIns(user) {
 
 // ENTRY POINT: REDIRECTS ADMINS, ROUTES NEW USERS TO ONBOARDING, RETURNING USERS TO PROFILE
 async function loadProfile(user) {
-	// LETS login.html GREET THIS DEVICE AS RETURNING NEXT TIME
-	try { localStorage.setItem("hasLoggedIn", "1"); } catch {}
 	await claimDeviceWalkIns(user);
 
 	// ADMINS NEVER LAND ON THE PLAYER PROFILE — SEND THEM TO THEIR DASHBOARD.

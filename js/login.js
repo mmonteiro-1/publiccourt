@@ -1,10 +1,11 @@
 const app = document.getElementById("app");
 const form = document.getElementById("login-form");
 
-const MSG_PIG_NEW = "Já não tás a brincar";
-const MSG_INTRO_NEW = "Joga em campos privados, acompanha o teu progresso, guarda o histórico e encontra parceiros de jogo.";
-const MSG_LOGIN_OPTIONAL = "O email introduzido abaixo será o teu método de login, e não é necessário se quiseres apenas jogar nos campos abertos.";
-const MSG_INTRO_RETURNING = "Bom tê-lo de volta";
+// WHAT HAPPENS NEXT, NOT A PITCH — THE PITCH LIVES IN info.html ("PORQUÊ LOGIN")
+const MSG_NOTE_NEW = "O email introduzido abaixo será o teu método de login. Enviaremos um código para ser introduzido aqui.";
+const MSG_NOTE_RETURNING = "Entra com o email que utilizaste para criar a conta. Vamos enviar o código para lá.";
+const MSG_SWITCH_TO_RETURNING = `Já tens conta? Então <a href="#">entra</a>!`;
+const MSG_SWITCH_TO_NEW = `Ainda não tens conta? <a href="#">Cria uma</a>`;
 const MSG_SENDING = "A enviar...";
 const MSG_SEND_ERROR = "Algo correu mal. Tenta outra vez.";
 const MSG_SENT = "Enviámos um código para o teu email. Escreve-o abaixo para entrar.";
@@ -12,17 +13,22 @@ const MSG_VERIFYING = "A entrar...";
 const MSG_CODE_ERROR = "Código errado ou expirado. Confirma-o ou pede um novo.";
 const MSG_RESENT = "Enviámos um código novo.";
 
-// SET BY profile.js ONCE A SESSION EXISTS. PER DEVICE ONLY: A RETURNING PLAYER ON A NEW PHONE SEES THE
-// NEWCOMER COPY, SO IT MUST STILL MAKE SENSE FOR THEM. ASKING THE SERVER WOULD EXPOSE WHICH EMAILS HAVE ACCOUNTS
-let hasLoggedIn = false;
-try { hasLoggedIn = localStorage.getItem("hasLoggedIn") === "1"; } catch {}
-document.getElementById("login-intro").innerHTML = hasLoggedIn ? MSG_INTRO_RETURNING : MSG_INTRO_NEW;
-if (!hasLoggedIn) {
-	setPigAppearance(document.getElementById("login-pig"), MSG_PIG_NEW, "pig_reaching");
-	const note = document.getElementById("login-note");
-	note.textContent = MSG_LOGIN_OPTIONAL;
-	note.hidden = false;
+// CREATE ACCOUNT OR LOG IN: THE PLAYER PICKS, NO FLAG GUESSES. ONLY THE COPY CHANGES — BOTH SEND THE SAME signInWithOtp, WHICH
+// CREATES THE ACCOUNT FOR A NEW EMAIL, SO THE WRONG CHOICE STILL WORKS. NEVER shouldCreateUser: false FOR "ENTRA": A NEWCOMER
+// WHO PICKED IT WOULD HIT AN ERROR, AND THE REFUSAL WOULD TELL ANYONE WHICH EMAILS HAVE ACCOUNTS. WHETHER THE PLAYER IS NEW IS
+// DECIDED AFTER THE CODE, BY THE profiles ROW (profile.js → onboarding). OPENS ON CREATE: AT LAUNCH EVERY ACCOUNT IS NEW
+const loginSwitch = document.getElementById("login-switch");
+
+function showMode(isNew) {
+	document.getElementById("login-title").textContent = isNew ? "Criar conta" : "Entrar";
+	document.getElementById("login-note").textContent = isNew ? MSG_NOTE_NEW : MSG_NOTE_RETURNING;
+	loginSwitch.innerHTML = isNew ? MSG_SWITCH_TO_RETURNING : MSG_SWITCH_TO_NEW;
+	loginSwitch.querySelector("a").addEventListener("click", event => {
+		event.preventDefault();
+		showMode(!isNew);
+	});
 }
+showMode(true);
 
 // ALREADY LOGGED IN — SKIP THE FORM AND GO STRAIGHT TO PROFILE
 db.auth.getSession().then(({ data: { session } }) => {

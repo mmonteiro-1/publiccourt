@@ -879,6 +879,7 @@ button .link-icon {
 
 .page-profile .card-sub,
 .page-info .card-sub,
+.page-login .card-sub,
 .page-onboarding .card-sub {
 	color: var(--black);
 }
@@ -900,19 +901,8 @@ button .link-icon {
 	padding-top: 20px;
 }
 
-/* IN FLOW ABOVE THE FORM — THE DEFAULT ABSOLUTE CENTRING IS FOR EMPTY LISTS AND WOULD COVER THE INPUT */
-.page-login .pig-appearance {
-	position: static;
-	transform: none;
-	padding: 0;
-	text-align: start;
-}
-
-.page-login .pig-appearance p {
-	text-transform: uppercase;
-	text-align: start;
-	margin-top: 20px;
-	width: 100%;
+#login-switch {
+	text-align: center;
 }
 
 /* TOP-ANCHORED, NOT CENTRED: THE PROFILE'S VIEWS DIFFER IN HEIGHT, AND CENTRING MADE THE PAGE JUMP ON EVERY SWITCH */

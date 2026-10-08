@@ -7,7 +7,6 @@
 //   secondary-card.js — secondary card, deck flip, hourly chart, court group diagram
 
 import { initDeck, renderSecondaryCard, loadHourlyChart, renderCourtGroupDiagram } from './secondary-card.js';
-import { renderBookable } from './court-bookable.js';
 import { init as initWalkin, fetchActiveReservation, renderPreview } from './court-walkin.js';
 
 // THE VISITOR NUDGE: A BLANK VISITOR IS INVITED TO SEE THEIR PROGRESS, A SEASONED ONE HEARS WHAT'S ALREADY WAITING.
@@ -51,6 +50,9 @@ async function load() {
 	// Route: bookable courts go to court-bookable.js, walk-in courts go to court-walkin.js.
 	if (court.bookable) {
 		renderSecondaryCard(court);
+		// LOADED ONLY HERE: BOOKINGS ARE "EM BREVE", SO A WALK-IN PAGE NEVER FETCHES THE BOOKING CODE (court-bookable.js →
+		// slot-picker.js → weather.js), AND A FAULT IN IT CAN'T BLANK THE WALK-IN FLOW
+		const { renderBookable } = await import("./court-bookable.js");
 		await renderBookable(court);
 		return;
 	}
