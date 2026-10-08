@@ -21,9 +21,6 @@ const MSG_DUMMY_PASS = "Meu primeiro passe";
 const MSG_DUMMY_PASS_EXPIRY = "1 ano";
 const MSG_VISITOR_PROGRESS = `Vais ver o teu ténis progredir aqui. Usa o Campo Livre quando jogares para acumular XP. ${MSG_LOGIN_LINK} para não perderes o progresso.`;
 const MSG_VISITOR_INFO = "Dá o próximo passo no ténis: acompanha a tua evolução e joga em campos privados.";
-// PASSES ARE POSTPONED UNTIL REAL PRIVATE COURTS SIGN UP: ONE TEASER LINE FOR PLAYERS AND VISITORS ALIKE, ABOVE THE LOCKED DUMMY PASS. THE
-// "EM BREVE" PILL SITS ON THE DUMMY PASS ITSELF (passCard soon)
-const MSG_PASSES_SOON = `Em breve poderás solicitar um passe junto dos administradores de um campo para poderes reservar horários e jogar em campos privados sem burocracia.`;
 // LOSS AVERSION FOR A VISITOR WITH WALK-INS; A CONCRETE NEXT STEP FOR A BLANK ONE, WHO HAS NOTHING TO LOSE YET
 const MSG_TEASER_XP = xp => `Já tens ${MSG_XP(xp)} à tua espera. ${MSG_LOGIN_LINK} para não os perderes.`;
 const MSG_TEASER_FIRST = xp => `O teu primeiro jogo vai valer logo ${MSG_XP(xp)}`;
@@ -85,7 +82,7 @@ async function loadProfile(user) {
 	// maybeSingle() RETURNS null (NOT AN ERROR) WHEN NO ROW EXISTS — USED TO DETECT NEW USERS
 	const { data: profile } = await db
 		.from("profiles")
-		.select("name, phone, nif, hide_from_ranking")
+		.select("name, hide_from_ranking")
 		.eq("id", user.id)
 		.maybeSingle();
 
@@ -312,13 +309,18 @@ function wireFolderTabs() {
 		toggleBtns.forEach(b => b.classList.toggle("active", b === btn));
 		app.querySelectorAll("[data-pane-body]").forEach(pane => { pane.hidden = pane.dataset.paneBody !== btn.dataset.pane; });
 	}));
+	// profile.html#ranking OPENS THAT TAB (THE "ENTENDE O …" CARDS ON info.html LINK HERE). CLEARED SO A RELOAD STARTS ON PROGRESS
+	const hashTab = location.hash && app.querySelector(`.folder-tab[data-pane="${location.hash.slice(1)}"]`);
+	if (hashTab) {
+		hashTab.click();
+		history.replaceState(null, "", location.pathname + location.search);
+	}
 }
 
-// PERSONAL INFO FIELDS SHOWN AND EDITED ON THE PROFILE; ONLY name IS REQUIRED
+// PERSONAL INFO FIELDS SHOWN AND EDITED ON THE PROFILE; ONLY name IS REQUIRED. PHONE AND NIF (profiles.phone / nif) ARE FOR THE
+// ADMIN WHO VETS A PASS, SO THEY COME BACK WITH PASSES — ASKING FOR THEM BEFORE WOULD BE DATA WE DON'T NEED
 const PROFILE_FIELDS = [
 	{ field: "name", label: "Nome", type: "text", autocomplete: "name" },
-	{ field: "phone", label: "Telefone", type: "tel", autocomplete: "tel" },
-	{ field: "nif", label: "NIF", type: "number", autocomplete: "off" },
 ];
 
 // RENDERS THE PLAYER PROFILE: A TOGGLE BETWEEN FOUR PANES — PROGRESS, RANKING, PAST GAMES (WITH THE PASSES UNDER THEM), AND INFO
@@ -350,7 +352,6 @@ function showProfile(user, profile) {
 				</div>
 				<div class="divider"></div>
 				<p class="card-sub" id="profile-feedback" hidden></p>
-				<p class="card-sub" style="font-size: .7em">${MSG_DATA_DISCLAIMER}</p>
 				<button id="save-profile-btn" disabled><img src="images/icon_save.svg" class="link-icon" alt="">Guardar alterações</button>
 				<button id="logout-btn" class="button-shallow">Terminar sessão</button>
 			</div>

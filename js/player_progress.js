@@ -320,9 +320,12 @@ function appendRulesCard(container, title, rows, text, intro) {
 		</div>
 	`);
 	const card = container.lastElementChild;
+	// OUTSIDE THE PROFILE (info.html SHOWS THESE CARDS TOO) THERE ARE NO TABS, SO THE LINK GOES TO THAT TAB ON THE PROFILE
 	card.querySelectorAll("[data-pane-link]").forEach(link => link.addEventListener("click", event => {
 		event.preventDefault();
-		document.querySelector(`.folder-tab[data-pane="${link.dataset.paneLink}"]`).click();
+		const tab = document.querySelector(`.folder-tab[data-pane="${link.dataset.paneLink}"]`);
+		if (tab) tab.click();
+		else location.href = `profile.html#${link.dataset.paneLink}`;
 	}));
 	card.querySelector(".card-collapsible-toggle").addEventListener("click", () => {
 		const body = card.querySelector(".card-collapsible-body");

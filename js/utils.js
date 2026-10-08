@@ -1,7 +1,5 @@
 // "FAZ LOGIN" IN THE VISITOR COPY IS A LINK TO login.html, SO THE ASK IS ONE TAP AWAY WHEREVER IT'S READ
 const MSG_LOGIN_LINK = `<a href="login.html">Faz login</a>`;
-// SHOWN BOTH DURING ONBOARDING AND ON THE PROFILE'S DADOS, NEXT TO WHERE THE DATA IS ENTERED
-const MSG_DATA_DISCLAIMER = "Estas informações são relevantes para o administrador do campo quando pedes um passe. Por este motivo o Campo Livre irá guardar os teus dados, embora não tenha interesse neles.";
 
 // THE DEV SERVER (localhost OR THE LAN IP, FOR TESTING ON A PHONE). DEBUG SWITCHES (?surprise, ?board) ONLY WORK HERE, NEVER IN
 // PRODUCTION OR ON VERCEL PREVIEWS

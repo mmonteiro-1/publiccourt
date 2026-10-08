@@ -725,9 +725,11 @@ button .link-icon {
 	color: var(--white);
 }
 
-/* ON THE PROFILE, "FAZ LOGIN" LINKS AND BOLD WORDS STAY BLACK, LIKE THE REST OF THE PAGE */
+/* ON THE PROFILE AND INFO PAGES, "FAZ LOGIN" LINKS AND BOLD WORDS STAY BLACK, LIKE THE REST OF THE PAGE */
 .page-profile .card-sub a,
-.page-profile .card-sub b {
+.page-profile .card-sub b,
+.page-info .card-sub a,
+.page-info .card-sub b {
 	color: var(--black);
 }
 
@@ -876,8 +878,13 @@ button .link-icon {
 }
 
 .page-profile .card-sub,
+.page-info .card-sub,
 .page-onboarding .card-sub {
 	color: var(--black);
+}
+
+.page-info {
+	padding-bottom: 70px;
 }
 
 .page-login header,

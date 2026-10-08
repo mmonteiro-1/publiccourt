@@ -180,7 +180,7 @@ One concept, one word per layer. **Code** is what identifiers, comments, docs an
 
 **profiles** — `id uuid, name text, phone text, nif text, hide_from_ranking bool, created_at timestamptz`
 - `id` = `auth.users.id`; created on first onboarding
-- `phone` and `nif` collected at onboarding, editable on the player profile, shown to admins on pending request cards
+- `phone` and `nif` are no longer asked for (10/2026): they are only for the admin vetting a pass, so onboarding and Dados ask for the name alone until passes go live (the columns stay; admin request cards still show them when filled)
 - RLS: players read/insert/update own; admins can read profiles of their approved members
 
 ## Backend Services
@@ -614,7 +614,7 @@ Supabase Auth is already included — email OTP is a built-in provider, no extra
 1. `login.html` — player submits their email (`signInWithOtp`), then types the code from the email on the same screen (`verifyOtp`, type `email`); "Pedir novo código" resends it. Already logged in → straight to `profile.html`
 2. Once the code is accepted, `login.js` sets a one-shot `localStorage.justLoggedIn` and goes to `profile.html`, which is also the post-login router (`js/profile.js`):
    - **Admin** → `admin.html` (admins have no `profile.html`; their profile is a view inside the dashboard)
-   - **No `profiles` row** → `onboarding.html` (`js/onboarding.js`): 3-step onboarding (name required; phone, NIF optional), then back to `profile.html`, which continues below
+   - **No `profiles` row** → `onboarding.html` (`js/onboarding.js`): onboarding asks only the name (phone and NIF return with passes), then back to `profile.html`, which continues below
    - **Came from a court page** → back to that court (see "Return to court")
    - **Otherwise, just logged in** (`justLoggedIn`) → the court list. The flag is set only after a real login, so it never lingers
    - **Otherwise** (avatar visit) → the player profile
@@ -679,8 +679,8 @@ Sessions are kept alive indefinitely for active users. Supabase auto-refreshes t
     - [x] Login from the installed PWA on iOS: the magic link opened in Safari, never the app. Login is now a code typed on `login.html` (`verifyOtp`) — see "Login is a code" under Authentication
     - [x] Custom SMTP for Supabase Auth — it also unlocks editing the email templates, which the login code needs. **Tried Gmail (10/2026), dead end:** app passwords weren't available on the new account even with 2-Step Verification and a phone. A free `@gmail.com` sender through Brevo or similar fails Gmail's 2024 sender authentication and lands in spam. `vercel.app` can't send email (no DNS access). So: buy a domain
     - [x] Bought `campolivre.app` (Vercel, €9.99) — see "Resend" under Backend Services. Buy a domain (~€10–20/yr, Vercel → Domains, so its DNS lives in Vercel), verify it in Resend (paste its DNS records into Vercel), create a Resend API key, and set the SMTP to Resend. Supabase's built-in email is a test service: a few emails per hour, and it may only deliver to the project team's addresses — public registration breaks on it. Needs a domain verified in Resend (DNS records), then Supabase → Authentication → SMTP Settings: host `smtp.resend.com`, port 465, user `resend`, password a Resend API key, sender on the verified domain (e.g. `Campo Livre <entrar@…>`). Then raise the auth email rate limit (Authentication → Rate Limits). The same verified domain unblocks `notify-pass` (its `from` is still the sandbox `onboarding@resend.dev`, see "Email notifications currently broken")
-    - [ ] Supabase URLs to the real ones: Authentication → URL Configuration → Site URL to the production address (`https://publiccourt.vercel.app`, or the custom domain if one comes with the Resend domain), and the Redirect URLs to match (keep `localhost` / LAN for development). Login no longer redirects, but the Site URL still appears in auth emails and any future link
-    - [ ] `info.html`: describe what ships — login by code, the profile (progress, ranking, Meus jogos), the visitor history, passes as "em breve" — today it only covers the walk-in app. And the contact email: still the duck.com alias (`early-serve-duffel@duck.com`); move it to an address on `campolivre.app` (e.g. `contacto@`), which needs receiving set up — Resend only sends, so add email forwarding for the domain (e.g. ImprovMX or Cloudflare Email Routing, free) to your inbox
+    - [x] Supabase URLs to the real ones: Authentication → URL Configuration → Site URL to the production address (`https://publiccourt.vercel.app`, or the custom domain if one comes with the Resend domain), and the Redirect URLs to match (keep `localhost` / LAN for development). Login no longer redirects, but the Site URL still appears in auth emails and any future link
+    - [x] `info.html`: "Como funciona" explains what ships — collapsibles for progress, ranking, game history, passes ("em breve") and why log in, progress, ranking and passes sharing the profile's copy (`appendRulesCard`, `MSG_PASSES_SOON`), and all but the login one ending in "ANDA CÁ VER" to its profile tab (`profile.html#ranking` opens that tab). Contact is `mail@campolivre.app`: ImprovMX forwards every `@campolivre.app` address (catch-all, so replies to `entrar@` / `passes@` arrive too) to Gmail, which replies as that address through Resend's SMTP (MX + SPF on the root in Vercel's DNS, team public-court)
     - [ ] Rethink the visitor bait on court pages: "Anda cá ver o teu progresso" is a one-line card, too small to pull anyone in. Show the reward instead of describing it: a mini trading card (the pig art, "Nível 1 · Raquete emprestada", the yellow XP bar with "1 500 XP à tua espera", "Faz login para não perderes"; a blank visitor sees 0 XP and "O teu primeiro jogo vale 1000 XP"), still closable. Pair it with the success screens' "+XP" line (see "Success screens show what the game earned"), where the XP is most real. Mock it first to judge the size. Also: it can stack with the install nudge — show one at a time
   - **Character arc for levels 1–10** (trading card)
     - [x] Names and flavour texts: all ten in `XP_LEVEL_INFO` from the "Character arc" under Player progress; visitors show level 1, Raquete emprestada (`XP_VISITOR_INFO` and "Apanha-bolas" gone)
@@ -773,7 +773,7 @@ Sessions are kept alive indefinitely for active users. Supabase auto-refreshes t
     - [x] Returning user lands back on the court
     - [ ] New user after onboarding: back to the court if login started there, otherwise the court list (was: stayed on the profile — retest with the `justLoggedIn` change, same browser)
   - [ ] Check what happens when a new user leaves mid-onboarding (e.g. via "Voltar"): no `profiles` row exists yet, so they're logged in but nameless — court pages fall back to "jogador", and booking/pass requests may go through without a name for the admin
-  - [x] View and edit personal info (name, phone, NIF) — email shown read-only; save disabled until something changes, name required
+  - [x] View and edit personal info (name; phone and NIF hidden until passes) — email shown read-only; save disabled until something changes, name required
     - [x] Confirm `profiles` has an UPDATE policy for the player's own row — saving works
   - [x] "Teus jogos passados": booking history (`bookings` by `player_id = auth.uid()`) plus walk-in history
     - [x] Add nullable `walk_ins.player_id` column

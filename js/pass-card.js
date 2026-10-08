@@ -9,6 +9,9 @@ const MSG_NO_EXPIRY = "Sem data de expiração";
 const MSG_NO_NEXT_GAME = "Sem jogos agendados";
 // "NENHUMA" FOR ZERO: SPACE GROTESK'S ROUND 0 READ AS AN "o", AND IT HAS NO SLASHED ZERO
 const MSG_BOOKING_COUNT = n => n === 0 ? "Nenhuma reserva" : `${n} ${n === 1 ? "reserva" : "reservas"}`;
+// PASSES ARE POSTPONED UNTIL REAL PRIVATE COURTS SIGN UP: ONE TEASER LINE FOR PLAYERS AND VISITORS ALIKE, ABOVE THE LOCKED DUMMY PASS
+// AND IN THE PASSES CARD ON info.html. THE "EM BREVE" PILL SITS ON THE DUMMY PASS ITSELF (passCard soon)
+const MSG_PASSES_SOON = `Em breve poderás solicitar um passe junto dos administradores de um campo para poderes reservar horários e jogar em campos privados sem burocracia.`;
 
 // A PASS IS A BIGGER STEP THAN A GAME: IT MEANS THE PLAYER WAS VETTED AND APPROVED BY A COURT'S ADMIN. POSTPONED: THE DATABASE
 // DOESN'T PAY IT YET (player_xp) — THE CARD AND THE RULES ROWS SHOW IT AS WHAT'S COMING

@@ -43,7 +43,7 @@
 		<p class="info-sub1">Ao chegar ao campo, o jogador sinaliza na app por quanto tempo pretende jogar.</p>
 		<p class="info-sub1">Ao acederem à app, outros jogadores sabem quais campos estão ocupados e por quanto tempo.</p>
 		<p class="info-sub2">O estado de disponibilidade dos campos é mantido pela comunidade: quanto mais utilizadores, mais preciso.</p>
-
+		<div class="divider"></div>
 	</div>
 
 	<div class="info-content" id="panel-download" hidden>
@@ -56,7 +56,7 @@
 		<p class="info-heading">Esta ferramenta foi feita pelos jogadores para os jogadores.</p>
 		<p class="info-sub1">Nenhum jogador é responsabilizado por eventuais conflitos de informação.</p>
 		<p class="info-sub2">
-			CONTACTO: <br> <a href="mailto:early-serve-duffel@duck.com">early-serve-duffel@duck.com</a>
+			CONTACTO: <br> <a href="mailto:mail@campolivre.app">mail@campolivre.app</a>
 		</p>
 	</div>
 
@@ -65,7 +65,29 @@
 	</a>
 
 	<script src="js/utils.js"></script>
+	<script src="js/pass-card.js"></script>
+	<script src="js/player_progress.js"></script>
+	<script src="js/ranking.js"></script>
 	<script>
+		// A VISITOR'S GAMES AND XP HANG ON THE DEVICE (device_id IN localStorage) UNTIL LOGIN CLAIMS THEM (claimDeviceWalkIns) — HENCE
+		// "SUPERFICIALMENTE NO TEU BROWSER"
+		const MSG_WHY_LOGIN = `O Campo Livre foi feito para facilitar os jogos de ténis. Não temos interesse nos teus dados pessoais.<br><br>Sem conta, podes:<br>• Ver que campos estão livres ou por quanto tempo estarão ocupados.<br>• Começar um jogo e avisar os outros jogadores.<br>• Ver o histórico dos teus jogos.<br>• Acumular XP e acompanhar o teu progresso no ténis.<br><br>No entanto, sem login, estes dados ficam guardados superficialmente no teu browser. O login é a forma de garantires que não perdes os dados e que tens uma experiência ainda mais completa.<br><br>Para fazer o login é necessário apenas introduzir o email e o código que te será enviado.`;
+
+		// "O CAMPO", NEVER "A LOCALIZAÇÃO": A GAME STORES ITS court_id, NOT WHERE THE PHONE WAS. THE GAMES THAT MOVE ARE THE DEVICE'S
+		// UNCLAIMED WALK-INS (claimDeviceWalkIns), SO "NESTE TELEMÓVEL"
+		const MSG_HISTORY_INFO = `Cada jogo fica guardado no teu histórico a mostrar o campo, a hora e a duração.<br><br>Sem conta, o histórico fica guardado neste browser. Quando fazes login, os jogos que já fizeste neste telemóvel passam automaticamente para o teu perfil.`;
+
+		// THE SAME CONTENT AS THE PROFILE'S "ENTENDE O …" CARDS, SO THEY CAN NEVER SAY DIFFERENT THINGS — ONLY THE TITLES CHANGE, SINCE
+		// HERE THEY INTRODUCE A FEATURE RATHER THAN EXPLAIN THE TAB THE PLAYER IS ON. EACH ENDS ON A WAY TO ITS TAB ON THE PROFILE.
+		// THE PASSES SIT ON TOP OF MEUS JOGOS (history)
+		const infoPanel = document.getElementById("panel-info");
+		const profileLink = tab => `<br><br><a href="profile.html#${tab}">ANDA CÁ VER</a>`;
+		appendRulesCard(infoPanel, "Progresso do jogador", XP_RULES, MSG_PROGRESS_RULES + profileLink("progress"), MSG_PROGRESS_INTRO);
+		appendRulesCard(infoPanel, "Ranking de jogadores", XP_RULES, MSG_RANKING_INFO + profileLink("ranking"), MSG_RANKING_INTRO);
+		appendRulesCard(infoPanel, "Histórico de jogos", [], MSG_HISTORY_INFO + profileLink("history"));
+		appendRulesCard(infoPanel, `Passes <span class="badge">Em breve</span>`, [], MSG_PASSES_SOON + profileLink("history"));
+		appendRulesCard(infoPanel, "Porquê login", [], MSG_WHY_LOGIN);
+
 		const toggle = document.getElementById("infoToggle");
 		const btns = toggle.querySelectorAll(".folder-tab");
 
