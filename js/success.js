@@ -6,12 +6,9 @@ const MSG_WALKIN_FINISHED = "Por avisar que o campo ficou livre.";
 const MSG_BOOKED = gameText => `Tens jogo marcado para ${gameText}.`;
 const MSG_BOOKING_CANCELLED = gameText => `Cancelaste o jogo marcado para ${gameText}.`;
 const MSG_BOOKING_CANCELLED_FREED = "O horário volta a ficar livre para outro jogador.";
-const MSG_ONBOARDED = "Já te conhecemos melhor. Agora é ir para o campo e começar a somar XP.";
 
-// ONE PRESET PER SCREEN. sub2 IS OPTIONAL; animation IS "ball" OR OMITTED; next IS WHERE THE COUNTDOWN GOES (A RELOAD IF OMITTED)
+// ONE PRESET PER SCREEN. sub2 IS OPTIONAL; animation IS "ball" OR OMITTED
 const SUCCESS = {
-	// THE PROFILE IS THE ROUTER: IT SENDS THEM ON TO THE COURT THEY LOGGED IN FROM, OR THE COURT LIST
-	onboarded: () => ({ pig: "pig_serving", header: "Tudo pronto", sub1: MSG_ONBOARDED, seconds: 6, animation: "ball", next: "profile.html" }),
 	walkInStarted: () => ({ pig: "pig_sitting", header: "Bom jogo", sub1: MSG_WALKIN_STARTED, seconds: 10, animation: "ball" }),
 	walkInFinished: () => ({ pig: "pig_serving", header: "Obrigado", sub1: MSG_WALKIN_FINISHED, seconds: 6 }),
 	booked: gameText => ({ pig: "pig_sitting", header: "Jogo reservado", sub1: MSG_BOOKED(gameText), seconds: 10, animation: "ball" }),
@@ -20,8 +17,8 @@ const SUCCESS = {
 };
 
 // FULL-SCREEN VIEW, THEN A COUNTDOWN THAT RELOADS THE PAGE. RELOAD RATHER THAN REDIRECT SO THE PAGE
-// RE-FETCHES THE STATE THE ACTION JUST CHANGED — UNLESS THE PRESET SAYS WHERE TO GO NEXT (ONBOARDING HAS NOTHING TO RELOAD)
-function showSuccess({ pig, header, sub1, sub2 = "", seconds, animation = null, next = null }) {
+// RE-FETCHES THE STATE THE ACTION JUST CHANGED
+function showSuccess({ pig, header, sub1, sub2 = "", seconds, animation = null }) {
 	const app = document.getElementById("app");
 	document.body.classList.remove("inuse");
 	document.body.classList.add("success");
@@ -58,7 +55,6 @@ function showSuccess({ pig, header, sub1, sub2 = "", seconds, animation = null, 
 	// ONE EXTRA SECOND SO "0" IS ACTUALLY SEEN; clearInterval FIRST SO NO TICK FIRES DURING UNLOAD
 	setTimeout(() => {
 		clearInterval(ticker);
-		if (next) location.replace(next);
-		else location.reload();
+		location.reload();
 	}, (seconds + 1) * 1000);
 }

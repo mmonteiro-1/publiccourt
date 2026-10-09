@@ -5,8 +5,32 @@
 // NEEDS config.js, utils.js, tear-reveal.js AND pass-card.js LOADED FIRST; RUNS ITS OWN CHECK ON LOAD
 
 const MSG_REVEAL_PASS_HEADER = "O teu passe foi aprovado";
+const MSG_REVEAL_TO_PROFILE = "Ver o meu perfil";
+
+// THE PIG'S HAND HOLDING A PRIZE: THE HAND BEHIND IT, THE THUMB IN FRONT — TWO HALVES OF ONE DRAWING, AND THE ORDER IN THE PAGE IS
+// THE LAYERING, SO NO z-index. BUMP ?v= WHENEVER pig_hand.svg CHANGES — BROWSERS CACHE IT HARD
+const liftedPrize = prize => `
+	<div class="prize-lift">
+		<div class="prize-bob">
+			<svg class="prize-arm" viewBox="0 0 1527 3291" aria-hidden="true"><use href="images/pig_hand.svg?v=3#hand"/></svg>
+			${prize}
+			<svg class="prize-arm" viewBox="0 0 1527 3291" aria-hidden="true"><use href="images/pig_hand.svg?v=3#thumb"/></svg>
+		</div>
+	</div>
+`;
 
 const REVEALS = {
+	// THE END OF THE ONBOARDING: THE PIG LIFTS THE PLAYER'S FIRST TRADING CARD — THE ANSWER TO THE WELCOME'S "JÁ SABES QUE TIPO DE
+	// JOGADOR ÉS?". NOTHING TO GO BACK TO, SO NO "PRA JÁ NÃO": ITS LINK GOES ON TO THE PROFILE, WHERE THE CARD LIVES
+	// FOR NOW ONLY THE CARD, RISING ON ITS OWN WITH THE PEANUTS: NO TEXT, NO HAND, NO BUTTON — BEING REWORKED
+	onboarded: ({ card }) => ({
+		kind: "onboarded",
+		ref: "1",
+		text: "",
+		prize: `<div class="prize-lift"><div class="prize-bob">${card}</div></div>`,
+		next: null,
+		exit: { label: MSG_REVEAL_TO_PROFILE, href: "profile.html" },
+	}),
 	// THE PIG LIFTS THE PASS TICKET — EXACTLY AS THE PROFILE DRAWS IT — LIKE A CHAMPION. A PRESET GIVES ITS text AND ITS prize
 	// SEPARATELY; showReveal LAYS THEM OUT (TEXT, THEN THE NEXT-STEP BUTTON, THEN THE PRIZE)
 	passApproved: ({ passId, card, courtId }) => ({
@@ -15,17 +39,7 @@ const REVEALS = {
 		text: `
 			<p class="info-heading">${MSG_REVEAL_PASS_HEADER}</p>
 		`,
-		prize: `
-			<div class="prize-lift">
-				<div class="prize-bob">
-					<!-- THE PRIZE SITS BETWEEN THE TWO HALVES OF ONE DRAWING: THE HAND BEHIND IT, THE THUMB IN FRONT. THE ORDER IN THE
-					     PAGE IS THE LAYERING, SO NO z-index. BUMP ?v= WHENEVER pig_hand.svg CHANGES — BROWSERS CACHE IT HARD -->
-					<svg class="prize-arm" viewBox="0 0 1527 3291" aria-hidden="true"><use href="images/pig_hand.svg?v=3#hand"/></svg>
-					${passCard(card)}
-					<svg class="prize-arm" viewBox="0 0 1527 3291" aria-hidden="true"><use href="images/pig_hand.svg?v=3#thumb"/></svg>
-				</div>
-			</div>
-		`,
+		prize: liftedPrize(passCard(card)),
 		// TO THE GROUP'S FIRST COURT, WHERE THE NEW MEMBER CAN BOOK RIGHT AWAY; NO BUTTON IF THE GROUP HAS NO ACTIVE COURT
 		next: courtId ? { label: "Reserva o teu primeiro jogo", icon: "icon_court", href: `court?court=${courtId}` } : null,
 	}),
@@ -33,14 +47,15 @@ const REVEALS = {
 
 // record: false IS FOR debugSurprise — PLAYS THE SAME, WRITES NOTHING
 // TEXT AND THE NEXT STEP UP TOP, THE PRIZE BELOW THEM — THE LOWER PART OF THE SCREEN IS LEFT FOR THE PRIZE AND THE HAND
-function showReveal({ kind, ref, text, prize, next }, { record = true } = {}) {
+// exit TURNS "PRA JÁ NÃO" INTO A LINK ON, FOR A SCENE WITH NOTHING BEHIND IT TO GO BACK TO
+function showReveal({ kind, ref, text, prize, next, exit = null }, { record = true } = {}) {
 	const layer = document.createElement("div");
 	layer.className = "reveal-scene";
 	layer.innerHTML = `
 		<div class="reveal-stage">${text}</div>
 		${next ? `<button data-action="reveal-next" class="margin-top-10"><img src="images/${next.icon}.svg" class="link-icon" alt="">${next.label}</button>` : ""}
 		<div class="reveal-stage margin-top-30">${prize}</div>
-		<a href="#" data-action="reveal-close" class="info-link">Pra já não</a>
+		${exit ? `<a href="${exit.href}" class="info-link">${exit.label}</a>` : `<a href="#" data-action="reveal-close" class="info-link">Pra já não</a>`}
 	`;
 	document.body.appendChild(layer);
 	// A LIFTED PRIZE STARTS JUST OUT OF SIGHT — ITS TOP EDGE ON THE SCREEN'S BOTTOM EDGE — SO IT ENTERS THE MOMENT IT MOVES.
@@ -54,7 +69,7 @@ function showReveal({ kind, ref, text, prize, next }, { record = true } = {}) {
 		lift.style.setProperty("--lift-from", `${innerHeight - (bob.offsetTop + prize.offsetTop)}px`);
 	}
 	layer.querySelector('[data-action="reveal-next"]')?.addEventListener("click", () => { location.href = next.href; });
-	layer.querySelector('[data-action="reveal-close"]').addEventListener("click", e => {
+	layer.querySelector('[data-action="reveal-close"]')?.addEventListener("click", e => {
 		e.preventDefault();
 		layer.remove();
 	});
@@ -158,7 +173,8 @@ async function checkSurprises() {
 }
 
 // profile.html IS ALSO THE POST-LOGIN ROUTER, SO IT CHECKS ONLY ONCE IT SHOWS THE PROFILE (showProfile) — CHECKING ON LOAD
-// FLASHED THE PARCEL JUST BEFORE THE REDIRECT TO THE COURT LIST, WHERE IT PLAYED AGAIN
+// FLASHED THE PARCEL JUST BEFORE THE REDIRECT TO THE COURT LIST, WHERE IT PLAYED AGAIN. THE ONBOARDING NEVER CHECKS: IT LOADS
+// THIS FILE ONLY FOR ITS OWN CARD REVEAL
 const debugKind = IS_DEV ? new URLSearchParams(location.search).get("surprise") : null;
 if (debugKind !== null) debugSurprise(debugKind || undefined);
-else if (!document.body.classList.contains("page-profile")) checkSurprises();
+else if (!document.body.matches(".page-profile, .page-onboarding")) checkSurprises();

@@ -216,32 +216,21 @@ body:has(.info-pig) .header-profile {
 	z-index: -1;
 }
 
-/* .success, NOT .page-court.success: THE ONBOARDING ENDS ON A SUCCESS SCREEN TOO */
-.success .info-heading,
-.success .info-sub1 {
+.page-court.success .info-heading,
+.page-court.success .info-sub1 {
 	color: var(--white);
 }
 
 /* info-heading IS 1.5em ON info.html; THE SUCCESS TITLE STAYS BIGGER THAN ITS 1.5em sub1 */
-.success .info-heading {
+.page-court.success .info-heading {
 	font-size: 2.5em;
 }
 
-.success .info-sub1 {
+.page-court.success .info-sub1 {
 	font-size: 1.5em;
 }
 
-/* THE ONBOARDING CENTRES ITS QUESTIONS; ITS SUCCESS SCREEN STARTS AT THE TOP LIKE THE COURT PAGE'S, SO THE PIG SITS ON THE
-   GREEN (.success-bg) THE SAME WAY */
-.page-onboarding.success #app {
-	margin-top: 0;
-}
-
-.page-onboarding.success .info-link {
-	display: none;
-}
-
-.success .info-sub2 {
+.page-court.success .info-sub2 {
 	font-size: 1.2em;
 	color: var(--muted);
 	font-weight: 400;
@@ -1385,12 +1374,12 @@ input[type="time"]::-webkit-date-and-time-value {
 }
 
 /* THE PROGRESS BAR: THE XP BAR WITHOUT ITS LABEL, SO IT NEEDS A HEIGHT OF ITS OWN. THE INPUTS' MUTED TRACK, A BLUE FILL */
-.page-onboarding .xp-bar {
+.page-onboarding #app > .xp-bar {
 	height: 15px;
 	background: var(--muted-input);
 }
 
-.page-onboarding .xp-bar div {
+.page-onboarding #app > .xp-bar div {
 	background: var(--blue);
 }
 

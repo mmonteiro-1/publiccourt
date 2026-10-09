@@ -173,9 +173,24 @@ function startOnboarding(user, profile) {
 				nextBtn.textContent = "Concluir";
 				return;
 			}
-			// THE SUCCESS SCREEN'S COUNTDOWN GOES ON TO profile.html, THE ROUTER
-			showSuccess(SUCCESS.onboarded());
+			await revealCard();
 		});
+	}
+
+	// THE END: A PARCEL TO TEAR OPEN, AND INSIDE IT THE PIG LIFTING THE PLAYER'S FIRST TRADING CARD — REAL XP AND STATS, AS THE
+	// PROFILE WILL SHOW THEM (A VISITOR'S GAMES WERE CLAIMED ON LOGIN). WITH ?force IT PLAYS BUT WRITES NOTHING
+	async function revealCard() {
+		const [xp, { data: games }] = await Promise.all([fetchXp(), db.rpc("my_games_xp", { p_device: null })]);
+		const stats = gameStats((games ?? []).map(game => ({ start: game.start_at, courtId: game.court_id })));
+		showReveal(REVEALS.onboarded({ card: tradingCard(xp, stats) }), { record: !FORCE_ONBOARDING });
+		// THE SCENE'S LINK GOES TO THE PROFILE, WHERE THE CARD LIVES — SO THE ROUTER (profile.js) MUST NOT SEND THEM ON TO THE COURT
+		// LIST OR THE COURT THEY LOGGED IN FROM
+		try {
+			localStorage.removeItem("justLoggedIn");
+			localStorage.removeItem("returnTo");
+		} catch {}
+		// THE SAME TILT AS ON THE PROFILE: THE CARD IS THE PLAYER'S TO PLAY WITH
+		tiltCard(document.querySelector(".reveal-scene .trading-card"));
 	}
 
 	// A FIRST VISIT OPENS ON A WELCOME, SO THE QUESTIONS DON'T START COLD. SAVES NOTHING: A PLAYER COMING BACK HALFWAY SKIPS IT

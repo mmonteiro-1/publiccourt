@@ -247,28 +247,44 @@ function statRating(max, value) {
 // A teaser MAKES THIS THE LOCKED PREVIEW (VISITORS, PLAYERS WITH NO GAMES YET): IT PINS EVERY RATING AND THE STAT CARDS'
 // COUNTS AT 0 — AN EMPTY STARTING POINT RATHER THAN THE DUMMY FIRST GAME'S REAL VALUES. THE XP STILL COMES FROM THAT GAME
 // xpPromise IS THE TRADING CARD'S TOTAL: THE GAMES' XP PLUS +3000 PER PASS EVER AWARDED, AS player_xp COUNTS IT
-async function loadProgress(container, gamesPromise, teaserPromise, xpPromise) {
-	const games = await gamesPromise;
-	const teaser = await teaserPromise;
-	const xp = DEBUG_LEVEL ? debugLevelXp(DEBUG_LEVEL) : await xpPromise;
-
-	// ALL THREE STATS SHARE ONE ROLLING 6-MONTH WINDOW — NOT A CALENDAR PERIOD, SO NOTHING RESETS TO ZERO ON A FIXED DATE
+// THE STATS AND DIAMONDS FROM A PLAYER'S GAMES ({ start, courtId }). SHARED BY THE PROGRESS TAB AND THE ONBOARDING'S CARD REVEAL.
+// ALL THREE STATS SHARE ONE ROLLING 6-MONTH WINDOW — NOT A CALENDAR PERIOD, SO NOTHING RESETS TO ZERO ON A FIXED DATE
+function gameStats(games) {
 	const now = new Date();
 	const recentStart = new Date(now);
 	recentStart.setMonth(recentStart.getMonth() - 6);
 	const past = games.filter(game => new Date(game.start) < now);
 	const recent = past.filter(game => new Date(game.start) >= recentStart);
-	const gamesRecent = recent.length;
-	// WEEKS WITH A GAME, NOT A STREAK: ONE MISSED WEEK DOESN'T WIPE IT OUT. THE STREAK ONLY PAYS XP AND THE INQUEBRÁVEL DIAMOND
-	const weeks = new Set(recent.map(game => weekStart(game.start))).size;
-	const courts = new Set(recent.map(game => game.courtId)).size;
-
-	// LIFETIME FEATS, KEPT FOREVER. KEYED BY STAT SO EACH SHOWS ON ITS CARD
-	const diamonds = {
-		games: past.length >= DIAMOND_GAMES,
-		weeks: longestStreak(past) >= DIAMOND_STREAK,
-		courts: new Set(past.map(game => game.courtId)).size >= DIAMOND_COURTS,
+	return {
+		gamesRecent: recent.length,
+		// WEEKS WITH A GAME, NOT A STREAK: ONE MISSED WEEK DOESN'T WIPE IT OUT. THE STREAK ONLY PAYS XP AND THE INQUEBRÁVEL DIAMOND
+		weeks: new Set(recent.map(game => weekStart(game.start))).size,
+		courts: new Set(recent.map(game => game.courtId)).size,
+		// LIFETIME FEATS, KEPT FOREVER. KEYED BY STAT SO EACH SHOWS ON ITS CARD
+		diamonds: {
+			games: past.length >= DIAMOND_GAMES,
+			weeks: longestStreak(past) >= DIAMOND_STREAK,
+			courts: new Set(past.map(game => game.courtId)).size >= DIAMOND_COURTS,
+		},
 	};
+}
+
+// THE TRADING CARD FOR THESE GAMES AND THIS XP. A teaser PINS THE RATINGS AT 0 (SEE loadProgress)
+function tradingCard(xp, stats, teaser) {
+	const rating = (max, value) => teaser ? 0 : Math.round(statRating(max, value));
+	return xpCard(xp, Object.values(stats.diamonds).filter(Boolean).length, [
+		{ icon: "fire_color", rating: rating(STAT_GAMES, stats.gamesRecent) },
+		{ icon: "repeat_color", rating: rating(STAT_WEEKS, stats.weeks) },
+		{ icon: "globe_color", rating: rating(STAT_TERRITORY, stats.courts) },
+	], teaser);
+}
+
+async function loadProgress(container, gamesPromise, teaserPromise, xpPromise) {
+	const games = await gamesPromise;
+	const teaser = await teaserPromise;
+	const xp = DEBUG_LEVEL ? debugLevelXp(DEBUG_LEVEL) : await xpPromise;
+	const stats = gameStats(games);
+	const { gamesRecent, weeks, courts, diamonds } = stats;
 
 	// NO BAR: THE XP BAR IS THE ONLY ONE ON THE PROFILE, SO A STAT NEVER READS AS A SECOND PROGRESS
 	const rating = (max, value) => teaser ? 0 : Math.round(statRating(max, value));
@@ -281,11 +297,7 @@ async function loadProgress(container, gamesPromise, teaserPromise, xpPromise) {
 		</div>
 	`;
 	container.innerHTML = [
-		xpCard(xp, Object.values(diamonds).filter(Boolean).length, [
-			{ icon: "fire_color", rating: rating(STAT_GAMES, gamesRecent) },
-			{ icon: "repeat_color", rating: rating(STAT_WEEKS, weeks) },
-			{ icon: "globe_color", rating: rating(STAT_TERRITORY, courts) },
-		], teaser),
+		tradingCard(xp, stats, teaser),
 		statCard("fire_color", "Frequência", STAT_GAMES, gamesRecent, MSG_STAT_GAMES_VALUE(shown(gamesRecent)), diamonds.games),
 		statCard("repeat_color", "Consistência", STAT_WEEKS, weeks, MSG_STAT_WEEKS(shown(weeks)), diamonds.weeks),
 		statCard("globe_color", MSG_TITLE_TERRITORY, STAT_TERRITORY, courts, MSG_STAT_COURTS(shown(courts)), diamonds.courts),
