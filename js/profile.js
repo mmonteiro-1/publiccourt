@@ -423,7 +423,11 @@ function showProfile(user, profile) {
 
 	const games = fetchHistory(user);
 	loadHistory(document.getElementById("history-list"), games);
-	loadProgress(app.querySelector('[data-pane-body="progress"] .bookings-list'), games, undefined, fetchXp());
+	// NO GAMES YET: THE VISITOR'S LOCKED PREVIEW (THE DUMMY FIRST GAME AND ITS TEASER) INSTEAD OF AN EMPTY PANE
+	loadProgress(app.querySelector('[data-pane-body="progress"] .bookings-list'),
+		games.then(list => list.length ? list : [dummyGame()]),
+		games.then(list => list.length ? undefined : MSG_TEASER_FIRST(DUMMY_GAME_XP)),
+		games.then(list => list.length ? fetchXp() : DUMMY_GAME_XP));
 	loadRanking(app.querySelector('[data-pane-body="ranking"] .bookings-list'), user);
 	loadPasses(document.getElementById("passes-list"), user, fetchPasses(user));
 

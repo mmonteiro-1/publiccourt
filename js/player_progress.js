@@ -2,7 +2,6 @@
 // THE XP LEVELS THEMSELVES ARE IN utils.js, SHARED WITH THE HEADER'S LEVEL RING
 
 // "ATIVIDADE", NEVER "SAÚDE" — SEE "ACTIVITY, NEVER HEALTH" IN CLAUDE.md
-const MSG_PROGRESS_EMPTY = "O teu progresso aparece aqui depois do primeiro jogo.";
 // "NENHUMA" FOR ZERO: SPACE GROTESK'S ROUND 0 READ AS AN "o" ("o jogos"), AND IT HAS NO SLASHED ZERO
 const MSG_STAT_WEEKS = n => n === 0 ? "Nenhuma semana com partidas" : `${n} ${n === 1 ? "semana" : "semanas"} com partidas`;
 const MSG_STAT_GAMES_VALUE = n => n === 0 ? "Nenhuma partida" : `${n} ${n === 1 ? "partida" : "partidas"}`;
@@ -245,18 +244,13 @@ function statRating(max, value) {
 
 // PROGRESS FROM THE SAME GAMES AS THE HISTORY (ALREADY WITHOUT THE ≤10 MIN ONES). DECLARED TIME ON COURT,
 // NOT TIME PLAYED: A WALK-IN LASTS WHAT THE PLAYER CHOSE UNLESS ENDED EARLY, AND A BOOKING DOESN'T PROVE A SHOW-UP
-// A teaser MAKES THIS THE VISITOR'S LOCKED PREVIEW: IT PINS EVERY RATING AND THE STAT CARDS' COUNTS AT 0 —
-// AN EMPTY STARTING POINT RATHER THAN THE DUMMY FIRST GAME'S REAL VALUES. THE XP STILL COMES FROM THAT GAME
+// A teaser MAKES THIS THE LOCKED PREVIEW (VISITORS, PLAYERS WITH NO GAMES YET): IT PINS EVERY RATING AND THE STAT CARDS'
+// COUNTS AT 0 — AN EMPTY STARTING POINT RATHER THAN THE DUMMY FIRST GAME'S REAL VALUES. THE XP STILL COMES FROM THAT GAME
 // xpPromise IS THE TRADING CARD'S TOTAL: THE GAMES' XP PLUS +3000 PER PASS EVER AWARDED, AS player_xp COUNTS IT
 async function loadProgress(container, gamesPromise, teaserPromise, xpPromise) {
 	const games = await gamesPromise;
 	const teaser = await teaserPromise;
 	const xp = DEBUG_LEVEL ? debugLevelXp(DEBUG_LEVEL) : await xpPromise;
-	if (!games.length) {
-		setPigAppearance(container, MSG_PROGRESS_EMPTY, "pig_reaching");
-		appendRulesCard(container, MSG_PROGRESS_INFO, XP_RULES, MSG_PROGRESS_RULES, MSG_PROGRESS_INTRO);
-		return;
-	}
 
 	// ALL THREE STATS SHARE ONE ROLLING 6-MONTH WINDOW — NOT A CALENDAR PERIOD, SO NOTHING RESETS TO ZERO ON A FIXED DATE
 	const now = new Date();

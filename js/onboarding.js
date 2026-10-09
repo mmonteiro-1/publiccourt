@@ -33,7 +33,12 @@ const MSG_FOUND_QR = "Esbarrei com o QR Code no campo";
 const MSG_FOUND_FRIEND = "Um amigo obrigou-me";
 const MSG_FOUND_WEB = "Na rede mundial de computadores";
 const MSG_ASK_NAME = "Como te devemos chamar?";
-const MSG_ONBOARDING_RESUME = "Saíste a meio do questionário, pá.<br>Por pouco não ficámos ofendidos.";
+const MSG_WELCOME_TITLE = "Seja muito bem-vindo,<br>tás à vontade.";
+const MSG_WELCOME = "Já sabes que tipo de jogador és? Anda cá descobrir, que estamos todos curiosos.";
+// THE WAY OUT AT THE BOTTOM: ON THE WELCOME NOTHING IS STARTED YET, SO IT'S A SHRUG; AFTER THAT, A PAUSE
+const MSG_LEAVE_WELCOME = "Tenho mais que fazer, pá!";
+const MSG_LEAVE = "Continuar depois";
+const MSG_ONBOARDING_RESUME ="Saíste a meio do questionário, pá.<br>Por pouco não ficámos ofendidos.";
 const MSG_ONBOARDING_ERROR = "Erro ao guardar. Tenta outra vez.";
 const MSG_SILLY_NAME = name => `Enquanto não escolheres um nome, serás o digníssimo <b>${name}</b>`;
 
@@ -88,6 +93,7 @@ function startOnboarding(user, profile) {
 	}
 
 	function render() {
+		document.getElementById("back-link").textContent = MSG_LEAVE;
 		const s = STEPS[step];
 		const answer = answers[s.field];
 		// THE PICKED ANSWER IS SOLID, THE OTHERS SHALLOW. A STEP OPENS WITH ITS SAVED ANSWER PICKED, OR THE FIRST ONE, SO
@@ -106,7 +112,7 @@ function startOnboarding(user, profile) {
 					`).join("")}
 				</div>
 			` : `
-				<input class="form-input" type="text" id="onboarding-input" placeholder="${sillyName(user.id)}" autocomplete="name">
+				<input class="form-input margin-top-10" type="text" id="onboarding-input" placeholder="${sillyName(user.id)}" autocomplete="name">
 				<p class="card-sub margin-top-10">${MSG_SILLY_NAME(sillyName(user.id))}</p>
 			`}
 			<div class="xp-bar margin-top-10" style="--fill: ${(step + 1) / STEPS.length * 100}%"><div></div></div>
@@ -160,11 +166,27 @@ function startOnboarding(user, profile) {
 				nextBtn.textContent = "Concluir";
 				return;
 			}
-			location.replace("profile.html");
+			// THE SUCCESS SCREEN'S COUNTDOWN GOES ON TO profile.html, THE ROUTER
+			showSuccess(SUCCESS.onboarded());
 		});
 	}
 
-	render();
+	// A FIRST VISIT OPENS ON A WELCOME, SO THE QUESTIONS DON'T START COLD. SAVES NOTHING: A PLAYER COMING BACK HALFWAY SKIPS IT
+	// AND LANDS ON THEIR QUESTION, WITH THE RESUME LINE
+	function welcome() {
+		document.getElementById("back-link").textContent = MSG_LEAVE_WELCOME;
+		app.innerHTML = `
+			<p class="onboarding-question" style="font-size: 1.5em">${MSG_WELCOME_TITLE}</p>
+			<p class="info-sub1 margin-top-10 margin-bottom-20">${MSG_WELCOME}</p>
+			<div class="onboarding-actions" style="margin-top: 0">
+				<button id="start-btn"><img src="images/icon_curious.svg" alt="">Descobrir</button>
+			</div>
+		`;
+		document.getElementById("start-btn").addEventListener("click", render);
+	}
+
+	if (resuming) render();
+	else welcome();
 }
 
 // A PLAYER WHO FINISHED HAS NOTHING TO DO HERE → BACK TO THE ROUTER. A ROW WITHOUT onboarded_at IS A PLAYER WHO LEFT HALFWAY
