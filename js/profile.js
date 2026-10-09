@@ -27,7 +27,7 @@ const MSG_TEASER_FIRST = xp => `O teu primeiro jogo vai valer logo ${MSG_XP(xp)}
 // A PLAYER WHO LEFT ONBOARDING HALFWAY: THEIR DADOS TAB, AND THE LINE ABOVE EVERY TEASER PANE. linked ON THE TEASER PANES;
 // DADOS HAS ITS OWN BUTTON INSTEAD
 const MSG_QUITTER_HELLO = "Olá";
-const MSG_QUITTER = linked => `Não sejas um estranho. ${linked ? `<a href="onboarding.html">Completa o questionário</a>` : "Completa o questionário"} para nos conhecermos melhor e para usares a app a sério.`;
+const MSG_QUITTER = linked => `Os estagiários vieram avisar que não completaste o ${linked ? `<a href="onboarding.html">questionário</a>` : "questionário"}. Vais ficar sem saber que jogador és até lá.`;
 
 const MSG_VIEW_PROGRESS = "Progresso";
 const MSG_VIEW_RANKING = "Ranking";

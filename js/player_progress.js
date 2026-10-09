@@ -99,6 +99,8 @@ const XP_LEVEL_INFO = [
 
 // THE CAMERA FLASH ON THE INFLUENCER'S CARD (LEVEL 3): THE CARD GOES WHITE AND, WHILE IT IS, THE ART SWAPS TO THIS ONE
 const XP_FLASH_LEVEL = 3;
+// FROM THIS LEVEL THE CARD IS A RARE FOIL (THE HOLO: ORANGE FACE, FOIL, SHINE), EARNED BY PLAYING
+const XP_HOLO_LEVEL = 9;
 const XP_FLASH_IMAGE = "pig_selfie2";
 // THE PHONE'S FLASH IN THE FIRST IMAGE, AS A SHARE OF ITS SIZE: THE #flash CIRCLE IN pig_selfie.svg (92.33, 24.81 OF 677.85 × 858.1)
 const XP_FLASH_SOURCE = { x: 92.33 / 677.85, y: 24.81 / 858.1, ratio: 677.85 / 858.1 };
@@ -156,8 +158,14 @@ function tiltCard(card) {
 		// THE PIG STANDS IN FRONT OF THE CARD, SO IT SLIDES TOWARDS THE EDGE THAT SINKS
 		card.style.setProperty("--pig-x", `${y.angle * TILT_DEPTH}px`);
 		card.style.setProperty("--pig-y", `${-x.angle * TILT_DEPTH}px`);
-		card.style.setProperty("--glare-x", `${-(x.angle + y.angle) / TILT_MAX * 60}%`);
-		card.style.setProperty("--glare-o", Math.min(Math.hypot(x.angle, y.angle) / TILT_MAX, 1) * 0.4);
+		// HOW FAR AND HOW MUCH THE CARD IS TILTED, FOR THE HOLO: THE FOIL'S DRIFT AND THE FOIL'S AND SHINE'S STRENGTH
+		// CAPPED AT ±60%: BOTH AXES TILTED THE SAME WAY (A PRESS NEAR THE TOP-RIGHT OR BOTTOM-LEFT CORNER) ADD UP TO TWICE THAT,
+		// AND THE SPRING OVERSHOOTS — PAST IT THE FOIL SLID OFF ITS OWN TILES AND SHOWED THEIR SEAMS
+		card.style.setProperty("--tilt-x", `${Math.max(-60, Math.min(60, -(x.angle + y.angle) / TILT_MAX * 60))}%`);
+		card.style.setProperty("--tilt-o", Math.min(Math.hypot(x.angle, y.angle) / TILT_MAX, 1) * 0.4);
+		// THE HOLO'S SHINE SITS ON THE PART OF THE CARD TILTED TOWARDS THE PLAYER — THE SAME EDGES THE SHADOW GROWS UNDER
+		card.style.setProperty("--shine-x", `${50 - y.angle / TILT_MAX * 50}%`);
+		card.style.setProperty("--shine-y", `${50 + x.angle / TILT_MAX * 50}%`);
 		const still = Object.values(axes).every(axis => Math.abs(axis.target - axis.angle) < 0.05 && Math.abs(axis.speed) < 0.05);
 		frame = still ? null : requestAnimationFrame(step);
 	}
@@ -207,7 +215,7 @@ function xpCard(xp, diamonds, stats, teaser) {
 	const index = level - 1;
 	const info = XP_LEVEL_INFO[index];
 	return `
-		<div class="trading-card${teaser ? " locked" : ""}${level === XP_FLASH_LEVEL ? " flash" : ""}">
+		<div class="trading-card${teaser ? " locked" : ""}${level === XP_FLASH_LEVEL ? " flash" : ""}${level >= XP_HOLO_LEVEL ? " holo" : ""}">
 			<p class="trading-card-level">${MSG_XP_LEVEL(index + 1)}<span>${DIAMOND_ICON} ${diamonds}</span></p>
 			<div class="trading-card-art">
 				<div class="trading-card-frame"${XP_LEVEL_BACKGROUNDS[index] ? ` style="background-image: url('images/${XP_LEVEL_BACKGROUNDS[index]}.svg')"` : ""}></div>
@@ -224,6 +232,7 @@ function xpCard(xp, diamonds, stats, teaser) {
 			`).join("")}</div>
 			<div class="xp-bar" style="--fill: ${fill}%"><div></div><span>${MSG_XP(xp)}</span></div>
 			${teaser ? `<p class="trading-card-text">${teaser}</p>` : ""}
+			${level >= XP_HOLO_LEVEL ? `<div class="trading-card-holo"></div>` : ""}
 		</div>
 	`;
 }

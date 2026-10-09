@@ -69,6 +69,19 @@ html:has(.page-court-list) {
 	--muted-input: #ffffff5c;
 	--yellow: #ffc700;	
 	--blue: #0058ff;
+	/* THE TRADING CARD'S HOLO FOIL ONLY: THE RAINBOW, THE METAL LINES, THE SHADE */
+	--holo-red: #ff7773;
+	--holo-yellow: #ffed5f;
+	--holo-green: #a8ff5f;
+	--holo-cyan: #83fff7;
+	--holo-blue: #7894ff;
+	--holo-violet: #d875ff;
+	--holo-metal-dark: #0e152e;
+	--holo-metal: #8fa3a3;
+	--holo-metal-light: #95c4c4;
+	--holo-shade-light: #0000001a;
+	--holo-shade: #00000026;
+	--holo-shade-dark: #00000040;
 }
 
 body {
@@ -1081,11 +1094,11 @@ input[type="time"]::-webkit-date-and-time-value {
 /* PINK = THE PAGE, SO THE ACTIVE TAB READS AS PART OF THE SHEET BELOW IT.
    THE SHADOW DROPS 4px LIKE EVERY OTHER CARD'S: THE ACTIVE TAB STANDS TALLER THAN ITS NEIGHBOURS, SO ITS SHADOW STARTS 4px DOWN
    AND FALLS ACROSS THE NEXT TAB. THE clip-path CUTS THE 4px IT WOULD CAST BELOW THE TAB, ONTO THE SHEET, AND LEAVES ROOM ON
-   THE RIGHT FOR THE SHADOW ITSELF */
+   THE RIGHT FOR THE SHADOW ITSELF. THE EXTRA BOTTOM PADDING KEEPS THE SHEET'S BLACK TOP LINE COVERED WHILE THE TAB SPRINGS */
 .folder-tab.active {
 	background: var(--pink);
 	flex: none;
-	padding: 1px 15px;
+	padding: 1px 15px 3px 15px;
 	border-bottom-color: transparent;
 	box-shadow: 4px 4px 0 var(--black);
 	clip-path: inset(0 -5px 0 0);
@@ -1379,8 +1392,27 @@ input[type="time"]::-webkit-date-and-time-value {
 	background: var(--muted-input);
 }
 
+/* BETWEEN STEPS THE FILL BURSTS LIKE A HOSE UNDER PRESSURE: A BEAT HELD BACK, A SLOW START AS THE PRESSURE BUILDS, THEN A FAST
+   SURGE PAST ITS MARK THAT SLOSHES BACK AND SETTLES. --fill-from (onboarding.js) IS THE LAST STEP'S FILL AS A SHARE OF THIS ONE,
+   SO THE SURGE STARTS WHERE THE BAR WAS. SCALED FROM ITS LEFT EDGE, transform ONLY; THE OVERSHOOT IS CLIPPED BY THE BAR */
 .page-onboarding #app > .xp-bar div {
 	background: var(--blue);
+	transform-origin: left;
+	animation: fill-burst 0.6s 0.1s both;
+}
+
+@keyframes fill-burst {
+	0% { transform: scaleX(var(--fill-from)); animation-timing-function: cubic-bezier(0.95, 0, 0.6, 1); }
+	40% { transform: scaleX(1.08); animation-timing-function: ease-in-out; }
+	60% { transform: scaleX(0.97); animation-timing-function: ease-in-out; }
+	80% { transform: scaleX(1.02); animation-timing-function: ease-in-out; }
+	100% { transform: scaleX(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.page-onboarding #app > .xp-bar div {
+		animation: none;
+	}
 }
 
 /* A PRESS PUSHES THE BUTTON INTO ITS SHADOW: IT MOVES BY THE SHADOW'S 4px AND THE SHADOW GOES, AS IF IT TURNED SHALLOW.
@@ -1845,18 +1877,84 @@ button.released {
 	touch-action: pan-y;
 }
 
-/* THE GLARE: ONE WIDE SOFT BAND, LIKE LIGHT ON A PLASTIC CARD, MOVED AND SHOWN BY THE TILT (--glare-x, --glare-o).
-   SOFT ON PURPOSE — HARD EDGES READ AS GLASS. A GRADIENT AGAINST THE FLAT-COLOUR RULE, THE SAME EXCEPTION AS THE CAMERA
-   FLASH: IT'S LIGHT, NOT A SURFACE. THE CARD'S overflow: hidden CLIPS IT TO THE ROUNDED CORNERS */
-.trading-card::before {
-	content: "";
+/* AN ORANGE FACE FOR THE FOIL TO LIGHT UP: COLOUR-DODGE ON THE LIGHT GREY ONLY WASHED OUT TO WHITE. BLACK STAYS BLACK UNDER
+   IT, SO THE TEXT AND OUTLINES READ AS BEFORE */
+.trading-card.holo {
+	background: var(--orange);
+}
+
+/* THE FOIL, ON HOLO CARDS (XP_HOLO_LEVEL, player_progress.js). AFTER THE "RARE HOLO V" OF codepen.io/msriki12/pen/yyBNMEr
+   (ITSELF CUT DOWN FROM simeydotme's POKÉMON CARDS; THE PEN CALLS IT "SHINE"): A GRAIN, A RAINBOW AND THIN METAL LINES,
+   BLENDED INTO ONE SHEET AND COLOUR-DODGED ONTO THE CARD, WITH A SECOND COPY (::after) DRIFTING THE OTHER WAY IN SOFT LIGHT.
+   THE TILT MOVES IT: --holo-pos IS --tilt-x MAPPED TO 20–80%, STANDING IN FOR THE PEN'S POINTER ON BOTH AXES; --tilt-o
+   BRINGS IT UP. TEXTURE AND GRADIENTS AGAINST THE STYLE RULES ON PURPOSE: A FOIL IS THE ONE THING ON A CARD THAT ISN'T FLAT */
+.trading-card-holo,
+.trading-card-holo::after {
+	--holo-pos: calc(50% + var(--tilt-x, 0%) / 2);
+	/* THE GRAIN: THE PEN'S NOISE SVG (BASE64), ITS NOISE RAISED FROM 0.3 TO 0.45 OPACITY FOR A COARSER FOIL */
+	background-image:
+		url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnhsaW5rPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5L3hsaW5rIiB3aWR0aD0iNTAwIiBoZWlnaHQ9IjUwMCI+CjxmaWx0ZXIgaWQ9Im4iPgo8ZmVUdXJidWxlbmNlIHR5cGU9ImZyYWN0YWxOb2lzZSIgYmFzZUZyZXF1ZW5jeT0iLjciIG51bU9jdGF2ZXM9IjEwIiBzdGl0Y2hUaWxlcz0ic3RpdGNoIj48L2ZlVHVyYnVsZW5jZT4KPC9maWx0ZXI+CjxyZWN0IHdpZHRoPSI1MDAiIGhlaWdodD0iNTAwIiBmaWxsPSIjMDAwIj48L3JlY3Q+CjxyZWN0IHdpZHRoPSI1MDAiIGhlaWdodD0iNTAwIiBmaWx0ZXI9InVybCgjbikiIG9wYWNpdHk9IjAuNDUiPjwvcmVjdD4KPC9zdmc+"),
+		repeating-linear-gradient(0deg, var(--holo-red) 5%, var(--holo-yellow) 10%, var(--holo-green) 15%, var(--holo-cyan) 20%, var(--holo-blue) 25%, var(--holo-violet) 30%, var(--holo-red) 35%),
+		repeating-linear-gradient(133deg, var(--holo-metal-dark) 0%, var(--holo-metal) 3.8%, var(--holo-metal-light) 4.5%, var(--holo-metal) 5.2%, var(--holo-metal-dark) 10%, var(--holo-metal-dark) 12%),
+		radial-gradient(farthest-corner circle at var(--holo-pos) var(--holo-pos), var(--holo-shade-light) 12%, var(--holo-shade) 20%, var(--holo-shade-dark) 120%);
+	background-blend-mode: screen, hue, hard-light;
+	/* iOS SAFARI DOESN'T CLIP A BLENDED OR FILTERED LAYER TO THE CARD'S ROUNDED overflow: hidden, SO ITS SQUARE CORNERS POKED
+	   OUT. EACH LAYER ROUNDS ITS OWN CORNERS INSTEAD */
+	border-radius: inherit;
+}
+
+.trading-card-holo {
 	position: absolute;
 	inset: 0;
 	z-index: 1;
-	background: linear-gradient(115deg, transparent 20%, var(--white) 50%, transparent 80%);
-	opacity: var(--glare-o, 0);
+	background-size: 500px, 200% 700%, 300%, 200%;
+	background-position: center, 0% var(--holo-pos), var(--holo-pos) var(--holo-pos), var(--holo-pos) var(--holo-pos);
+	/* THE PEN DRAINS IT TO saturate(0.5), A SILVERY FOIL; PUSHED UP FOR A RAINBOW ONE, WITH LESS CONTRAST SO THE COLOURS AREN'T CRUSHED */
+	filter: brightness(0.9) contrast(2) saturate(1.75);
+	mix-blend-mode: color-dodge;
+	opacity: calc(0.1 + var(--tilt-o, 0) * 0.75);
 	pointer-events: none;
-	transform: translateX(var(--glare-x, 0%));
+}
+
+.trading-card-holo::after {
+	content: "";
+	position: absolute;
+	inset: 0;
+	background-size: 500px, 200% 400%, 195%, 200%;
+	/* THE PEN DRIFTS THE METAL LINES BY A NEGATIVE POSITION, WHICH PUTS THE TILE'S EDGE INSIDE THE CARD (A SEAM 10% IN FROM THE
+	   LEFT). 100% MINUS THE POSITION DRIFTS THEM THE OTHER WAY AND KEEPS THE TILE OVER THE WHOLE CARD */
+	background-position: center, 0% var(--holo-pos), calc(100% - var(--holo-pos)) calc(100% - var(--holo-pos)), var(--holo-pos) var(--holo-pos);
+	filter: brightness(1) contrast(2.5) saturate(2.75);
+	mix-blend-mode: soft-light;
+}
+
+/* THE SHINE, ON HOLO CARDS: AFTER THE PEN'S SPOT THAT FOLLOWS THE POINTER (ITS "GLARE"), BUT CENTRED
+   ON THE PART OF THE CARD TILTED TOWARDS THE PLAYER (--shine-x / --shine-y, tiltCard) INSTEAD OF THE FINGER, AND AS STRONG AS
+   THE TILT (--tilt-o, UP TO 0.4). OVER THE FOIL */
+.trading-card.holo::before {
+	content: "";
+	position: absolute;
+	inset: 0;
+	z-index: 2;
+	/* RAINBOW RINGS, NOT THE PEN'S WHITE: overlay ONLY LIGHTENED OR DARKENED WHAT WAS UNDER IT, SO ON THE ORANGE, THE FRAME AND
+	   THE LEVEL BACKGROUNDS IT SHOWED NO COLOUR. hard-light LETS THE RINGS' OWN COLOURS WIN OVER ANY BACKGROUND */
+	background: radial-gradient(farthest-corner circle at var(--shine-x, 50%) var(--shine-y, 50%),
+		var(--holo-red) 0%,
+		var(--holo-yellow) 10%,
+		var(--holo-green) 20%,
+		var(--holo-cyan) 30%,
+		var(--holo-blue) 40%,
+		var(--holo-violet) 50%,
+		transparent 70%);
+	mix-blend-mode: hard-light;
+	/* ONLY ON THE EXTREMITIES, LIKE LIGHT CATCHING A CARD'S RIM: HIDDEN IN THE MIDDLE, FADING IN TOWARDS THE EDGES AND CORNERS.
+	   THE ELLIPSE TOUCHES THE FOUR SIDES, SO THE CORNERS, PAST IT, SHOW IN FULL. PREFIXED FOR OLDER iOS */
+	-webkit-mask-image: radial-gradient(ellipse closest-side, transparent 60%, var(--black) 100%);
+	mask-image: radial-gradient(ellipse closest-side, transparent 60%, var(--black) 100%);
+	opacity: var(--tilt-o, 0);
+	pointer-events: none;
+	/* THE SAME iOS CLIPPING FIX AS THE FOIL */
+	border-radius: inherit;
 }
 
 .trading-card-level {

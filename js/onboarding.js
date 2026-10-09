@@ -81,6 +81,8 @@ function startOnboarding(user, profile) {
 	let step = FORCE_ONBOARDING ? 0 : Math.max(STEPS.findIndex(s => !answers[s.field]), 0);
 	// A PLAYER WHO LEFT HALFWAY IS TOLD SO, ON THE STEP THEY COME BACK TO ONLY — GONE ONCE THEY MOVE
 	let resuming = !FORCE_ONBOARDING && STEPS.some(s => answers[s.field]);
+	// THE BAR IS REDRAWN EVERY STEP, SO IT BURSTS FROM WHAT THE LAST STEP SHOWED (EMPTY ON THE FIRST ONE)
+	let shownFill = 0;
 
 	// upsert: THE FIRST SAVE INSERTS THE ROW, EVERY LATER ONE ONLY TOUCHES ITS OWN COLUMNS
 	async function save(fields) {
@@ -101,6 +103,9 @@ function startOnboarding(user, profile) {
 		let picked = s.options ? answer || s.options[0][0] : null;
 		const resumeLine = resuming;
 		resuming = false;
+		const fill = (step + 1) / STEPS.length * 100;
+		const fillFrom = shownFill / fill;
+		shownFill = fill;
 		// THE PROGRESS, UNDER THE ANSWERS: THE XP BAR'S LOOK, FILLED UP TO THIS STEP
 		app.innerHTML = `
 			${resumeLine ? `<p class="card-sub">${MSG_ONBOARDING_RESUME}</p>` : ""}
@@ -115,7 +120,7 @@ function startOnboarding(user, profile) {
 				<input class="form-input margin-top-10" type="text" id="onboarding-input" placeholder="${sillyName(user.id)}" autocomplete="name">
 				<p class="card-sub margin-top-10">${MSG_SILLY_NAME(sillyName(user.id))}</p>
 			`}
-			<div class="xp-bar margin-top-10" style="--fill: ${(step + 1) / STEPS.length * 100}%"><div></div></div>
+			<div class="xp-bar margin-top-10" style="--fill: ${fill}%; --fill-from: ${fillFrom}"><div></div></div>
 			<div class="onboarding-actions">
 				${step > 0 ? `<button id="back-btn" class="button-shallow">Voltar</button>` : ""}
 				<button id="next-btn">${s.options ? "Avançar" : "Concluir"}</button>
