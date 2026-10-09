@@ -155,8 +155,9 @@ function visitorRanking(xp) {
 }
 
 // THE SEASON BOARD, EVERY PLAYER ON IT.
-// preset (THE VISITOR'S EXAMPLE ROWS) SKIPS THE DATABASE ENTIRELY: NO LIVE RANKING, NO SNAPSHOT, NOTHING SAVED OR ANIMATED
-async function loadRanking(container, user, preset) {
+// preset (THE VISITOR'S EXAMPLE ROWS) SKIPS THE DATABASE ENTIRELY: NO LIVE RANKING, NO SNAPSHOT, NOTHING SAVED OR ANIMATED.
+// presetLine IS THE DESCRIPTION ABOVE THOSE EXAMPLE ROWS (A PLAYER WHO LEFT ONBOARDING GETS THEIR OWN, NOT THE LOGIN NUDGE)
+async function loadRanking(container, user, preset, presetLine = MSG_VISITOR_RANKING) {
 	const season = currentSeason();
 	const { data } = preset ? { data: preset } : await db.rpc("season_ranking");
 	const debug = IS_DEV && new URLSearchParams(location.search).get("board");
@@ -272,7 +273,7 @@ async function loadRanking(container, user, preset) {
 		// NO PLAYER NAMES IN IT, SO IT CAN GO IN AS HTML
 		line.className = "card-sub margin-top-10";
 		line.style.fontSize = ".7em";
-		line.innerHTML = MSG_VISITOR_RANKING;
+		line.innerHTML = presetLine;
 		container.before(line);
 		container.classList.replace("margin-top-20", "margin-top-10");
 		return appendRulesCard(container, MSG_POINTS_INFO, XP_RULES, MSG_RANKING_INFO, MSG_RANKING_INTRO);

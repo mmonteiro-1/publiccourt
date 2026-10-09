@@ -35,11 +35,13 @@ with season as (
 		((s + interval '6 months')::timestamp at time zone 'Europe/Lisbon') as to_at
 	from (select coalesce(p_start, season_start(now())) as s) t
 ),
--- EVERY REGISTERED PLAYER, OPT-OUT RATHER THAN OPT-IN; ADMINS DON'T PLAY HERE
+-- EVERY REGISTERED PLAYER, OPT-OUT RATHER THAN OPT-IN; ADMINS DON'T PLAY HERE. ONLY ONCE ONBOARDING IS DONE: A PLAYER WHO
+-- LEFT HALFWAY HAS A ROW BUT NO NAME (onboarding.sql)
 players as (
 	select p.id, trim(p.name) as name
 	from profiles p
 	where not p.hide_from_ranking
+		and p.onboarded_at is not null
 		and not exists (select 1 from court_groups g where g.admin_id = p.id)
 ),
 -- TARIMBA (LIFETIME WHOLE HOURS ON COURT, NO LONGER SHOWN ON THE PROFILE) ONLY BREAKS TIES; IT ISN'T RETURNED

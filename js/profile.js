@@ -24,6 +24,10 @@ const MSG_VISITOR_INFO = "Dá o próximo passo no ténis: acompanha a tua evolu�
 // LOSS AVERSION FOR A VISITOR WITH WALK-INS; A CONCRETE NEXT STEP FOR A BLANK ONE, WHO HAS NOTHING TO LOSE YET
 const MSG_TEASER_XP = xp => `Já tens ${MSG_XP(xp)} à tua espera. ${MSG_LOGIN_LINK} para não os perderes.`;
 const MSG_TEASER_FIRST = xp => `O teu primeiro jogo vai valer logo ${MSG_XP(xp)}`;
+// A PLAYER WHO LEFT ONBOARDING HALFWAY: THEIR DADOS TAB, AND THE LINE ABOVE EVERY TEASER PANE. linked ON THE TEASER PANES;
+// DADOS HAS ITS OWN BUTTON INSTEAD
+const MSG_QUITTER_HELLO = "Olá";
+const MSG_QUITTER = linked => `Não sejas um estranho. ${linked ? `<a href="onboarding.html">Completa o questionário</a>` : "Completa o questionário"} para nos conhecermos melhor e para usares a app a sério.`;
 
 const MSG_VIEW_PROGRESS = "Progresso";
 const MSG_VIEW_RANKING = "Ranking";
@@ -80,14 +84,19 @@ async function loadProfile(user) {
 	// maybeSingle() RETURNS null (NOT AN ERROR) WHEN NO ROW EXISTS — USED TO DETECT NEW USERS
 	const { data: profile } = await db
 		.from("profiles")
-		.select("name, hide_from_ranking")
+		.select("name, hide_from_ranking, onboarded_at")
 		.eq("id", user.id)
 		.maybeSingle();
 
-	// NEW PLAYERS ONBOARD FIRST, ON THEIR OWN PAGE, WHICH SENDS THEM BACK HERE ONCE THE ROW EXISTS. returnTo / justLoggedIn
-	// AREN'T TAKEN YET, SO THE RETURN TO THE COURT STILL HAPPENS ON THAT SECOND PASS. replace() SO "BACK" DOESN'T BOUNCE THEM
-	if (!profile) {
-		location.replace("onboarding.html");
+	// NOT ONBOARDED YET. RIGHT AFTER A LOGIN (justLoggedIn, PEEKED NOT TAKEN) → THE ONBOARDING, WHICH SENDS THEM BACK HERE ONCE
+	// onboarded_at IS SET; returnTo / justLoggedIn ARE STILL THERE, SO THE RETURN TO THE COURT HAPPENS ON THAT SECOND PASS.
+	// replace() SO "BACK" DOESN'T BOUNCE THEM. ANY OTHER VISIT IS A PLAYER WHO LEFT HALFWAY ("CONTINUAR DEPOIS" CLEARS THE FLAG):
+	// THE PROFILE IN TEASER MODE, WITH ONLY DADOS ASKING THEM TO FINISH
+	if (!profile?.onboarded_at) {
+		let justLoggedIn = null;
+		try { justLoggedIn = localStorage.getItem("justLoggedIn"); } catch {}
+		if (justLoggedIn) location.replace("onboarding.html");
+		else showQuitter(user);
 		return;
 	}
 
@@ -288,6 +297,50 @@ function showVisitor() {
 	loadRanking(app.querySelector('[data-pane-body="ranking"] .bookings-list'), null, visitorRanking(DUMMY_GAME_XP));
 	wireFolderTabs();
 	app.querySelectorAll('[data-action="login"]').forEach(btn => btn.addEventListener("click", () => { location.href = "login.html"; }));
+}
+
+// A PLAYER WHO LEFT ONBOARDING HALFWAY: LOGGED IN, BUT NOT KNOWN YET. THE PROGRESS, RANKING AND GAMES PANES ARE THE VISITOR'S
+// TEASER (DUMMY CARDS, EXAMPLE BOARD) WITH THE QUESTIONNAIRE IN PLACE OF THE LOGIN NUDGE; DADOS, THE ONLY PANE THAT NEEDS THEM
+// KNOWN, HOLDS JUST THE GREETING, THE NUDGE AND THE WAY OUT
+function showQuitter(user) {
+	const line = linked => `<p class="card-sub margin-top-10" style="font-size: .7em">${MSG_QUITTER(linked)}</p>`;
+	app.innerHTML = `
+		${FOLDER_TABS_HTML}
+		<div data-pane-body="history" hidden>
+			<p class="card-sub margin-top-10" style="font-size: .7em">${MSG_PASSES_SOON}</p>
+			<div class="bookings-list margin-top-10">${dummyPassCard()}</div>
+			<div class="divider"></div>
+			<div class="bookings-list margin-top-20 margin-bottom-20" id="history-list"></div>
+		</div>
+		<div data-pane-body="progress">
+			${line(true)}
+			<div class="bookings-list margin-top-10"></div>
+		</div>
+		<div data-pane-body="ranking" hidden>
+			<div class="bookings-list margin-top-20"></div>
+		</div>
+		<div data-pane-body="info" hidden>
+			<p class="profile-name margin-top-20">${MSG_QUITTER_HELLO}</p>
+			<p class="profile-email"></p>
+			${line(false)}
+			<button id="onboarding-btn" class="margin-top-20">Completar questionário</button>
+			<button id="logout-btn" class="button-shallow margin-top-10">Terminar sessão</button>
+		</div>
+	`;
+
+	loadHistory(document.getElementById("history-list"), Promise.resolve([]));
+	loadProgress(app.querySelector('[data-pane-body="progress"] .bookings-list'), Promise.resolve([dummyGame()]),
+		Promise.resolve(MSG_TEASER_FIRST(DUMMY_GAME_XP)), Promise.resolve(DUMMY_GAME_XP));
+	loadRanking(app.querySelector('[data-pane-body="ranking"] .bookings-list'), null, visitorRanking(DUMMY_GAME_XP), MSG_QUITTER(true));
+	wireFolderTabs();
+
+	// THROUGH THE DOM, NOT THE TEMPLATE, LIKE THE PLAYER'S OWN GREETING
+	app.querySelector(".profile-email").textContent = user.email;
+	document.getElementById("onboarding-btn").addEventListener("click", () => { location.href = "onboarding.html"; });
+	document.getElementById("logout-btn").addEventListener("click", async () => {
+		await db.auth.signOut();
+		location.href = "login.html";
+	});
 }
 
 // PROGRESS IS THE DEFAULT PANE FOR PLAYERS AND VISITORS ALIKE (A VISITOR SEES THE DUMMY FIRST GAME UNDER THEIR TEASER)

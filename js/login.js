@@ -8,10 +8,12 @@ const MSG_SWITCH_TO_RETURNING = `Já tens conta? Então <a href="#">entra</a>!`;
 const MSG_SWITCH_TO_NEW = `Ainda não tens conta? <a href="#">Cria uma</a>`;
 const MSG_SENDING = "A enviar...";
 const MSG_SEND_ERROR = "Algo correu mal. Tenta outra vez.";
-const MSG_SENT = "Enviámos um código para o teu email. Escreve-o abaixo para entrar.";
+const MSG_SENT = "Introduz o código que enviámos para o teu email. Tem a duração de 10 min e só pode ser usado uma vez. Se demorar, verifica a caixa de spam.";
 const MSG_VERIFYING = "A entrar...";
 const MSG_CODE_ERROR = "Código errado ou expirado. Confirma-o ou pede um novo.";
 const MSG_RESENT = "Enviámos um código novo.";
+// THE DIGITS IN A LOGIN CODE — Supabase → Authentication → Sign In / Providers → Email, "Email OTP Length". KEEP THE TWO IN STEP
+const CODE_LENGTH = 6;
 
 // CREATE ACCOUNT OR LOG IN: THE PLAYER PICKS, NO FLAG GUESSES. ONLY THE COPY CHANGES — BOTH SEND THE SAME signInWithOtp, WHICH
 // CREATES THE ACCOUNT FOR A NEW EMAIL, SO THE WRONG CHOICE STILL WORKS. NEVER shouldCreateUser: false FOR "ENTRA": A NEWCOMER
@@ -70,19 +72,26 @@ form.addEventListener("submit", async (e) => {
 function showCodeForm(email) {
 	app.innerHTML = `
 		<form id="code-form">
-			<p class="info-sub1">${MSG_SENT}</p>
+			<p class="card-sub" style="font-size: .7em">${MSG_SENT}</p>
 			<input class="form-input" type="text" id="code-input" inputmode="numeric" autocomplete="one-time-code" maxlength="10" placeholder="Código" required>
 			<button type="submit"><img src="images/icon_login.svg" alt="">Entrar</button>
-			<button type="button" class="button-shallow" id="resend-btn">Pedir novo código</button>
+			<p class="info-sub2 margin-top-5" id="resend-link"><a href="#">Pedir novo código</a></p>
 		</form>
 	`;
 	const codeForm = document.getElementById("code-form");
 	const input = document.getElementById("code-input");
 	input.focus();
 
+	// A FULL CODE LOGS IN BY ITSELF — PASTED, TYPED OR OFFERED BY THE KEYBOARD — WITHOUT A TAP ON ENTRAR
+	input.addEventListener("input", () => {
+		if (input.value.replace(/\D/g, "").length === CODE_LENGTH) codeForm.requestSubmit();
+	});
+
 	codeForm.addEventListener("submit", async (e) => {
 		e.preventDefault();
 		const btn = codeForm.querySelector('button[type="submit"]');
+		// ALREADY CHECKING: THE AUTO-SUBMIT AND A TAP ON ENTRAR CAN LAND TOGETHER
+		if (btn.disabled) return;
 		const btnHtml = btn.innerHTML;
 		btn.disabled = true;
 		btn.textContent = MSG_VERIFYING;
@@ -97,11 +106,11 @@ function showCodeForm(email) {
 		}
 		// SET ONLY ONCE THE LOGIN REALLY HAPPENED, SO A CODE NEVER TYPED LEAVES NO STALE FLAG BEHIND.
 		// profile.js THEN ROUTES: ADMIN DASHBOARD, ONBOARDING, BACK TO THE COURT (returnTo) OR THE COURT LIST
-		try { localStorage.setItem("justLoggedIn", "1"); } catch {}
-		location.href = "profile.html";
+		try { localStorage.setItem("justLoggedIn", "1"); } catch {}		location.href = "profile.html";
 	});
 
-	document.getElementById("resend-btn").addEventListener("click", async () => {
+	document.querySelector("#resend-link a").addEventListener("click", async event => {
+		event.preventDefault();
 		const { error } = await db.auth.signInWithOtp({ email });
 		if (error) showMessage(codeForm, MSG_SEND_ERROR);
 		else showMessage(codeForm, MSG_RESENT, "info-sub2");

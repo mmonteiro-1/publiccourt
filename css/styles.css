@@ -725,11 +725,12 @@ button .link-icon {
 	color: var(--white);
 }
 
-/* ON THE PROFILE AND INFO PAGES, "FAZ LOGIN" LINKS AND BOLD WORDS STAY BLACK, LIKE THE REST OF THE PAGE */
+/* ON THE PROFILE, INFO AND ONBOARDING PAGES, "FAZ LOGIN" LINKS AND BOLD WORDS STAY BLACK, LIKE THE REST OF THE PAGE */
 .page-profile .card-sub a,
 .page-profile .card-sub b,
 .page-info .card-sub a,
-.page-info .card-sub b {
+.page-info .card-sub b,
+.page-onboarding .card-sub b {
 	color: var(--black);
 }
 
@@ -901,7 +902,8 @@ button .link-icon {
 	padding-top: 20px;
 }
 
-#login-switch {
+#login-switch,
+#resend-link {
 	text-align: center;
 }
 
@@ -1350,11 +1352,40 @@ input[type="time"]::-webkit-date-and-time-value {
 .onboarding-actions {
 	display: flex;
 	gap: 10px;
+	margin-top: 60px;
 }
 
-.onboarding-step {
+/* THE THREE ANSWERS, STACKED. THEY WRAP: SOME ARE A WHOLE SENTENCE */
+.onboarding-options {
+	display: flex;
+	flex-direction: column;
+	gap: 15px;
+	margin-top: 10px;
+}
+
+.onboarding-options button {
+	white-space: normal;
+}
+
+/* THE RESUME LINE, SMALL ABOVE THE QUESTION */
+.page-onboarding .card-sub {
+	font-size: 0.8em;
 	margin-bottom: 10px;
-	color: var(--black);
+}
+
+/* THE PROGRESS BAR: THE XP BAR WITHOUT ITS LABEL, SO IT NEEDS A HEIGHT OF ITS OWN. THE INPUTS' MUTED TRACK, A BLUE FILL */
+.page-onboarding .xp-bar {
+	height: 15px;
+	background: var(--muted-input);
+}
+
+.page-onboarding .xp-bar div {
+	background: var(--blue);
+}
+
+/* AN ANSWER NOT PICKED: A DASHED OUTLINE, LIKE A SPACE STILL TO FILL */
+.onboarding-options .button-shallow {
+	border-style: dashed;
 }
 
 .onboarding-question {

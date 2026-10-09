@@ -21,7 +21,7 @@ login.html / js/login.js
 profile.html / js/profile.js     — post-login router, profile views (history, passes, info)
                 js/player_progress.js — the profile's progress tab: stats (Estilo de jogo), diamonds, trading card (loaded before profile.js)
                 js/ranking.js     — the profile's ranking tab: board, plaque updates, "Entende o ranking" (loaded before profile.js)
-onboarding.html / js/onboarding.js — first-login slideshow for players with no `profiles` row; back to profile.html when done
+onboarding.html / js/onboarding.js — first-login slideshow (eight taps, then the name) until `profiles.onboarded_at` is set; back to profile.html when done
 info.html
 
 js/utils.js           — shared helpers: setPigAppearance, gameLabel, formatTime, minutesLeft, getDeviceId, cityHtml
@@ -178,8 +178,10 @@ One concept, one word per layer. **Code** is what identifiers, comments, docs an
 - RLS: players read, insert and update their own only. SQL in `supabase/sql/ranking.sql`
 - Debug: `?board=overtake` / `?board=gain` on `profile.html` replays an update with fake numbers and saves nothing
 
-**profiles** — `id uuid, name text, phone text, nif text, hide_from_ranking bool, created_at timestamptz`
-- `id` = `auth.users.id`; created on first onboarding
+**profiles** — `id uuid, name text, phone text, nif text, hide_from_ranking bool, created_at timestamptz, playing_since text, ability text, summer_play text, court_taken text, competitiveness text, pays_to_play text, partner_count text, found_via text, onboarded_at timestamptz`
+- `id` = `auth.users.id`; created by the first onboarding answer, before the name — so `name` can be null (`supabase/sql/onboarding.sql`)
+- `playing_since` (`1m` / `1y` / `10y`), `ability` (`beginner` / `intermediate` / `advanced`), `summer_play` (`rare` / `often` / `always`), `court_taken` (`give_up` / `ask` / `elsewhere`), `competitiveness` (`exercise` / `serious` / `competitive`), `pays_to_play` (`no` / `maybe` / `yes`), `partner_count` (`one` / `few` / `many`), `found_via` (`qr` / `friend` / `web`): the onboarding answers as codes, never the copy (check constraints hold the codes)
+- `onboarded_at`: null until the name step. A row without it is a player who left onboarding halfway — sent back there by the router and left out of `season_ranking`. Backfilled with `created_at` for every named row
 - `phone` and `nif` are no longer asked for (10/2026): they are only for the admin vetting a pass, so onboarding and Dados ask for the name alone until passes go live (the columns stay; admin request cards still show them when filled)
 - RLS: players read/insert/update own; admins can read profiles of their approved members
 
@@ -214,7 +216,7 @@ npx supabase functions deploy notify-pass
 ### Resend
 Sends every email the app sends, on the domain **`campolivre.app`** (bought 10/2026 through Vercel, so its DNS lives in Vercel; verified in Resend, region Ireland `eu-west-1`). The domain only sends email — the site stays at `publiccourt.vercel.app`, which every printed QR code points to.
 - **Auth emails (login codes):** Supabase sends them through Resend as custom SMTP — Supabase → Authentication → Emails → SMTP Settings: host `smtp.resend.com`, port 465, user `resend`, password a Resend API key, sender `Campo Livre <entrar@campolivre.app>`. Supabase's built-in email can't be used: it only delivers to the project team's addresses, ~2 an hour, and custom SMTP is what unlocks editing the templates
-- **Templates** ("Magic Link" for returning players, "Confirm signup" for new emails): Portuguese, the code (`{{ .Token }}`) and no link; OTP length 6, expiry 10 min
+- **Templates** ("Magic Link" for returning players, "Confirm signup" for new emails): Portuguese, the code (`{{ .Token }}`) and no link; OTP length 6 (Sign In / Providers → Email; Supabase allows 6–10; `CODE_LENGTH` in `login.js` auto-submits at that length — keep them in step), expiry 10 min
 - **Edge functions** (`notify-pass`) call Resend's API directly with the `RESEND_API_KEY` secret, from `Campo Livre <passes@campolivre.app>` (was the sandbox `onboarding@resend.dev`, which only reached the Resend account owner). Debug `console.log`s removed. Deploy by pasting the file in the dashboard
 - Pass emails: approval/denial in Portuguese, plain text only. More flows planned (booking confirmation, etc.)
 - **If the site ever moves to `campolivre.app`:** add it to Supabase's Site URL and Redirect URLs, and keep `publiccourt.vercel.app` working (or redirecting) for the QR codes
@@ -614,7 +616,8 @@ Supabase Auth is already included — email OTP is a built-in provider, no extra
 1. `login.html` — player submits their email (`signInWithOtp`), then types the code from the email on the same screen (`verifyOtp`, type `email`); "Pedir novo código" resends it. Already logged in → straight to `profile.html`
 2. Once the code is accepted, `login.js` sets a one-shot `localStorage.justLoggedIn` and goes to `profile.html`, which is also the post-login router (`js/profile.js`):
    - **Admin** → `admin.html` (admins have no `profile.html`; their profile is a view inside the dashboard)
-   - **No `profiles` row** → `onboarding.html` (`js/onboarding.js`): onboarding asks only the name (phone and NIF return with passes), then back to `profile.html`, which continues below
+   - **No `profiles.onboarded_at`, right after a login** (`justLoggedIn` peeked, not taken) → `onboarding.html` (`js/onboarding.js`): eight tap questions, then the name (phone and NIF return with passes), each saved as answered and resumed at the first unanswered one, then back to `profile.html`, which continues below
+   - **No `profiles.onboarded_at`, any other visit** (a player who left halfway — "Continuar depois" clears `justLoggedIn` and `returnTo`) → the profile in teaser mode (`showQuitter`): progress, ranking and Meus jogos as the visitor's dummies, with "Não sejas um estranho. Completa o questionário…" (`MSG_QUITTER`, linking to the onboarding) in place of the login nudge; Dados holds only "Olá", the email, that line (no link) and two buttons, "Completar questionário" and "Terminar sessão"
    - **Came from a court page** → back to that court (see "Return to court")
    - **Otherwise, just logged in** (`justLoggedIn`) → the court list. The flag is set only after a real login, so it never lingers
    - **Otherwise** (avatar visit) → the player profile
@@ -683,19 +686,32 @@ Sessions are kept alive indefinitely for active users. Supabase auto-refreshes t
     - [x] `info.html`: "Como funciona" explains what ships — collapsibles for progress, ranking, game history, passes ("em breve") and why log in, progress, ranking and passes sharing the profile's copy (`appendRulesCard`, `MSG_PASSES_SOON`), and all but the login one ending in "ANDA CÁ VER" to its profile tab (`profile.html#ranking` opens that tab). Contact is `mail@campolivre.app`: ImprovMX forwards every `@campolivre.app` address (catch-all, so replies to `entrar@` / `passes@` arrive too) to Gmail, which replies as that address through Resend's SMTP (MX + SPF on the root in Vercel's DNS, team public-court)
     - [x] Visitor bait on court pages stays the one-line card (decided 10/2026 — the mini trading card would clutter the page), with "Somos todos amadores, mas não tamos cá para brincar." under it. Was: "Anda cá ver o teu progresso" is a one-line card, too small to pull anyone in. Show the reward instead of describing it: a mini trading card (the pig art, "Nível 1 · Raquete emprestada", the yellow XP bar with "1 500 XP à tua espera", "Faz login para não perderes"; a blank visitor sees 0 XP and "O teu primeiro jogo vale 1000 XP"), still closable. Pair it with the success screens' "+XP" line (see "Success screens show what the game earned"), where the XP is most real. Mock it first to judge the size. Also: it can stack with the install nudge — show one at a time
     - [ ] Onboarding, before shipping (decided 10/2026) — leaving it halfway: logged in with no `profiles` row — "jogador" on court pages, `player_name` null on walk-ins and out of the ranking
-      - **Next (where we stopped, 10/2026):** the database first, as SQL to run by hand in the Supabase SQL editor (and keep in `supabase/sql/`) — check `profiles.name` allows null (step 1 creates the row before the name), add the three answer columns and `onboarded_at`, backfill `onboarded_at = created_at` for existing players so nobody is sent back. Then build one at a time: the steps with save-per-step and resume, the progress bar, the leave warning with the silly names
-      - [ ] Four steps, light, funny and personal ("everybody loves describing themselves"), always 3 options to tap — never a field, except the name. Decided 10/2026, copy final:
+      - [x] Database (`supabase/sql/onboarding.sql`, run 10/2026): `name` nullable, the answer columns (`court_taken`, `competitiveness`, `pays_to_play`, `partner_count` and `found_via` added later, 10/2026), `onboarded_at` backfilled; `season_ranking` skips rows without `onboarded_at`
+      - **Next:** the welcome step, the resume line and the success screen (copy first), then the progress bar, then the leave warning with the silly names
+      - [x] Nine steps (tested 10/2026 with four; questions 4–8, a taken court, competitiveness, paying, partners and how they found us, added after — `STEPS` in `onboarding.js`), light, funny and personal ("everybody loves describing themselves"), always 3 options to tap — never a field, except the name. Decided 10/2026, copy final:
         1. Há quanto tempo jogas ténis? — Há 1 mês · Há 1 ano · Há 10 anos
-        2. Quão profissional és? — Sei segurar a raquete · Devolvo quase todas as bolas · Sei o que estou a fazer, ok? (also the skill signal partners and matchmaking need)
-        3. Quantas vezes jogas no verão? — Só quando os primos franceses vêm de férias · Sempre que me apetece fazer exercício · Tenho sempre o equipamento no carro (summer on purpose, for the joke)
-        4. Como te devemos chamar? — the name field, last
+        2. De 0 a 100, quão profissional és? — Sei segurar a raquete · Devolvo quase todas as bolas · Treino o serviço sozinho aos domingos (also the skill signal partners and matchmaking need)
+        3. Quantas vezes jogas no verão? — Só quando os primos de França vêm de férias · Quando me lembro de praticar exercício · Mais vezes do que vejo a família (summer on purpose, for the joke)
+        4. Quando dás de cara com um campo ocupado — Deixo para a próxima e vou aos copos · Pergunto aos jogadores se ainda demoram · Vou logo tentar a sorte noutro campo
+        5. Os teus jogos costumam ser competitivos? — Jogo mais para praticar exercício · Não conto pontuação, mas levo a sério · Vou até ao tie-break se precisar
+        6. Já pagaste por aulas ou para jogar? — Tenho mais que fazer, pá · Até pagava, se calhar · Pago com gosto
+        7. Com quantos jogadores diferentes costumas jogar? — 1: nem conheço outros jogadores · 2 ou 3: tenho um backup ou outro · Nem sei dizer, são muitos
+        8. Como descobriste o Campo Livre? — Esbarrei com o QR Code no campo · Um amigo obrigou-me · Na rede mundial de computadores (the acquisition channel). Singles vs doubles and time of day were weighed and dropped: nobody local plays doubles or at night
+        9. Como te devemos chamar? — the name field, last
         - Stored as short codes in three new `profiles` columns (`1m` / `1y` / `10y`…), never the copy, so the wording can change. Step 1 creates the row with no name yet (check `profiles.name` allows null)
         - Show the answers back somewhere later (a line on the trading card, editable in Dados) — undecided. The ranking opt-out stays in Dados
-      - [ ] Warn when leaving midway. Leaving without a name: the pig suggests a silly name and asks sim / não
+      - [x] Answer selection: a step opens with its saved answer picked, or the first one; the picked answer is solid, the others shallow (dashed), and tapping one picks it without moving on. An "Avançar" button always sits next to "Voltar", never disabled, and is what saves the answer and moves on. Replaces tap-saves-and-advances
+      - [ ] Tell answers apart from the action buttons: a picked answer and "Avançar" are both solid white buttons, and the answers read as actions. Give the answers their own look (still brutomorphic, reusing classes where possible)
+      - [ ] An animation when an answer is picked (dashed → solid). Brutomorphic, `transform` / `opacity` only, still under reduced motion
+      - [x] The bottom "Voltar" link (`#back-link` in `onboarding.html`, the way out) reads "Continuar depois" — the answers are saved, so leaving is a pause, and it no longer clashes with the in-step "Voltar".      - [x] Resuming says so: a player sent back to an unfinished onboarding (a row without `onboarded_at`) gets "Saíste a meio do questionário, pá. Por pouco não ficámos ofendidos." (two lines) (`MSG_ONBOARDING_RESUME`, small `.card-sub`) above the question they resume on — on that step only, gone once they move; never with `?force`
+      - [ ] A success screen after "Concluir": a new `SUCCESS` preset in `success.js` (never inline). `showSuccess` reloads when its countdown ends; here it has to go on to `profile.html` instead, so the router still returns the player to their court or the court list
+      - [ ] A welcome step before the first question — opening straight on "Há quanto tempo jogas ténis?" is too jarring. Saves nothing, so a returning half-onboarded player resumes on their question, not on the welcome
+      - [x] ~~Warn when leaving midway~~ — no warning (decided 10/2026). Instead the name step's placeholder is a silly name, with "Enquanto não escolheres um nome, serás o digníssimo …" under it (masculine on purpose, like the rest of the copy — "Sua Excelência" was the neutral alternative) (`MSG_SILLY_NAME`); "Concluir" is never blocked, and an empty field saves that name. One per player, picked from their id (`sillyName` in `onboarding.js`), so it's the same on every visit. Leaving halfway lands on the quitter profile
+        - [ ] More silly names (`SILLY_NAMES` in `onboarding.js`, 8 for now): they repeat across players, accepted for now. Unique names were weighed and dropped (10/2026) — they'd need a pool built from parts (tennis word + twist pairs × surnames) and a `security definer` function handing out an unused one
         - Silly names (decided 10/2026): a tennis word, a common-but-not-too-common surname in the middle, then the twist — the ranking shows the first initial and the last word, so the joke reaches the board ("B. Perdida"). Bola Figueiredo Perdida · Raquete Brandão Torta · Rede Gouveia Rasgada · Ace Tavares Falhado · Slice Pinheiro Duvidoso · Grip Fonseca Suado · Linha Cardoso Fora · Smash Teixeira Tímido. Surnames kept clear of the example ranking board's (`DUMMY_RANKING`)
-        - The pig offers one at random, with "outro" to cycle to the next before saying sim
-      - [ ] Progress bar across the steps
-      - [ ] Save at every step, so leaving never loses answers: the first answer creates the `profiles` row (no name yet), later steps update it, and a new `profiles.onboarded_at` (null until the last step, backfilled with `created_at`) tells finished from halfway — the router sends a null to onboarding, which resumes at the first unanswered step
+      - [ ] Animate the progress bar between steps: the fill grows (or shrinks, on "Voltar") from the previous step's width to the new one. Each step re-renders the whole screen, so the bar starts at the old fill and then moves. `transform: scaleX` from the left edge, never `width` (the XP bar's loop rule); still under reduced motion
+      - [x] Progress bar across the steps: the XP bar's look (`.xp-bar`, yellow fill) under the answers, filled up to the current step, 15px tall with no label, 10px under the answers — replaced the "N / 9" line above the question
+      - [x] Save at every step (tested 10/2026 — an `upsert` per answer; the router checks `onboarded_at`), so leaving never loses answers: the first answer creates the `profiles` row (no name yet), later steps update it, and a new `profiles.onboarded_at` (null until the last step, backfilled with `created_at`) tells finished from halfway — the router sends a null to onboarding, which resumes at the first unanswered step
     - [ ] Last pass on the PT-PT copy and localization (the very last step before shipping): read every player- and admin-facing string (`MSG_*`, inline labels, `success.js`, `info.html`, the auth and `notify-pass` emails) for Brazilian forms, typos and one voice (tu, the pig's tone), and check the formats — dates, times, PT-PT number grouping ("26 500"), currency
   - **Character arc for levels 1–10** (trading card)
     - [x] Names and flavour texts: all ten in `XP_LEVEL_INFO` from the "Character arc" under Player progress; visitors show level 1, Raquete emprestada (`XP_VISITOR_INFO` and "Apanha-bolas" gone)
@@ -706,13 +722,13 @@ Sessions are kept alive indefinitely for active users. Supabase auto-refreshes t
     - [x] Email templates "Magic Link" and "Confirm signup" (brand-new emails get the second): show `{{ .Token }}`, no link, in Portuguese — login breaks without the code in the email
     - [x] Vercel Analytics is switched on (ad blockers hide some visits — see "Usage metrics")
   - **Should fix (can follow right after)**
-    - [x] Debug switches (`?surprise`, `debugSurprise()`, `?board=`, `?level=`) work only on the dev server (`IS_DEV` in `utils.js`: localhost or a 192.168 LAN IP), never in production or on Vercel previews
+    - [x] Debug switches (`?surprise`, `debugSurprise()`, `?board=`, `?level=`, `?force` on onboarding — runs it for a finished player, saving nothing) work only on the dev server (`IS_DEV` in `utils.js`: localhost or a 192.168 LAN IP), never in production or on Vercel previews
     - [x] ~~Stale `localStorage` flag~~ — not a real problem (decided 10/2026), left as is: (`justLoggedIn` fixed — now set only after the code is accepted) `returnTo` (set by "Fazer login" on a court) can return a much later login to an old court
     - [ ] `notify-pass`: sender now `passes@campolivre.app` and the debug logs are gone (redeploy from the dashboard). Still open: it doesn't check who calls it — low impact while passes are postponed
   - **Can wait**
     - [ ] Nudge close controls are `<div>`s, not buttons (keyboard / screen readers can't close them)
     - [x] Booking code loads only on a bookable court: `court-stage.js` imports `court-bookable.js` (and with it `slot-picker.js` and `weather.js`) lazily, and the service worker no longer pre-caches them (v11)
-    - [ ] Lost back icon on the check-in screen's "Voltar"; a name with `"` breaks going back in onboarding; a page can hang on "A carregar..." if `access_token` comes without a session
+    - [ ] Lost back icon on the check-in screen's "Voltar"; a page can hang on "A carregar..." if `access_token` comes without a session
     - [ ] Already on `main`: a court with no walk-ins in 15 days shows a made-up occupancy chart; `court.html` with no `?court=` shows English debug text
 - [x] Get the player to login and land on profile page
   - [x] Differentiate first login (sign up — player chooses a name) from returning login (sign in — just requests a magic link) — no `profiles` row routes to onboarding; `login.html` opens on the newcomer copy with a "Já tens conta? Entra" ↔ "Ainda não tens conta? Cria uma" switch (copy only — both send the same `signInWithOtp`, which creates the account for a new email; never `shouldCreateUser: false`, which would fail newcomers who pick "Entra" and reveal which emails have accounts). Replaced the per-device `hasLoggedIn` flag (10/2026)
@@ -829,6 +845,7 @@ Sessions are kept alive indefinitely for active users. Supabase auto-refreshes t
       - [x] XP gained on each history card, players and visitors (`games_xp`)
       - [x] Progress: dummy trading card + skill cards from the dummy first game, teaser inside the trading card
       - [x] Passes: dummy pass ("Meu primeiro passe", 30/02) with the padlock, and the passes explainer above it
+      - [ ] Progress for a registered player with no games: drop the pig appearance (`MSG_PROGRESS_EMPTY` in `loadProgress`). The empty state is the dummy trading card and stat cards, the same as the visitor's, like the history already does with its dummy card
       - [ ] Dados: locked dummy version for visitors
       - [ ] Padlocks on the progress cards? Their `overflow: hidden` and top banners clip and cover the history card's padlock
       - [x] History: 1 locked dummy card ("Minha primeira partida", +1000 XP) for blank visitors and players with no games, replacing the pig, with "Teu histórico de jogos ficará guardado aqui." above it. `.locked` card with a `.padlock` in the top-right corner: the round `.ticket-hole` plus `icon_padlock_color_cut.svg`, whose shackle is already cut where it runs behind the card — so it only works at its exact hand-tuned position
@@ -854,6 +871,7 @@ Sessions are kept alive indefinitely for active users. Supabase auto-refreshes t
     - [ ] Streak nudge as a second card underneath the court card, only when the streak is at risk (late in the week, no game yet): "Consistência: 3 semanas seguidas — joga esta semana para não perderes", tapping through to the progress view. Wait for the rain freeze, or a rainy week feels unfair
     - [ ] Level-up and diamond surprises end on "Ver progresso" (see the surprises todo)
 - [x] The install nudge's "Saiba como" no longer leaves the court page: it swaps the nudge's line for the iOS / Android steps (`MSG_INSTALL_HOWTO`, the same as info.html's "Como voltar cá")
+- [ ] Invert the `.card-sub a` / `.card-sub b` colour rule: today they default to white, and the profile, info and onboarding pages override them to black — white is now the minority (court pages). Make black the default and override to white only where a page needs it, then drop the per-page black overrides
 - [ ] Get the admin to see the player booking and modify it
   - [x] Admin queries `bookings` for courts in their `court_groups` (bookings tab, default view)
   - [x] Admin sees the exact same availability calendar as the player (read-only picker in each card-collapsible, player names on occupied slots)
