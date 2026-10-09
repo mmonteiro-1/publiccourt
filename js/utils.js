@@ -139,3 +139,77 @@ const VISITOR_RING_HTML = `
 	<span>1</span>
 `;
 showHeaderLevel();
+
+// THE BUTTON PRESS, APP-WIDE (CALLED BELOW; EVERY PAGE LOADS THIS FILE): .pressed ON A BUTTON WITH A SHADOW, HELD AT LEAST
+// PRESS_MIN_MS — :active ALONE FLASHES BY UNSEEN ON A QUICK PHONE TAP — THEN .released FOR THE SPRING BACK, CLEARED WHEN IT ENDS
+// SO THE NEXT PRESS CAN PLAY IT AGAIN. THE CSS DOES THE MOVING. HAPTICS (iOS'S SWITCH TRICK, DEAD ON iOS 26) AND CLICK SOUNDS
+// WERE TRIED AND DROPPED (10/2026)
+const PRESS_MIN_MS = 100;
+
+// THE SPRING BACK ON ITS OWN: ALSO PLAYED BY A SHALLOW ANSWER THE MOMENT IT'S PICKED (onboarding.js), RISING FROM FLAT INTO A
+// SOLID BUTTON. RESTARTED IF IT'S ALREADY PLAYING (offsetWidth FORCES THE RESTART)
+function springButton(btn) {
+	btn.classList.remove("pressed", "released");
+	void btn.offsetWidth;
+	btn.classList.add("released");
+	btn.addEventListener("animationend", () => btn.classList.remove("released"), { once: true });
+}
+
+// RESOLVES ONCE THE BUTTON'S SPRING HAS SHOWN, SO THE TAP'S HANDLER (HELD BACK BY enableButtonFeedback) DOESN'T WIPE IT AT ONCE.
+// NOT THE WHOLE SPRING: SPRING_SEEN_MS AFTER IT STARTS, PAST THE RISE (40% OF 0.3s) — THE SETTLE ISN'T WORTH THE WAIT.
+// AT ONCE IF NOTHING IS PLAYING (REDUCED MOTION, WHERE THERE'S NO SPRING TO WAIT FOR)
+const SPRING_SEEN_MS = 170;
+
+function afterSpring(btn) {
+	if (!btn.matches(".pressed, .released") || matchMedia("(prefers-reduced-motion: reduce)").matches) return Promise.resolve();
+	return new Promise(resolve => {
+		// STILL PRESSED: THE SPRING HASN'T STARTED YET (THE PRESS IS HELD PRESS_MIN_MS)
+		if (btn.classList.contains("released")) setTimeout(resolve, SPRING_SEEN_MS);
+		else btn.addEventListener("animationstart", () => setTimeout(resolve, SPRING_SEEN_MS), { once: true });
+		// SAFETY NET: IF THE SPRING NEVER STARTS, THE PAGE STILL MOVES ON
+		setTimeout(resolve, 1000);
+	});
+}
+
+// EVERY BUTTON THAT ISN'T AN ACTION BUTTON (WHITE, OUTLINED, WITH A SHADOW): NO PRESS, NO SPRING. A NEW BUTTON STYLE THAT ISN'T
+// AN ACTION GOES HERE. AN UNPICKED DURATION IS FLAT, A PICKED ONE LOOKS LIKE AN ACTION; THE ORANGE ONES ARE DESTRUCTIVE CONFIRMS
+const NOT_ACTION_BUTTONS = [
+	".button-shallow", ".view-toggle-btn", ".dur-btn:not(.selected)", ".admin-nav-btn", ".filter-tag",
+	".secondary-close", ".confirm-deny-btn", ".ticket-actions button:not(.approve-btn)",
+].join(", ");
+
+function enableButtonFeedback() {
+	document.addEventListener("pointerdown", event => {
+		const btn = event.target.closest("button");
+		if (!btn || btn.disabled || btn.matches(NOT_ACTION_BUTTONS)) return;
+		const downAt = Date.now();
+		btn.classList.remove("released");
+		btn.classList.add("pressed");
+		const release = () => {
+			setTimeout(() => springButton(btn), Math.max(0, PRESS_MIN_MS - (Date.now() - downAt)));
+			document.removeEventListener("pointerup", release);
+			document.removeEventListener("pointercancel", release);
+		};
+		document.addEventListener("pointerup", release);
+		document.addEventListener("pointercancel", release);
+	});
+
+	// MOST TAPS CHANGE THE SCREEN OR RELOAD THE PAGE AT ONCE, WIPING THE SPRING BEFORE IT SHOWS. SO THE CLICK OF A SPRINGING BUTTON
+	// IS HELD BACK HERE — CAPTURE PHASE, BEFORE ANY PAGE'S OWN HANDLER — AND REPLAYED ONCE THE SPRING HAS SHOWN. EVERY HANDLER IN
+	// THE APP RUNS AFTER THE BOUNCE WITHOUT KNOWING. A CLICK WITH NO PRESS (KEYBOARD, A SCRIPT) GOES THROUGH AT ONCE
+	const replaying = new WeakSet();
+	document.addEventListener("click", event => {
+		const btn = event.target.closest("button");
+		// FOLDER TABS STAY ON SCREEN WHEN TAPPED (ONLY THE PANE BELOW CHANGES), SO THEIR SPRING SHOWS ANYWAY: NO HOLD, NO DELAY
+		if (!btn || replaying.has(btn) || btn.matches(".folder-tab") || !btn.matches(".pressed, .released")) return;
+		event.stopImmediatePropagation();
+		event.preventDefault();
+		afterSpring(btn).then(() => {
+			replaying.add(btn);
+			btn.click();
+			replaying.delete(btn);
+		});
+	}, true);
+}
+
+enableButtonFeedback();

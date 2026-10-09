@@ -24,7 +24,7 @@ alter table public.profiles add column if not exists court_taken text
 -- Vou até ao tie-break se precisar
 alter table public.profiles add column if not exists competitiveness text
 	check (competitiveness in ('exercise', 'serious', 'competitive'));
--- Já pagaste por aulas ou para jogar? — Tenho mais que fazer, pá · Até pagava, se calhar · Pago com gosto
+-- Já pagaste por aulas ou para jogar? — Tás parvo? · Até pagava, se calhar · Pago com gosto
 -- ALSO A SIGNAL FOR PRIVATE COURTS AND THE PAID ADD-ONS
 alter table public.profiles add column if not exists pays_to_play text
 	check (pays_to_play in ('no', 'maybe', 'yes'));

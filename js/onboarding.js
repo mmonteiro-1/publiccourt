@@ -21,7 +21,7 @@ const MSG_COMPETITIVE_EXERCISE = "Jogo mais para praticar exercício";
 const MSG_COMPETITIVE_SERIOUS = "Não conto pontuação, mas levo a sério";
 const MSG_COMPETITIVE_TIEBREAK = "Vou até ao tie-break se precisar";
 const MSG_ASK_PAYS = "Já pagaste por aulas ou para jogar?";
-const MSG_PAYS_NO = "Tenho mais que fazer, pá";
+const MSG_PAYS_NO = "Tás parvo?";
 const MSG_PAYS_MAYBE = "Até pagava, se calhar";
 const MSG_PAYS_YES = "Pago com gosto";
 const MSG_ASK_PARTNERS = "Com quantos jogadores diferentes costumas jogar?";
@@ -132,18 +132,23 @@ function startOnboarding(user, profile) {
 		if (s.options) {
 			const buttons = app.querySelectorAll("[data-code]");
 			buttons.forEach(btn => btn.addEventListener("click", () => {
+				// ALREADY PICKED: ITS OWN PRESS ALREADY PLAYED THE SPRING
+				if (picked === btn.dataset.code) return;
 				picked = btn.dataset.code;
 				buttons.forEach(b => b.classList.toggle("button-shallow", b !== btn));
+				springButton(btn);
 			}));
+			// moving, NOT disabled (WHICH FADES THE BUTTON MID-SPRING), KEEPS A SECOND TAP FROM SKIPPING A STEP
+			let moving = false;
 			nextBtn.addEventListener("click", async () => {
-				if (picked !== answer) {
-					nextBtn.disabled = true;
-					if (!await save({ [s.field]: picked })) {
-						nextBtn.disabled = false;
-						return;
-					}
-					answers[s.field] = picked;
+				if (moving) return;
+				moving = true;
+				const saved = picked === answer || await save({ [s.field]: picked });
+				if (!saved) {
+					moving = false;
+					return;
 				}
+				answers[s.field] = picked;
 				step++;
 				render();
 			});
@@ -158,11 +163,13 @@ function startOnboarding(user, profile) {
 			if (e.key === "Enter" && !nextBtn.disabled) nextBtn.click();
 		});
 		// NEVER BLOCKED: AN EMPTY FIELD SAVES THE SILLY NAME IN ITS PLACEHOLDER
+		let finishing = false;
 		nextBtn.addEventListener("click", async () => {
-			nextBtn.disabled = true;
+			if (finishing) return;
+			finishing = true;
 			nextBtn.textContent = "A guardar...";
 			if (!await save({ name: input.value.trim() || sillyName(user.id), onboarded_at: new Date().toISOString() })) {
-				nextBtn.disabled = false;
+				finishing = false;
 				nextBtn.textContent = "Concluir";
 				return;
 			}
@@ -182,7 +189,7 @@ function startOnboarding(user, profile) {
 				<button id="start-btn"><img src="images/icon_curious.svg" alt="">Descobrir</button>
 			</div>
 		`;
-		document.getElementById("start-btn").addEventListener("click", render);
+		document.getElementById("start-btn").addEventListener("click", render, { once: true });
 	}
 
 	if (resuming) render();
@@ -213,6 +220,8 @@ document.getElementById("back-link").addEventListener("click", () => {
 
 // SAME SESSION HANDLING AS profile.js: getSession() CAN RETURN null DURING A TOKEN REFRESH, SO WAIT FOR onAuthStateChange.
 // NOT AWAITED INSIDE THE CALLBACK — A DATABASE CALL AWAITED THERE CAN DEADLOCK SUPABASE'S AUTH LOCK. NO SESSION → LOGIN
+
+
 let loaded = false;
 db.auth.onAuthStateChange((event, session) => {
 	if (session) {

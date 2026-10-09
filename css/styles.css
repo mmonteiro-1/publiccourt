@@ -1394,6 +1394,64 @@ input[type="time"]::-webkit-date-and-time-value {
 	background: var(--blue);
 }
 
+/* A PRESS PUSHES THE BUTTON INTO ITS SHADOW: IT MOVES BY THE SHADOW'S 4px AND THE SHADOW GOES, AS IF IT TURNED SHALLOW.
+   .pressed (enableButtonFeedback IN utils.js), NOT :active, WHICH FLASHES BY UNSEEN ON A QUICK PHONE TAP. THE PRESS IS INSTANT;
+   ON RELEASE (.released) THE BUTTON SPRINGS: UP PAST ITS SPOT, BACK DOWN A LITTLE, A LAST SMALL RISE, THEN IT SETTLES — THE
+   SHADOW STRETCHING AND SHRINKING WITH IT, SO IT ALWAYS LOOKS LIFTED OFF THE SAME PAGE. THE "CLICK" OF A REAL KEY. APP-WIDE, ON
+   THE ACTION BUTTONS ONLY (WHITE, OUTLINED, WITH A SHADOW — EVERY OTHER BUTTON STYLE IS LISTED IN NOT_ACTION_BUTTONS, utils.js) */
+button.pressed {
+	box-shadow: 0 0 0 var(--black);
+	transform: translate(4px, 4px);
+}
+
+button.released {
+	animation: button-spring 0.3s ease-out;
+}
+
+/* A FOLDER TAB'S OWN PRESS: SQUASHED FROM THE TOP, THEN A SMALL SPRING BACK UP. THE BOTTOM EDGE NEVER MOVES (transform-origin:
+   bottom) — IT SITS ON THE SHEET'S TOP LINE, AND THE ACTIVE TAB HIDES THAT LINE, SO ANY SHIFT OF THE WHOLE TAB LET IT PEEK OUT.
+   ITS SHADOW (THE ACTIVE TAB'S ONLY) STAYS PUT — IT'S PART OF THE TAB'S LOOK, NOT A SURFACE TO SINK INTO */
+.folder-tab.pressed,
+.folder-tab.released {
+	transform-origin: bottom;
+}
+
+.folder-tab.pressed {
+	transform: scaleY(0.95);
+	box-shadow: none;
+}
+
+.folder-tab.active.pressed {
+	box-shadow: 4px 4px 0 var(--black);
+}
+
+.folder-tab.released {
+	animation: tab-spring 0.4s ease-out;
+}
+
+/* 0.95 OF THE 40px TAB IS A 2px DIP; 1.06 A 2.5px POP ABOVE ITS HEIGHT, THEN A SECOND, SMALLER BOUNCE */
+@keyframes tab-spring {
+	0% { transform: scaleY(0.95); }
+	35% { transform: scaleY(1.06); }
+	60% { transform: scaleY(0.98); }
+	80% { transform: scaleY(1.015); }
+	100% { transform: scaleY(1); }
+}
+
+@keyframes button-spring {
+	0% { transform: translate(4px, 4px); box-shadow: 0 0 0 var(--black); }
+	40% { transform: translate(-1px, -1px); box-shadow: 5px 5px 0 var(--black); }
+	70% { transform: translate(0.25px, 0.25px); box-shadow: 3.75px 3.75px 0 var(--black); }
+	100% { transform: translate(0, 0); box-shadow: 4px 4px 0 var(--black); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+	button.released,
+	.folder-tab.released {
+		animation: none;
+	}
+}
+
 /* AN ANSWER NOT PICKED: A DASHED OUTLINE, LIKE A SPACE STILL TO FILL */
 .onboarding-options .button-shallow {
 	border-style: dashed;
