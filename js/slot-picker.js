@@ -30,12 +30,6 @@ function buildDayStrip(days, selectedIndex, openingHours, weather) {
 }
 
 // BUILDS THE SLOT TIME GRID FOR A GIVEN DAY; ALSO APPENDS THE LEGEND BELOW THE GRID
-// FIRST NAME SHORTENED TO ITS INITIAL; SURNAME (LAST WORD) KEPT IN FULL, E.G. "Matheus Monteiro" -> "M. Monteiro"
-function shortName(fullName) {
-	const parts = fullName?.trim().split(/\s+/);
-	return parts?.length > 1 ? `${parts[0].charAt(0)}. ${parts[parts.length - 1]}` : parts?.[0];
-}
-
 function buildSlotGrid(day, dayIndex, groupRules, openingHours, selectionStart, selectionEnd, existingBookings, userId, locked, readOnly, canCancel, courtCount) {
 	const dow = day.getDay();
 	const dayHours = (openingHours || []).find(h => h.day_of_week === dow);

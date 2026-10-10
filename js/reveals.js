@@ -5,7 +5,6 @@
 // NEEDS config.js, utils.js, tear-reveal.js AND pass-card.js LOADED FIRST; RUNS ITS OWN CHECK ON LOAD
 
 const MSG_REVEAL_PASS_HEADER = "O teu passe foi aprovado";
-const MSG_REVEAL_TO_PROFILE = "Ver o meu perfil";
 
 // THE PIG'S HAND HOLDING A PRIZE: THE HAND BEHIND IT, THE THUMB IN FRONT — TWO HALVES OF ONE DRAWING, AND THE ORDER IN THE PAGE IS
 // THE LAYERING, SO NO z-index. BUMP ?v= WHENEVER pig_hand.svg CHANGES — BROWSERS CACHE IT HARD
@@ -20,16 +19,17 @@ const liftedPrize = prize => `
 `;
 
 const REVEALS = {
-	// THE END OF THE ONBOARDING: THE PIG LIFTS THE PLAYER'S FIRST TRADING CARD — THE ANSWER TO THE WELCOME'S "JÁ SABES QUE TIPO DE
-	// JOGADOR ÉS?". NOTHING TO GO BACK TO, SO NO "PRA JÁ NÃO": ITS LINK GOES ON TO THE PROFILE, WHERE THE CARD LIVES
-	// FOR NOW ONLY THE CARD, RISING ON ITS OWN WITH THE PEANUTS: NO TEXT, NO HAND, NO BUTTON — BEING REWORKED
+	// THE END OF THE ONBOARDING: THE CROMO CARD RISES ON ITS OWN WITH THE PEANUTS. NOTHING TO GO BACK TO, SO NO "PRA JÁ NÃO":
+	// A BUTTON UNDER THE CARD COLLECTS IT AND GOES ON TO THE PROFILE, WHERE THE CARD LIVES
 	onboarded: ({ card }) => ({
 		kind: "onboarded",
 		ref: "1",
 		text: "",
 		prize: `<div class="prize-lift"><div class="prize-bob">${card}</div></div>`,
 		next: null,
-		exit: { label: MSG_REVEAL_TO_PROFILE, href: "profile.html" },
+		exit: { label: "Colar na caderneta", icon: "icon_hand_rock", href: "profile.html", button: true },
+		// NO TEXT AND NO HAND RUNNING OFF THE BOTTOM: THE CARD AND ITS BUTTON SIT IN THE MIDDLE OF THE SCREEN
+		centered: true,
 	}),
 	// THE PIG LIFTS THE PASS TICKET — EXACTLY AS THE PROFILE DRAWS IT — LIKE A CHAMPION. A PRESET GIVES ITS text AND ITS prize
 	// SEPARATELY; showReveal LAYS THEM OUT (TEXT, THEN THE NEXT-STEP BUTTON, THEN THE PRIZE)
@@ -47,15 +47,18 @@ const REVEALS = {
 
 // record: false IS FOR debugSurprise — PLAYS THE SAME, WRITES NOTHING
 // TEXT AND THE NEXT STEP UP TOP, THE PRIZE BELOW THEM — THE LOWER PART OF THE SCREEN IS LEFT FOR THE PRIZE AND THE HAND
-// exit TURNS "PRA JÁ NÃO" INTO A LINK ON, FOR A SCENE WITH NOTHING BEHIND IT TO GO BACK TO
-function showReveal({ kind, ref, text, prize, next, exit = null }, { record = true } = {}) {
+// exit TURNS "PRA JÁ NÃO" INTO A LINK ON, FOR A SCENE WITH NOTHING BEHIND IT TO GO BACK TO — OR, WITH button, INTO A BUTTON
+// UNDER THE PRIZE
+function showReveal({ kind, ref, text, prize, next, exit = null, centered = false }, { record = true } = {}) {
 	const layer = document.createElement("div");
-	layer.className = "reveal-scene";
+	layer.className = `reveal-scene${centered ? " centered" : ""}`;
 	layer.innerHTML = `
 		<div class="reveal-stage">${text}</div>
 		${next ? `<button data-action="reveal-next" class="margin-top-10"><img src="images/${next.icon}.svg" class="link-icon" alt="">${next.label}</button>` : ""}
 		<div class="reveal-stage margin-top-30">${prize}</div>
-		${exit ? `<a href="${exit.href}" class="info-link">${exit.label}</a>` : `<a href="#" data-action="reveal-close" class="info-link">Pra já não</a>`}
+		${exit?.button ? `<button data-action="reveal-exit" class="margin-top-30"><img src="images/${exit.icon}.svg" class="link-icon" alt="">${exit.label}</button>`
+			: exit ? `<a href="${exit.href}" class="info-link">${exit.label}</a>`
+			: `<a href="#" data-action="reveal-close" class="info-link">Pra já não</a>`}
 	`;
 	document.body.appendChild(layer);
 	// A LIFTED PRIZE STARTS JUST OUT OF SIGHT — ITS TOP EDGE ON THE SCREEN'S BOTTOM EDGE — SO IT ENTERS THE MOMENT IT MOVES.
@@ -69,6 +72,7 @@ function showReveal({ kind, ref, text, prize, next, exit = null }, { record = tr
 		lift.style.setProperty("--lift-from", `${innerHeight - (bob.offsetTop + prize.offsetTop)}px`);
 	}
 	layer.querySelector('[data-action="reveal-next"]')?.addEventListener("click", () => { location.href = next.href; });
+	layer.querySelector('[data-action="reveal-exit"]')?.addEventListener("click", () => { location.href = exit.href; });
 	layer.querySelector('[data-action="reveal-close"]')?.addEventListener("click", e => {
 		e.preventDefault();
 		layer.remove();
@@ -87,7 +91,7 @@ function showReveal({ kind, ref, text, prize, next, exit = null }, { record = tr
 }
 
 // THE LAST OF THE PACKING: ONCE THE HAND IS UP AND THE BURST HAS CLEARED (1s), PEANUTS FALL FROM ABOVE THE SCREEN TO BELOW IT —
-// THE SAME PILL AS THE BURST (.tear-peanut). TWO LAYERS FOR DEPTH: 30 SMALL ONES BEHIND THE HAND, 10 BIG ONES IN FRONT OF IT.
+// THE SAME PEANUT AS THE BURST (.tear-peanut). TWO LAYERS FOR DEPTH: 60 SMALL ONES BEHIND THE PRIZE, 20 BIG ONES IN FRONT OF IT.
 // EASED IN LIKE GRAVITY, STAGGERED SO THEY DON'T LAND AS A ROW. fill: "both" KEEPS EACH ONE ABOVE THE SCREEN DURING ITS DELAY;
 // EACH IS REMOVED ONCE IT HAS FALLEN OUT OF SIGHT
 function rainPeanuts(layer) {
@@ -109,8 +113,8 @@ function rainPeanuts(layer) {
 			).finished.then(() => peanut.remove());
 		}
 	};
-	drop(30, 0.3, 0.5, "behind");
-	drop(10, 0.8, 1, "in-front");
+	drop(60, 0.3, 0.5, "behind");
+	drop(20, 0.8, 1, "in-front");
 }
 
 // DEBUG (DEV SERVER ONLY, IS_DEV): PLAYS A SURPRISE WITH DUMMY DATA, ON DEMAND — ADD ?surprise TO ANY PAGE THAT LOADS THIS FILE (?surprise=passApproved
@@ -126,11 +130,16 @@ const DEBUG_SURPRISES = {
 			card: { name: "Campo de teste", since: "30/02", expires: null, nextGame: null, bookings: 0 },
 		});
 	},
+	// THE ONBOARDING'S CROMO CARD WITHOUT A LOGIN: ONLY ON PAGES THAT LOAD player_progress.js (PROFILE, ONBOARDING).
+	// THE DUMMY DEBUT IS A REAL DATE: 30/02 WOULD ROLL OVER TO MARCH IN new Date
+	onboarded: async () => REVEALS.onboarded({ card: await cromoCard("Rafael Barbosa", new Date().toISOString()) }),
 };
 
 async function debugSurprise(kind = "passApproved") {
 	if (!IS_DEV) return;
 	showReveal(await DEBUG_SURPRISES[kind](), { record: false });
+	const card = document.querySelector(".reveal-scene .trading-card");
+	if (card && typeof tiltCard === "function") tiltCard(card);
 }
 
 // ON EVERY PAGE LOAD: THE NEWEST APPROVED PASS THIS PLAYER HASN'T TORN OPEN YET. ONE SMALL QUERY PAIR — NO REALTIME, THERE
@@ -176,5 +185,6 @@ async function checkSurprises() {
 // FLASHED THE PARCEL JUST BEFORE THE REDIRECT TO THE COURT LIST, WHERE IT PLAYED AGAIN. THE ONBOARDING NEVER CHECKS: IT LOADS
 // THIS FILE ONLY FOR ITS OWN CARD REVEAL
 const debugKind = IS_DEV ? new URLSearchParams(location.search).get("surprise") : null;
-if (debugKind !== null) debugSurprise(debugKind || undefined);
+// ONCE EVERY SCRIPT HAS RUN: SOME DEBUG SURPRISES DRAW WITH FILES LOADED AFTER THIS ONE (cromoCard, player_progress.js)
+if (debugKind !== null) addEventListener("DOMContentLoaded", () => debugSurprise(debugKind || undefined));
 else if (!document.body.matches(".page-profile, .page-onboarding")) checkSurprises();

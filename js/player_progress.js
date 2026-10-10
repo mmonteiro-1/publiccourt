@@ -8,6 +8,7 @@ const MSG_STAT_GAMES_VALUE = n => n === 0 ? "Nenhuma partida" : `${n} ${n === 1 
 const MSG_STAT_RATING = n => `${n}%`;
 const MSG_STAT_HINT = "nos últimos 6 meses";
 const MSG_XP_LEVEL = n => `Nível ${n}`;
+const MSG_CROMO_DEBUT = date => `Estreia: ${date}`;
 // EACH STAT'S 100 MARK: THE COUNT OVER THE LAST 6 MONTHS THAT RATES 100 (ANYTHING ABOVE IS CAPPED)
 const STAT_GAMES = 40;
 const STAT_WEEKS = 20;
@@ -166,6 +167,10 @@ function tiltCard(card) {
 		// THE HOLO'S SHINE SITS ON THE PART OF THE CARD TILTED TOWARDS THE PLAYER — THE SAME EDGES THE SHADOW GROWS UNDER
 		card.style.setProperty("--shine-x", `${50 - y.angle / TILT_MAX * 50}%`);
 		card.style.setProperty("--shine-y", `${50 + x.angle / TILT_MAX * 50}%`);
+		// THE SAME DIRECTION AS PLAIN NUMBERS (ABOUT −1 TO 1), WHICH opacity CAN USE: THE CROMO CARD'S SHARDS EACH CATCH THE LIGHT
+		// TOWARDS THEIR OWN SIDE
+		card.style.setProperty("--tilt-h", -y.angle / TILT_MAX);
+		card.style.setProperty("--tilt-v", x.angle / TILT_MAX);
 		const still = Object.values(axes).every(axis => Math.abs(axis.target - axis.angle) < 0.05 && Math.abs(axis.speed) < 0.05);
 		frame = still ? null : requestAnimationFrame(step);
 	}
@@ -233,6 +238,28 @@ function xpCard(xp, diamonds, stats, teaser) {
 			<div class="xp-bar" style="--fill: ${fill}%"><div></div><span>${MSG_XP(xp)}</span></div>
 			${teaser ? `<p class="trading-card-text">${teaser}</p>` : ""}
 			${level >= XP_HOLO_LEVEL ? `<div class="trading-card-holo"></div>` : ""}
+		</div>
+	`;
+}
+
+// THE CROMO CARD, GIVEN FOR FINISHING ONBOARDING: THE DRAWN CARD (images/card_cromo.svg), HOLO, WITH THE PLAYER'S NAME IN
+// "R. BARBOSA" FORM AND THE DEBUT DATE (onboarded_at) IN ITS EMPTY #textarea.
+// INLINED, NOT AN <img>, SO ITS #pig GROUP CAN TAKE THE TILT'S PARALLAX. THE EXPORT'S CLASSES AND IDS ARE GENERIC (cls-1,
+// clippath…) AND ITS <style> IS GLOBAL ONCE INLINED, SO THEY'RE PREFIXED TO KEEP OFF OTHER INLINE SVGs
+async function cromoCard(name, debut) {
+	const svg = (await (await fetch("images/card_cromo.svg")).text())
+		.replace(/<\?xml[^>]*>/, "")
+		.replace(/cls-/g, "cromo-cls-")
+		.replace(/id="/g, 'id="cromo-')
+		.replace(/url\(#/g, "url(#cromo-");
+	return `
+		<div class="trading-card cromo holo">
+			${svg}
+			<div class="cromo-text">
+				<p class="trading-card-name">${shortName(name)}</p>
+				<p class="trading-card-text">${MSG_CROMO_DEBUT(new Date(debut).toLocaleDateString("pt-PT"))}</p>
+			</div>
+			<div class="trading-card-holo"></div>
 		</div>
 	`;
 }

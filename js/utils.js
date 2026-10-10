@@ -44,6 +44,13 @@ function gameLabel(start, end) {
 	return `${WEEKDAYS[s.getDay()]}, ${pad(s.getDate())}/${pad(s.getMonth() + 1)}, ${time(s)}-${time(e)}`;
 }
 
+// FIRST NAME SHORTENED TO ITS INITIAL; SURNAME (LAST WORD) KEPT IN FULL, E.G. "Matheus Monteiro" -> "M. Monteiro" — THE ONE FORM
+// A NAME IS EVER SHOWN TO OTHERS (THE ADMIN'S SLOT PICKER, THE CROMO CARD; season_ranking DOES THE SAME IN SQL)
+function shortName(fullName) {
+	const parts = fullName?.trim().split(/\s+/);
+	return parts?.length > 1 ? `${parts[0].charAt(0)}. ${parts[parts.length - 1]}` : parts?.[0];
+}
+
 // MINUTES REMAINING UNTIL A RESERVATION ENDS, SHARED BY EVERY PAGE
 function minutesLeft(endsAt) {
 	const ms = new Date(endsAt) - Date.now();

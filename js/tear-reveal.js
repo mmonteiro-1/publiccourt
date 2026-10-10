@@ -176,6 +176,9 @@ function showTearReveal({ label = MSG_TEAR_LABEL, onBurst, onDone } = {}) {
 		const back = document.createElement("div");
 		back.className = "tear-back";
 		back.style.clipPath = clip;
+		// THE SAME CUT LINES, HEAVIER (CSS): CURLED, THE BACK'S THICK BLACK RIM READS AS THE STRIP'S THICKNESS — WITHOUT THE 3D
+		// LAYERS A REAL THICKNESS NEEDED, WHICH TANKED THE iPHONE
+		back.insertAdjacentHTML("beforeend", cutLinesSvg(h, isBottom));
 
 		slice.append(face, back);
 		parent.appendChild(slice);

@@ -59,6 +59,7 @@ html:has(.page-court-list) {
 :root {
 	--pink: #e6b5b2;
 	--pink-dark: #b48582;
+	--brown: #ab6543;
 	--green: #2c5745;
 	--orange: #e55604;
 	--white: #fff;
@@ -1883,6 +1884,60 @@ button.released {
 	background: var(--orange);
 }
 
+/* TEST: THE CROMO CARD AS ONE DRAWN SVG (images/card_cromo.svg, INLINED BY cromoCard) THAT FILLS THE CARD, ITS OWN ORANGE RIM IN
+   PLACE OF THE PADDING */
+.trading-card.cromo {
+	padding: 0;
+	/* THE DRAWING'S OWN CORNERS (#frame: rx 36.16 OF 716.04 × 1011.24), ROUNDER THAN THE CARD'S 15px — THE HOLO'S ORANGE FACE
+	   SHOWED IN THE GAP. NO FACE OF ITS OWN: THE DRAWING IS THE FACE */
+	border-radius: 5.05% / 3.58%;
+	background: transparent;
+}
+
+.trading-card.cromo > svg {
+	display: block;
+	width: 100%;
+}
+
+/* THE NAME AND DEBUT DATE, OVER THE DRAWING'S EMPTY #textarea (x 118.4, y 810.06, 479.24 × 110.07 OF ITS 716.04 × 1011.24),
+   IN PERCENTAGES SO IT STAYS ON IT AT ANY CARD SIZE. WHITE, LIKE THE DRAWN TITLE, ON THE PURPLE */
+.cromo-text {
+	position: absolute;
+	left: 16.54%;
+	top: 80.11%;
+	width: 66.93%;
+	height: 10.88%;
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+	gap: 5px;
+	color: var(--white);
+}
+
+/* THE SHARDS: THE DRAWING'S #texture SHAPES (WHITE AT 5% IN THE EXPORT) AS SHATTERED-GLASS FOIL. EACH TAKES A HOLO COLOUR AND
+   FACES ITS OWN WAY, SIX DIRECTIONS 60° APART: A SHARD LIGHTS UP AS THE CARD TILTS TOWARDS ITS SIDE (--tilt-h / --tilt-v
+   AGAINST ITS --dx / --dy), SO THEY GLINT IN TURN, NEVER ALL AT ONCE. AT REST THEY'RE BACK TO THE EXPORT'S FAINT 5% */
+#cromo-texture {
+	opacity: 1;
+}
+
+#cromo-texture path {
+	opacity: clamp(0.05, (var(--tilt-h, 0) * var(--dx) + var(--tilt-v, 0) * var(--dy) - 0.3) * 1.5, 0.6);
+}
+
+#cromo-texture path:nth-child(6n + 1) { fill: var(--holo-red); --dx: 1; --dy: 0; }
+#cromo-texture path:nth-child(6n + 2) { fill: var(--holo-yellow); --dx: 0.5; --dy: 0.85; }
+#cromo-texture path:nth-child(6n + 3) { fill: var(--holo-green); --dx: -0.5; --dy: 0.85; }
+#cromo-texture path:nth-child(6n + 4) { fill: var(--holo-cyan); --dx: -1; --dy: 0; }
+#cromo-texture path:nth-child(6n + 5) { fill: var(--holo-blue); --dx: -0.5; --dy: -0.85; }
+#cromo-texture path:nth-child(6n + 6) { fill: var(--holo-violet); --dx: 0.5; --dy: -0.85; }
+
+/* THE TILT'S PARALLAX ON THE PIG, AS ON THE CURRENT CARD (tiltCard). DOUBLED: INSIDE THE SVG A px IS ONE OF ITS 716 USER UNITS,
+   ABOUT HALF A SCREEN PIXEL AT CARD SIZE */
+#cromo-pig {
+	transform: translate(calc(var(--pig-x, 0px) * 2), calc(var(--pig-y, 0px) * 2));
+}
+
 /* THE FOIL, ON HOLO CARDS (XP_HOLO_LEVEL, player_progress.js). AFTER THE "RARE HOLO V" OF codepen.io/msriki12/pen/yyBNMEr
    (ITSELF CUT DOWN FROM simeydotme's POKÉMON CARDS; THE PEN CALLS IT "SHINE"): A GRAIN, A RAINBOW AND THIN METAL LINES,
    BLENDED INTO ONE SHEET AND COLOUR-DODGED ONTO THE CARD, WITH A SECOND COPY (::after) DRIFTING THE OTHER WAY IN SOFT LIGHT.
@@ -2850,6 +2905,26 @@ button.released {
 	text-align: left;
 }
 
+/* A SCENE WITH JUST A CARD AND A BUTTON (THE CROMO CARD, centered IN ITS PRESET): BOTH IN THE MIDDLE OF THE SCREEN. THE CARD
+   SHRINKS WITH THE SCREEN'S HEIGHT SO THE BUTTON ALWAYS FITS UNDER IT — THE SCENE CLIPS, SO ON A SHORT PHONE IT WAS CUT OFF.
+   NO TEXT ABOVE AND NO LINK BAR BELOW, SO THE PADDING AND THE GAP ABOVE THE PRIZE SHRINK TO GIVE THE CARD THE ROOM.
+   130px = THE PADDING (20 + 20), THE 30px GAP AND THE BUTTON; 0.7 = THE CARD'S WIDTH OVER ITS HEIGHT. dvh LEAVES OUT THE
+   BROWSER'S BARS, vh IS THE FALLBACK */
+.reveal-scene.centered {
+	justify-content: center;
+	padding: 20px;
+}
+
+.reveal-scene.centered .reveal-stage {
+	margin-top: 0;
+}
+
+.reveal-scene.centered .trading-card {
+	width: min(100%, calc((100vh - 130px) * 0.7));
+	width: min(100%, calc((100dvh - 130px) * 0.7));
+	margin: 0 auto;
+}
+
 .reveal-stage .info-heading,
 .reveal-stage .info-sub1 {
 	text-align: center;
@@ -2991,12 +3066,12 @@ button.released {
 	display: none;
 }
 
-/* THE PINK BOX. JS CUTS THE TORN SLOT OUT OF IT (AN evenodd clip-path HOLE IN THE STRIP'S NOTCHED SHAPE, FROM THE TEAR LINE
+/* THE BOX, CARDBOARD BROWN. JS CUTS THE TORN SLOT OUT OF IT (AN evenodd clip-path HOLE IN THE STRIP'S NOTCHED SHAPE, FROM THE TEAR LINE
    DOWN), SO THE PAGE BEHIND SHOWS THROUGH WHERE THE STRIP IS GONE */
 .tear-box {
 	position: absolute;
 	inset: 0;
-	background: var(--pink);
+	background: var(--brown);
 }
 
 /* THE PACKING: A COLUMN BEHIND BOTH HALVES, THE STRIP'S SIZE (JS PLACES IT), SEEN THROUGH THE HOLE. ITS BACKGROUND IS THE
@@ -3013,17 +3088,14 @@ button.released {
 	background: none;
 }
 
-/* ONE STYROFOAM PEANUT: A WHITE BAR WITH SOFT BUTT CAPS (SLIGHTLY ROUNDED CORNERS, NOT A FULL PILL); THE INSET SHADE ALONG ITS
-   BOTTOM GIVES IT SOME VOLUME. NO TEXTURE: AN SVG NOISE GRAIN, AND EVEN A FEW RADIAL GRADIENTS, MADE iOS WEBKIT DROP FRAMES AS
-   THE BURST'S PEANUTS GREW IN PERSPECTIVE, AND THE BURST SKIPPED AHEAD AS IF SPED UP */
+/* ONE STYROFOAM PEANUT: THE DRAWN images/styro.svg (85.06 × 159.66, SIZED TO ITS SHAPE), ONE FILE FOR EVERY PEANUT IN THE BURST
+   AND THE RAIN, SO IT'S DECODED ONCE AND EACH PEANUT IS JUST A PICTURE THE GPU MOVES. FLAT FILLS ONLY: AN SVG NOISE GRAIN, AND
+   EVEN A FEW RADIAL GRADIENTS, MADE iOS WEBKIT DROP FRAMES AS THE BURST'S PEANUTS GREW IN PERSPECTIVE */
 .tear-peanut {
 	position: absolute;
-	width: 105px;
-	height: 45px;
-	border: 2px solid var(--black);
-	border-radius: 15px;
-	background: var(--white);
-	box-shadow: inset 0 -15px 0 var(--muted-black);
+	width: 55px;
+	height: 105px;
+	background: url("../images/styro.svg") center / contain no-repeat;
 }
 
 /* AND NO PAGE SCROLL AT ALL WHILE THE REVEAL IS UP (WHEEL, KEYS, SCROLLBAR); LIFTS ITSELF WHEN THE OVERLAY IS REMOVED */
@@ -3073,25 +3145,26 @@ body:has(.tear-reveal, .reveal-scene) {
 }
 
 /* THE VISIBLE SLICE: A HEXAGON WITH ROUNDED UPPER CORNERS, CUT BY A clip-path THE SCRIPT SETS (FACE_SHAPE, SHARED WITH THE
-   CUT LINES). CHAINED, THE CUT-AWAY TOP CORNERS LEAVE A V-NOTCH ON BOTH EDGES AT EVERY JOINT. PINK LIKE THE PAGE, SO SEALED
-   IT'S INVISIBLE BUT FOR ITS SVG CUT LINES. A LEAF ELEMENT, SO ITS clip-path IS SAFE */
+   CUT LINES). CHAINED, THE CUT-AWAY TOP CORNERS LEAVE A V-NOTCH ON BOTH EDGES AT EVERY JOINT. BROWN LIKE THE BOX, SO
+   SEALED IT'S INVISIBLE BUT FOR ITS SVG CUT LINES. A LEAF ELEMENT, SO ITS clip-path IS SAFE */
 .tear-face,
 .tear-back {
 	position: absolute;
 	inset: 0;
-	background: var(--pink);
+	background: var(--brown);
 	backface-visibility: hidden;
 }
 
 /* THE STRIP'S BACK, SEEN ONCE A SLICE CURLS PAST 90° — SOLID, SO THE FRONT'S LABEL NEVER SHOWS THROUGH MIRRORED */
 .tear-back {
-	background: color-mix(in srgb, var(--pink), var(--black) 20%);
+	background: color-mix(in srgb, var(--brown), var(--black) 20%);
 	transform: rotateY(180deg);
 }
 
 /* THE CUT LINES: EACH SIDE PLUS ITS NOTCH SLOPE, NOTHING ACROSS THE STRIP. THE LINES RUN ON THE FACE'S EDGE AND THE clip-path
    CUTS THEIR OUTER HALF, SO THE 6px STROKE SHOWS AS 3px */
-.tear-face svg {
+.tear-face svg,
+.tear-back svg {
 	position: absolute;
 	inset: 0;
 	width: 100%;
@@ -3099,6 +3172,11 @@ body:has(.tear-reveal, .reveal-scene) {
 	fill: none;
 	stroke: var(--black);
 	stroke-width: 6px;
+}
+
+/* ON THE BACK, 10px (5 SHOWING): THE RIM THAT MAKES A CURLED SLICE LOOK THICK */
+.tear-back svg {
+	stroke-width: 10px;
 }
 
 /* THE STRIP'S LABEL, ONE COPY PER FACE, SIZED AND SHIFTED TO THE WHOLE STRIP BY JS (top / height / padding-bottom), SO EVERY

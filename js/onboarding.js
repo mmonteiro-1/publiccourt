@@ -173,21 +173,19 @@ function startOnboarding(user, profile) {
 			if (finishing) return;
 			finishing = true;
 			nextBtn.textContent = "A guardar...";
-			if (!await save({ name: input.value.trim() || sillyName(user.id), onboarded_at: new Date().toISOString() })) {
+			const fields = { name: input.value.trim() || sillyName(user.id), onboarded_at: new Date().toISOString() };
+			if (!await save(fields)) {
 				finishing = false;
 				nextBtn.textContent = "Concluir";
 				return;
 			}
-			await revealCard();
+			await revealCard(fields.name, fields.onboarded_at);
 		});
 	}
 
-	// THE END: A PARCEL TO TEAR OPEN, AND INSIDE IT THE PIG LIFTING THE PLAYER'S FIRST TRADING CARD — REAL XP AND STATS, AS THE
-	// PROFILE WILL SHOW THEM (A VISITOR'S GAMES WERE CLAIMED ON LOGIN). WITH ?force IT PLAYS BUT WRITES NOTHING
-	async function revealCard() {
-		const [xp, { data: games }] = await Promise.all([fetchXp(), db.rpc("my_games_xp", { p_device: null })]);
-		const stats = gameStats((games ?? []).map(game => ({ start: game.start_at, courtId: game.court_id })));
-		showReveal(REVEALS.onboarded({ card: tradingCard(xp, stats) }), { record: !FORCE_ONBOARDING });
+	// THE END: A PARCEL TO TEAR OPEN, AND INSIDE IT THE PLAYER'S CROMO CARD. WITH ?force IT PLAYS BUT WRITES NOTHING
+	async function revealCard(name, debut) {
+		showReveal(REVEALS.onboarded({ card: await cromoCard(name, debut) }), { record: !FORCE_ONBOARDING });
 		// THE SCENE'S LINK GOES TO THE PROFILE, WHERE THE CARD LIVES — SO THE ROUTER (profile.js) MUST NOT SEND THEM ON TO THE COURT
 		// LIST OR THE COURT THEY LOGGED IN FROM
 		try {
