@@ -4,14 +4,13 @@
 // THE RANKING MEASURES WHO PLAYS THE MOST, NOT WHO PLAYS THE BEST. THE PIG TEASES, NEVER SHAMES
 const MSG_SEASON = name => `Época de ${name}`;
 const MSG_RANKING_FIRST = "A vista do topo é qualquer coisa. Aproveita.";
-const MSG_RANKING_TIED = name => `Estás empatado com ${name}. Desempata em campo.`;
 // "N JOGOS" AT 500 XP EACH, THE LEAST A GAME EARNS — A NEW COURT OR A STREAK WEEK CAN MAKE IT FEWER
 const MSG_RANKING_CHASE = (games, name) => `${games === 1 ? "1 jogito" : `${games} jogitos`} e deixas ${name} para trás.`;
 // AFTER THE BOARD UPDATES, BEFORE THE USUAL LINE: WHAT THE PLAYER GAINED SINCE THEY LAST LOOKED, AND WHO THEY PASSED
-const MSG_RANKING_GAINED = xp => `Ganhaste ${MSG_XP(xp)} desde a última vez.`;
+const MSG_RANKING_GAINED = xp => `Acumulador! Ganhaste ${MSG_XP(xp)} desde a última vez.`;
 const MSG_RANKING_OVERTAKE = (xp, name) => `Máquina! Ganhaste ${MSG_XP(xp)} e agora vês ${name} pelo retrovisor.`;
 const MSG_RANKING_DROPPED = "Tragédia anunciada: caíste de posição. Não deixes ficar barato.";
-const MSG_RANKING_ZERO = "Nenhum jogo na época? Tás a gozar.";
+const MSG_RANKING_ZERO = "Um minuto de silêncio para quem ainda não jogou nesta época.";
 // "BORA PARTICIPAR" OPENS DADOS (data-pane-link), WHERE THE PARTICIPAR / RECUSAR TOGGLE IS
 const MSG_RANKING_OUT = `Não te deixes intimidar, somos todos amadores. <a href="#" data-pane-link="info">Bora participar</a>.`;
 // "ENTENDE O RANKING": ABOVE THE POINTS ROWS, THE SEASONS AND THE RESET (AND WHY THE BOARD CAN SHOW LESS THAN THE TRADING CARD — IT
@@ -121,11 +120,10 @@ function rankingLine(list) {
 	const meIndex = list.findIndex(row => row.is_me);
 	const me = list[meIndex];
 	if (!me) return MSG_RANKING_OUT;
-	// EVERYONE WITHOUT POINTS SHARES A PLACE ON TARIMBA ALONE, SO "TIED" OR "1.º" WOULD MEAN NOTHING HERE
+	// EVERYONE WITHOUT POINTS SHARES A PLACE ON TARIMBA ALONE, SO "1.º" WOULD MEAN NOTHING HERE
 	if (!me.points) return MSG_RANKING_ZERO;
-	const tiedWith = list.find(row => !row.is_me && row.place === me.place);
-	if (tiedWith) return MSG_RANKING_TIED(tiedWith.name);
-	// THE NEAREST PLAYER WITH MORE POINTS; A SAME-POINTS PLAYER AHEAD ON TARIMBA STILL NEEDS ONE MORE POINT, SO ONE GAME
+	// THE NEAREST PLAYER WITH MORE POINTS — A TIE GETS NO LINE OF ITS OWN: TIED FIRST READS AS FIRST, TIED LOWER CHASES THE NEXT
+	// ONE UP. A SAME-POINTS PLAYER AHEAD ON TARIMBA STILL NEEDS ONE MORE POINT, SO ONE GAME
 	const above = list.slice(0, meIndex).reverse().find(row => row.place < me.place);
 	if (!above) return MSG_RANKING_FIRST;
 	return MSG_RANKING_CHASE(Math.ceil((above.points - me.points + 1) / 500), above.name);
@@ -278,8 +276,10 @@ async function loadRanking(container, user, preset, presetLine = MSG_VISITOR_RAN
 		container.classList.replace("margin-top-20", "margin-top-10");
 		return appendRulesCard(container, MSG_POINTS_INFO, XP_RULES, MSG_RANKING_INFO, MSG_RANKING_INTRO);
 	}
-	// A PLAYER'S LINE IS THE BOARD'S PUNCHLINE, IN THE PIG'S VOICE: UNDER THE SIGN, BIG AND BOLD, SO IT DOESN'T READ AS A DESCRIPTION
-	line.className = "info-sub1 margin-top-20";
+	// A PLAYER'S LINE IS THE BOARD'S PUNCHLINE, IN THE PIG'S VOICE, UNDER THE SIGN — SMALL, LIKE THE DESCRIPTIONS ABOVE THE BOARDS:
+	// THE BOARD IS THE NEWS, THE LINE ITS CAPTION
+	line.className = "card-sub margin-bottom-10";
+	line.style.fontSize = ".7em";
 	sign.after(line);
 	if (meIndex === -1) {
 		// OPTED OUT: THE ONE LINE WITH A LINK, AND NO PLAYER NAMES IN IT, SO IT CAN GO IN AS HTML

@@ -359,8 +359,8 @@ const BEHOLD_CLOUDS = [[26, 29, 27], [28, 30]]
 // TAP TO BEHOLD: THE FULL CARD — HOLO, TILT, PARALLAX — LIFTED INTO THE MIDDLE OF THE SCREEN ON A SCENE OF ITS OWN, THE SAME
 // CENTRED LAYOUT AND LIFT AS THE ONBOARDING'S REVEAL, WITHOUT THE PARCEL. ONLY "FECHAR" PUTS IT AWAY — A TAP OFF THE CARD
 // CLOSED IT BY MISTAKE MID-TILT.
-// heavenly (THE CROMO CARD): A BANK OF CLOUDS MEETS AT THE TOP OF THE SCREEN AND PARTS, THEN THE CARD RISES INTO THE GAP AND
-// THE CLOUDS DRIFT. CSS DOES THE MOTION (.heavenly, .behold-clouds)
+// heavenly (THE CROMO CARD): A BANK OF CLOUDS MEETS AT THE TOP OF THE SCREEN AND PARTS, THEN THE CARD RISES INTO THE GAP; THE
+// CLOUDS STAY STILL ONCE PARTED. CSS DOES THE MOTION (.heavenly, .behold-clouds)
 function beholdCard(card, heavenly = false) {
 	const layer = document.createElement("div");
 	layer.className = `reveal-scene centered opened${heavenly ? " heavenly" : ""}`;
@@ -382,6 +382,7 @@ function beholdCard(card, heavenly = false) {
 // profile.html#album OPENS ON THE ALBUM. READ AS THE PAGE LOADS: THE FOLDER TABS (profile.js) CLEAR THE HASH BEFORE THE
 // ALBUM IS DRAWN
 const OPEN_ON_ALBUM = location.hash === "#album";
+const ALBUM_SCROLL_DELAY_MS = 500;
 
 const DEBUG_LEVEL = IS_DEV ? Math.min(Math.max(parseInt(new URLSearchParams(location.search).get("level")) || 0, 0), 10) : 0;
 
@@ -492,13 +493,20 @@ async function loadProgress(container, gamesPromise, teaserPromise, xpPromise, a
 	swayAlbum(row);
 	appendRulesCard(container, MSG_PROGRESS_INFO, XP_RULES, MSG_PROGRESS_RULES, MSG_PROGRESS_INTRO);
 	// "COLAR CROMO NA CADERNETA" (THE ONBOARDING'S REVEAL) LANDS HERE: SCROLLED ALL THE WAY DOWN, THE ALBUM IN VIEW, THEN THE HASH
-	// GOES SO A RELOAD STARTS AT THE TOP. AFTER THE RULES CARD IS IN, AND ONCE THE PAGE HAS LOADED: THE CARD'S PICTURES ABOVE,
-	// STILL LOADING, WOULD MAKE THE PAGE LONGER AFTER
+	// GOES SO A RELOAD STARTS AT THE TOP. ONCE THE TAB'S OWN PICTURES HAVE LOADED — THE PAGE'S load EVENT HAS USUALLY FIRED BY
+	// NOW, BUT THE PICTURES JUST ADDED (THE CURRENT CARD'S PIG…) STILL MAKE THE PAGE TALLER AS THEY ARRIVE, AND THE SCROLL STOPPED
+	// SHORT OF THE NEW BOTTOM
 	if (OPEN_ON_ALBUM) {
 		history.replaceState(null, "", location.pathname + location.search);
-		const toBottom = () => scrollTo({ top: document.documentElement.scrollHeight, behavior: "smooth" });
-		if (document.readyState === "complete") toBottom();
-		else addEventListener("load", toBottom, { once: true });
+		const loading = [...container.querySelectorAll("img")].filter(img => !img.complete)
+			.map(img => new Promise(done => {
+				img.addEventListener("load", done, { once: true });
+				img.addEventListener("error", done, { once: true });
+			}));
+		// AND HALF A SECOND MORE: LANDING AND SCROLLING AT ONCE WAS JARRING — THE PLAYER SEES WHERE THEY ARE, THEN IS TAKEN DOWN
+		Promise.all(loading).then(() => setTimeout(() => {
+			scrollTo({ top: document.documentElement.scrollHeight, behavior: "smooth" });
+		}, ALBUM_SCROLL_DELAY_MS));
 	}
 }
 

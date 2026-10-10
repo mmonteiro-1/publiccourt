@@ -38,9 +38,9 @@ const MSG_WELCOME = "Já sabes que tipo de jogador és? Anda cá descobrir, que 
 // THE WAY OUT AT THE BOTTOM: ON THE WELCOME NOTHING IS STARTED YET, SO IT'S A SHRUG; AFTER THAT, A PAUSE
 const MSG_LEAVE_WELCOME = "Tenho mais que fazer, pá!";
 const MSG_LEAVE = "Continuar depois";
-const MSG_ONBOARDING_RESUME ="Saíste a meio do questionário, pá.<br>Por pouco não ficámos ofendidos.";
+const MSG_ONBOARDING_RESUME ="Saíste a meio do teste de aptidão, pá.<br>Por pouco não ficámos ofendidos.";
 const MSG_ONBOARDING_ERROR = "Erro ao guardar. Tenta outra vez.";
-const MSG_SILLY_NAME = name => `Enquanto não escolheres um nome, serás o digníssimo <b>${name}</b>`;
+const MSG_SILLY_NAME = name => `Se não colocares o teu nome, serás conhecido(a) como o(a) <b>${name}</b>`;
 
 // THE NAME A PLAYER GETS IF THEY LEAVE THE FIELD EMPTY: A TENNIS WORD, A SURNAME, THEN THE TWIST — THE RANKING SHOWS THE INITIAL
 // AND THE LAST WORD, SO THE JOKE REACHES THE BOARD ("B. PERDIDA"). SURNAMES KEPT CLEAR OF THE EXAMPLE BOARD'S (DUMMY_RANKING)

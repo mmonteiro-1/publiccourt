@@ -27,7 +27,7 @@ const MSG_TEASER_FIRST = xp => `O teu primeiro jogo vai valer logo ${MSG_XP(xp)}
 // A PLAYER WHO LEFT ONBOARDING HALFWAY: THEIR DADOS TAB, AND THE LINE ABOVE EVERY TEASER PANE. linked ON THE TEASER PANES;
 // DADOS HAS ITS OWN BUTTON INSTEAD
 const MSG_QUITTER_HELLO = "Olá";
-const MSG_QUITTER = linked => `Os estagiários vieram avisar que não completaste o ${linked ? `<a href="onboarding.html">questionário</a>` : "questionário"}. Vais ficar sem saber que jogador és até lá.`;
+const MSG_QUITTER = linked => `Os estagiários vieram avisar que não completaste o ${linked ? `<a href="onboarding.html">teste de aptidão</a>` : "teste de aptidão"}. Vais ficar sem saber que jogador és até lá.`;
 
 const MSG_VIEW_PROGRESS = "Progresso";
 const MSG_VIEW_RANKING = "Ranking";
@@ -323,7 +323,7 @@ function showQuitter(user) {
 			<p class="profile-name margin-top-20">${MSG_QUITTER_HELLO}</p>
 			<p class="profile-email"></p>
 			${line(false)}
-			<button id="onboarding-btn" class="margin-top-20">Completar questionário</button>
+			<button id="onboarding-btn" class="margin-top-20">Completar teste de aptidão</button>
 			<button id="logout-btn" class="button-shallow margin-top-10">Terminar sessão</button>
 		</div>
 	`;

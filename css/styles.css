@@ -1580,6 +1580,7 @@ button.released {
 	box-shadow: 4px 4px 0 var(--black);
 }
 
+
 /* A REFUSED PASS REQUEST ON THE PLAYER'S PASSES VIEW */
 .ticket.refused {
 	background: var(--orange);
@@ -3091,7 +3092,6 @@ button.released {
 /* HELD BELOW THE SCREEN UNTIL THE BOX BURSTS (reveals.js ADDS .opened FROM tear-reveal's onBurst); THE DELAYS ABOVE COUNT FROM THEN */
 .reveal-scene:not(.opened) .prize-lift,
 .reveal-scene:not(.opened) .prize-bob,
-.reveal-scene:not(.opened) .behold-clouds > div,
 .reveal-scene:not(.opened) .behold-clouds img {
 	animation-play-state: paused;
 }
@@ -3143,8 +3143,7 @@ button.released {
 	pointer-events: none;
 }
 
-/* THE BANK'S TWO SIDES, EACH 60% WIDE AND OVERLAPPING IN THE MIDDLE WHEN CLOSED; PARTED, EACH HAS MOVED 45% OF ITS WIDTH OUT,
-   LEAVING THE GAP THE CARD RISES INTO. ITS RESTING STATE IS PARTED (SEE ABOVE) */
+/* THE BANK'S TWO SIDES, EACH 60% WIDE AND OVERLAPPING IN THE MIDDLE WHEN CLOSED. THE SIDES ONLY HOLD THEIR CLOUDS IN PLACE */
 .behold-clouds > div {
 	position: absolute;
 	top: 0;
@@ -3154,49 +3153,38 @@ button.released {
 
 .behold-clouds > div:first-child {
 	left: 0;
-	transform: translateX(-45%);
-	animation: behold-cloud-left 0.9s 0.2s ease-out both;
 }
 
 .behold-clouds > div:last-child {
 	right: 0;
-	transform: translateX(45%);
-	animation: behold-cloud-right 0.9s 0.2s ease-out both;
 }
 
-/* EACH CLOUD PLACED IN ITS SIDE, AND DRIFTING ON translate ONCE APART (A SEPARATE PROPERTY, SO IT DOESN'T FIGHT THE PARTING),
-   EACH ON ITS OWN LENGTH AND DIRECTION SO THEY NEVER MOVE IN STEP */
+/* EACH CLOUD PARTS ON ITS OWN, OUT TO ITS SIDE: ITS OWN DISTANCE (--part, A SHARE OF THE SCREEN'S WIDTH), DELAY AND LENGTH, SO
+   THE BANK OPENS UNEVENLY LIKE REAL CLOUDS, NOT AS TWO SLABS — ROUGHLY WHERE THE SIDES USED TO GO TOGETHER (27vw). ITS RESTING
+   STATE IS PARTED (SEE ABOVE); ONCE THERE IT STAYS STILL — A DRIFT WAS TRIED AND DROPPED */
 .behold-clouds img {
 	position: absolute;
-	animation: behold-drift 3s 1.1s ease-in-out infinite alternate;
+	transform: translateX(var(--part));
+	animation: behold-cloud-part var(--length) var(--delay) ease both;
 }
 
-.behold-clouds > div:first-child img:nth-child(1) { top: 5px; left: -15%; width: 115%; animation-duration: 3.4s; }
-.behold-clouds > div:first-child img:nth-child(2) { top: 75px; left: 40%; width: 55%; animation-duration: 2.9s; animation-direction: alternate-reverse; }
-.behold-clouds > div:first-child img:nth-child(3) { top: 0; left: 55%; width: 45%; animation-duration: 4.1s; }
-.behold-clouds > div:last-child img:nth-child(1) { top: 10px; right: -15%; width: 120%; animation-duration: 3.7s; animation-direction: alternate-reverse; }
-.behold-clouds > div:last-child img:nth-child(2) { top: 80px; right: 40%; width: 55%; animation-duration: 3.1s; }
+.behold-clouds > div:first-child img:nth-child(1) { top: 5px; left: -15%; width: 115%; --part: -24vw; --delay: 0.2s; --length: 1.1s; }
+.behold-clouds > div:first-child img:nth-child(2) { top: 75px; left: 40%; width: 55%; --part: -30vw; --delay: 0.35s; --length: 0.9s; }
+.behold-clouds > div:first-child img:nth-child(3) { top: 0; left: 55%; width: 45%; --part: -33vw; --delay: 0.25s; --length: 1s; }
+.behold-clouds > div:last-child img:nth-child(1) { top: 10px; right: -15%; width: 120%; --part: 26vw; --delay: 0.3s; --length: 1.05s; }
+.behold-clouds > div:last-child img:nth-child(2) { top: 80px; right: 40%; width: 55%; --part: 31vw; --delay: 0.4s; --length: 0.85s; }
 
-@keyframes behold-cloud-left {
+@keyframes behold-cloud-part {
 	from { transform: translateX(0); }
-	to { transform: translateX(-45%); }
+	to { transform: translateX(var(--part)); }
 }
-
-@keyframes behold-cloud-right {
-	from { transform: translateX(0); }
 	to { transform: translateX(45%); }
-}
-
-@keyframes behold-drift {
-	from { translate: -10px 0; }
-	to { translate: 10px 0; }
 }
 
 /* A PRIZE ALREADY IN PLACE, STILL, FOR PLAYERS WHO ASK THEIR PHONE FOR LESS MOTION — AND THE CROMO'S HEAVEN ALREADY OPEN */
 @media (prefers-reduced-motion: reduce) {
 	.prize-lift,
 	.prize-bob,
-	.behold-clouds > div,
 	.behold-clouds img {
 		animation: none;
 	}
