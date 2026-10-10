@@ -27,7 +27,7 @@ const REVEALS = {
 		text: "",
 		prize: `<div class="prize-lift"><div class="prize-bob">${card}</div></div>`,
 		next: null,
-		exit: { label: "Colar na caderneta", icon: "icon_hand_rock", href: "profile.html", button: true },
+		exit: { label: "Colar cromo na caderneta", icon: "icon_hand_rock", href: "profile.html", button: true },
 		// NO TEXT AND NO HAND RUNNING OFF THE BOTTOM: THE CARD AND ITS BUTTON SIT IN THE MIDDLE OF THE SCREEN
 		centered: true,
 	}),
@@ -45,11 +45,20 @@ const REVEALS = {
 	}),
 };
 
+// HOW LONG THE PARCEL TAKES TO SLIDE IN WITH push — parcel-in / page-out IN styles.css, DELAY INCLUDED
+const PARCEL_ARRIVE_MS = 2200;
+
 // record: false IS FOR debugSurprise — PLAYS THE SAME, WRITES NOTHING
 // TEXT AND THE NEXT STEP UP TOP, THE PRIZE BELOW THEM — THE LOWER PART OF THE SCREEN IS LEFT FOR THE PRIZE AND THE HAND
 // exit TURNS "PRA JÁ NÃO" INTO A LINK ON, FOR A SCENE WITH NOTHING BEHIND IT TO GO BACK TO — OR, WITH button, INTO A BUTTON
 // UNDER THE PRIZE
-function showReveal({ kind, ref, text, prize, next, exit = null, centered = false }, { record = true } = {}) {
+// push SLIDES THE PARCEL IN FROM THE RIGHT, PUSHING THE PAGE OUT TO THE LEFT (THE ONBOARDING'S LAST STEP), INSTEAD OF A CUT.
+// .parcel-arriving ON body RUNS IT (CSS) AND KEEPS THE STRIP FROM BEING GRABBED UNTIL THE BOX HAS STOPPED
+function showReveal({ kind, ref, text, prize, next, exit = null, centered = false }, { record = true, push = false } = {}) {
+	if (push && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
+		document.body.classList.add("parcel-arriving");
+		setTimeout(() => document.body.classList.remove("parcel-arriving"), PARCEL_ARRIVE_MS);
+	}
 	const layer = document.createElement("div");
 	layer.className = `reveal-scene${centered ? " centered" : ""}`;
 	layer.innerHTML = `

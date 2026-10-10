@@ -55,8 +55,8 @@ function sillyName(userId) {
 	return SILLY_NAMES[sum % SILLY_NAMES.length];
 }
 
-// DEBUG (DEV SERVER ONLY, IS_DEV): ?force ON onboarding.html RUNS THE ONBOARDING FOR A PLAYER WHO ALREADY FINISHED IT, FROM
-// THE FIRST STEP, WITH THEIR ANSWERS PICKED. NOTHING IS SAVED; CONCLUIR GOES ON TO THE PROFILE AS USUAL
+// DEBUG (DEV SERVER ONLY, IS_DEV): ?force ON onboarding.html RUNS THE ONBOARDING FROM THE FIRST STEP — FOR A PLAYER WHO
+// ALREADY FINISHED IT (THEIR ANSWERS PICKED), OR WITHOUT AN ACCOUNT. NOTHING IS SAVED; CONCLUIR PLAYS THE CROMO REVEAL
 const FORCE_ONBOARDING = IS_DEV && new URLSearchParams(location.search).has("force");
 
 // EIGHT TAPS, THEN THE NAME. THE CODES ARE WHAT'S STORED (supabase/sql/onboarding.sql), NEVER THE COPY, SO THE WORDING CAN CHANGE
@@ -185,7 +185,7 @@ function startOnboarding(user, profile) {
 
 	// THE END: A PARCEL TO TEAR OPEN, AND INSIDE IT THE PLAYER'S CROMO CARD. WITH ?force IT PLAYS BUT WRITES NOTHING
 	async function revealCard(name, debut) {
-		showReveal(REVEALS.onboarded({ card: await cromoCard(name, debut) }), { record: !FORCE_ONBOARDING });
+		showReveal(REVEALS.onboarded({ card: await cromoCard(name, debut) }), { record: !FORCE_ONBOARDING, push: true });
 		// THE SCENE'S LINK GOES TO THE PROFILE, WHERE THE CARD LIVES — SO THE ROUTER (profile.js) MUST NOT SEND THEM ON TO THE COURT
 		// LIST OR THE COURT THEY LOGGED IN FROM
 		try {
@@ -237,9 +237,9 @@ document.getElementById("back-link").addEventListener("click", () => {
 });
 
 // SAME SESSION HANDLING AS profile.js: getSession() CAN RETURN null DURING A TOKEN REFRESH, SO WAIT FOR onAuthStateChange.
-// NOT AWAITED INSIDE THE CALLBACK — A DATABASE CALL AWAITED THERE CAN DEADLOCK SUPABASE'S AUTH LOCK. NO SESSION → LOGIN
-
-
+// NOT AWAITED INSIDE THE CALLBACK — A DATABASE CALL AWAITED THERE CAN DEADLOCK SUPABASE'S AUTH LOCK. NO SESSION → LOGIN,
+// EXCEPT WITH ?force: IT SAVES NOTHING, SO IT RUNS WITHOUT AN ACCOUNT AS A DUMMY PLAYER WITH NO ANSWERS (A FIXED id KEEPS THE
+// SILLY NAME STABLE)
 let loaded = false;
 db.auth.onAuthStateChange((event, session) => {
 	if (session) {
@@ -247,6 +247,9 @@ db.auth.onAuthStateChange((event, session) => {
 			loaded = true;
 			loadOnboarding(session.user);
 		}
+	} else if (FORCE_ONBOARDING && event === "INITIAL_SESSION") {
+		loaded = true;
+		startOnboarding({ id: "debug" }, {});
 	} else if (event === "INITIAL_SESSION" || event === "SIGNED_OUT") {
 		location.replace("login.html");
 	}

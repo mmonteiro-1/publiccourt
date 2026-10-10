@@ -427,7 +427,9 @@ function showProfile(user, profile) {
 	loadProgress(app.querySelector('[data-pane-body="progress"] .bookings-list'),
 		games.then(list => list.length ? list : [dummyGame()]),
 		games.then(list => list.length ? undefined : MSG_TEASER_FIRST(DUMMY_GAME_XP)),
-		games.then(list => list.length ? fetchXp() : DUMMY_GAME_XP));
+		games.then(list => list.length ? fetchXp() : DUMMY_GAME_XP),
+		// my_collected_cards ALSO COLLECTS: IT ADDS A CARD FOR ANY LEVEL REACHED SINCE THE LAST LOOK (album.sql)
+		{ name: profile.name, debut: profile.onboarded_at, cards: db.rpc("my_collected_cards").then(({ data }) => data ?? []) });
 	loadRanking(app.querySelector('[data-pane-body="ranking"] .bookings-list'), user);
 	loadPasses(document.getElementById("passes-list"), user, fetchPasses(user));
 

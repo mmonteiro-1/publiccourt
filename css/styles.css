@@ -59,7 +59,7 @@ html:has(.page-court-list) {
 :root {
 	--pink: #e6b5b2;
 	--pink-dark: #b48582;
-	--brown: #ab6543;
+	--brown: #aa7244;
 	--green: #2c5745;
 	--orange: #e55604;
 	--white: #fff;
@@ -1878,22 +1878,35 @@ button.released {
 	touch-action: pan-y;
 }
 
-/* AN ORANGE FACE FOR THE FOIL TO LIGHT UP: COLOUR-DODGE ON THE LIGHT GREY ONLY WASHED OUT TO WHITE. BLACK STAYS BLACK UNDER
-   IT, SO THE TEXT AND OUTLINES READ AS BEFORE */
-.trading-card.holo {
-	background: var(--orange);
+/* THE GLARE, ON EVERY CARD BUT A HOLO (WHICH HAS ITS SHINE THERE): ONE WIDE SOFT BAND, LIKE LIGHT ON A PLASTIC CARD, MOVED
+   AND SHOWN BY THE TILT (--tilt-x, --tilt-o — tiltCard). SOFT ON PURPOSE — HARD EDGES READ AS GLASS. A GRADIENT AGAINST THE
+   FLAT-COLOUR RULE, THE SAME EXCEPTION AS THE CAMERA FLASH: IT'S LIGHT, NOT A SURFACE. THE CARD'S overflow: hidden CLIPS IT
+   TO THE ROUNDED CORNERS. THREE CARDS WIDE (A CARD'S WIDTH OVERHANGING EACH SIDE): SHIFTED BY THE FULL TILT, A CARD-WIDE LAYER
+   SLID ITS OWN SLANTED EDGE INTO VIEW AS A SEAM (TOP-RIGHT TO BOTTOM-LEFT, WHERE BOTH AXES ADD UP). THE SHIFT IS A THIRD (IT'S
+   A SHARE OF THE WIDER LAYER), AND THE STOPS ARE NARROWED SO THE BAND KEEPS ITS WIDTH ON THE LONGER GRADIENT LINE */
+.trading-card:not(.holo)::before {
+	content: "";
+	position: absolute;
+	top: 0;
+	bottom: 0;
+	left: -100%;
+	right: -100%;
+	z-index: 1;
+	background: linear-gradient(115deg, transparent 35%, var(--white) 50%, transparent 65%);
+	opacity: var(--tilt-o, 0);
+	pointer-events: none;
+	transform: translateX(calc(var(--tilt-x, 0%) / 3));
 }
 
-/* TEST: THE CROMO CARD AS ONE DRAWN SVG (images/card_cromo.svg, INLINED BY cromoCard) THAT FILLS THE CARD, ITS OWN ORANGE RIM IN
-   PLACE OF THE PADDING */
+/* THE CROMO CARD: ONE DRAWN SVG (images/card_cromo.svg, INLINED BY cromoCard) THAT FILLS THE CARD, ITS OWN RIM IN PLACE OF THE
+   PADDING. THE ONLY HOLO CARD FOR NOW */
 .trading-card.cromo {
 	padding: 0;
-	/* THE DRAWING'S OWN CORNERS (#frame: rx 36.16 OF 716.04 × 1011.24), ROUNDER THAN THE CARD'S 15px — THE HOLO'S ORANGE FACE
-	   SHOWED IN THE GAP. NO FACE OF ITS OWN: THE DRAWING IS THE FACE */
-	border-radius: 5.05% / 3.58%;
+	/* NO FACE OF ITS OWN: THE DRAWING IS THE FACE */
 	background: transparent;
 }
 
+.trading-card.cromo > img,
 .trading-card.cromo > svg {
 	display: block;
 	width: 100%;
@@ -1932,13 +1945,51 @@ button.released {
 #cromo-texture path:nth-child(6n + 5) { fill: var(--holo-blue); --dx: -0.5; --dy: -0.85; }
 #cromo-texture path:nth-child(6n + 6) { fill: var(--holo-violet); --dx: 0.5; --dy: -0.85; }
 
+/* THE ALBUM (loadProgress, "CADERNETA" TO PLAYERS): THE COLLECTED CARDS TWO TO A ROW, LIKE STICKERS IN A PANINI CADERNETA. A CARD AT HALF WIDTH HALVES ITS
+   TEXT TOO, SO THE NAME STILL FITS ITS TEXT AREA */
+.album {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 10px;
+	/* EACH CARD KEEPS ITS OWN HEIGHT, NONE STRETCHED TO ITS NEIGHBOUR'S */
+	align-items: start;
+}
+
+.album .trading-card {
+	font-size: 0.5em;
+}
+
+
+/* EVERY COLLECTED CARD (cromo AND level CARDS, IN THE ALBUM AND BEHELD) IS CUT TO ONE SHAPE, 5 × 7 — ROUNDED FROM THE CROMO
+   DRAWING'S 716 × 1011 — WITH 10px CORNERS, SO THE ALBUM'S GRID IS EVEN. THE LIVE CURRENT CARD KEEPS ITS OWN SHAPE.
+   border-box: THE WHOLE CARD, BORDER AND PADDING INCLUDED, TAKES THE SHAPE */
+.trading-card.collected {
+	box-sizing: border-box;
+	aspect-ratio: 5 / 7;
+	border-radius: 10px;
+	/* STUCK FLAT IN THE ALBUM, LIKE A STICKER: NO SHADOW. BEHELD, tiltCard SETS ITS OWN AS THE CARD LIFTS */
+	box-shadow: none;
+}
+
+/* A LEVEL CARD'S ART TAKES WHAT'S LEFT AFTER ITS BANNER, NAME, FLAVOUR TEXT AND DATE, AND THE PIG FITS INSIDE IT —
+   NOT THE CURRENT CARD'S FIXED 210px, WHICH WOULD BURST A HALF-WIDTH CARD */
+.trading-card.collected .trading-card-art {
+	flex: 1 1 0;
+	min-height: 0;
+}
+
+.trading-card.collected .trading-card-art img {
+	height: 100%;
+	max-height: none;
+}
+
 /* THE TILT'S PARALLAX ON THE PIG, AS ON THE CURRENT CARD (tiltCard). DOUBLED: INSIDE THE SVG A px IS ONE OF ITS 716 USER UNITS,
    ABOUT HALF A SCREEN PIXEL AT CARD SIZE */
 #cromo-pig {
 	transform: translate(calc(var(--pig-x, 0px) * 2), calc(var(--pig-y, 0px) * 2));
 }
 
-/* THE FOIL, ON HOLO CARDS (XP_HOLO_LEVEL, player_progress.js). AFTER THE "RARE HOLO V" OF codepen.io/msriki12/pen/yyBNMEr
+/* THE FOIL, ON HOLO CARDS (THE CROMO CARD, cromoCard IN player_progress.js). AFTER THE "RARE HOLO V" OF codepen.io/msriki12/pen/yyBNMEr
    (ITSELF CUT DOWN FROM simeydotme's POKÉMON CARDS; THE PEN CALLS IT "SHINE"): A GRAIN, A RAINBOW AND THIN METAL LINES,
    BLENDED INTO ONE SHEET AND COLOUR-DODGED ONTO THE CARD, WITH A SECOND COPY (::after) DRIFTING THE OTHER WAY IN SOFT LIGHT.
    THE TILT MOVES IT: --holo-pos IS --tilt-x MAPPED TO 20–80%, STANDING IN FOR THE PEN'S POINTER ON BOTH AXES; --tilt-o
@@ -3047,6 +3098,54 @@ button.released {
 	z-index: 1000;
 }
 
+/* THE PARCEL ARRIVING (showReveal's push, THE ONBOARDING'S END): THE BOX SLIDES IN FROM THE RIGHT AND PUSHES THE PAGE OUT TO
+   THE LEFT AT THE SAME SPEED, ITS BLACK LEADING EDGE PRESSED AGAINST IT. THE SCENE RIDES IN WITH THE BOX (IT'S UNDER IT, BUT
+   WOULD OTHERWISE COVER THE PAGE BEFORE THE BOX GOT THERE). THE PAGE IS EVERY OTHER CHILD OF body. transform ONLY.
+   THE MOTION IS THE ONBOARDING BAR'S fill-burst, SO THE STEPS AND THE PARCEL MOVE ALIKE: A BEAT HELD BACK, A SLOW BUILD, A
+   SURGE PAST THE MARK THAT SLOSHES BACK — HALF THE BAR'S OVERSHOOT, SINCE IT'S THE WHOLE SCREEN MOVING.
+   A 1s WAIT AFTER CONCLUIR FIRST, SO THE FINISHED STEP SITS A MOMENT BEFORE IT GOES. 1s + 1.2s = PARCEL_ARRIVE_MS IN
+   reveals.js; NO GRABBING THE STRIP TILL IT'S DONE */
+.parcel-arriving > .tear-reveal,
+.parcel-arriving > .reveal-scene {
+	animation: parcel-in 1.2s 1s both;
+}
+
+.parcel-arriving > .tear-reveal {
+	box-shadow: -2px 0 0 var(--black);
+	pointer-events: none;
+}
+
+/* MORE BOX OFF ITS RIGHT EDGE, MOVING WITH IT: THE SURGE CARRIES THE BOX 4% PAST THE LEFT EDGE, AND THIS FILLS THE GAP IT OPENS
+   ON THE RIGHT, SO THE PAGE NEVER SHOWS. A PSEUDO-ELEMENT, NOT A WIDER BOX — tear-reveal.js CENTRES THE STRIP ON THE BOX'S WIDTH */
+.parcel-arriving > .tear-reveal::after {
+	content: "";
+	position: absolute;
+	top: 0;
+	bottom: 0;
+	left: 100%;
+	width: 10%;
+}
+
+.parcel-arriving > :not(.tear-reveal, .reveal-scene, script) {
+	animation: page-out 1.2s 1s both;
+}
+
+@keyframes parcel-in {
+	0% { transform: translateX(100%); animation-timing-function: cubic-bezier(0.95, 0, 0.6, 1); }
+	40% { transform: translateX(-4%); animation-timing-function: ease-in-out; }
+	60% { transform: translateX(1.5%); animation-timing-function: ease-in-out; }
+	80% { transform: translateX(-1%); animation-timing-function: ease-in-out; }
+	100% { transform: translateX(0); }
+}
+
+@keyframes page-out {
+	0% { transform: translateX(0); animation-timing-function: cubic-bezier(0.95, 0, 0.6, 1); }
+	40% { transform: translateX(-104%); animation-timing-function: ease-in-out; }
+	60% { transform: translateX(-98.5%); animation-timing-function: ease-in-out; }
+	80% { transform: translateX(-101%); animation-timing-function: ease-in-out; }
+	100% { transform: translateX(-100%); }
+}
+
 /* THE PARCEL, AS TWO FULL-SCREEN HALVES CLIPPED AT THE TEAR (THE SCREEN'S CENTRE), EACH WITH ITS OWN BOX AND SHADOW — KEPT
    FROM WHEN THE BOX SPLIT OPEN. THE BOX NOW JUST VANISHES THE MOMENT THE PEANUTS BURST, LEAVING THEM FLYING OVER THE PAGE */
 .tear-half {
@@ -3071,7 +3170,22 @@ button.released {
 .tear-box {
 	position: absolute;
 	inset: 0;
-	background: var(--brown);
+}
+
+/* CORRUGATED CARDBOARD, ON THE BOX, ON THE BIT TRAILING IT AS IT ARRIVES AND ON THE STRIP: THE DRAWN LINES (images/cardboard.svg)
+   OVER THE BROWN, AT TWICE THE DRAWING'S SIZE (330px WIDE) SO THEY READ ON A PHONE. THE LINES WERE A SEE-THROUGH multiply
+   BLEND; THEY'RE NOW THE SOLID COLOURS IT GAVE OVER --brown (#a66d40, #a1693b) — A LIVE background-blend-mode ON EVERY STRIP
+   SLICE SLOWED THE TEAR ON THE iPHONE. --brown IS FIXED; CHANGE IT AND THE LINES NEED RE-BAKING */
+.tear-box,
+.parcel-arriving > .tear-reveal::after,
+.tear-face {
+	background: url("../images/cardboard.svg") 0 0 / 330px auto repeat var(--brown);
+}
+
+/* THE STRIP IS CUT FROM THE SAME CARDBOARD: ITS LINES PICK UP WHERE THE BOX'S ARE (--strip-x, SET BY tear-reveal.js), SO SEALED
+   IT STILL SHOWS ONLY THROUGH ITS CUT LINES — AND THE LINES CURL AWAY WITH IT AS IT TEARS */
+.tear-face {
+	background-position: calc(-1 * var(--strip-x, 0px)) 0;
 }
 
 /* THE PACKING: A COLUMN BEHIND BOTH HALVES, THE STRIP'S SIZE (JS PLACES IT), SEEN THROUGH THE HOLE. ITS BACKGROUND IS THE
@@ -3145,13 +3259,12 @@ body:has(.tear-reveal, .reveal-scene) {
 }
 
 /* THE VISIBLE SLICE: A HEXAGON WITH ROUNDED UPPER CORNERS, CUT BY A clip-path THE SCRIPT SETS (FACE_SHAPE, SHARED WITH THE
-   CUT LINES). CHAINED, THE CUT-AWAY TOP CORNERS LEAVE A V-NOTCH ON BOTH EDGES AT EVERY JOINT. BROWN LIKE THE BOX, SO
+   CUT LINES). CHAINED, THE CUT-AWAY TOP CORNERS LEAVE A V-NOTCH ON BOTH EDGES AT EVERY JOINT. THE BOX'S CARDBOARD (ABOVE), SO
    SEALED IT'S INVISIBLE BUT FOR ITS SVG CUT LINES. A LEAF ELEMENT, SO ITS clip-path IS SAFE */
 .tear-face,
 .tear-back {
 	position: absolute;
 	inset: 0;
-	background: var(--brown);
 	backface-visibility: hidden;
 }
 

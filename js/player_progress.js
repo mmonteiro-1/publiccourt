@@ -9,6 +9,7 @@ const MSG_STAT_RATING = n => `${n}%`;
 const MSG_STAT_HINT = "nos últimos 6 meses";
 const MSG_XP_LEVEL = n => `Nível ${n}`;
 const MSG_CROMO_DEBUT = date => `Estreia: ${date}`;
+const MSG_LEVEL_REACHED = date => `Alcançado a ${date}`;
 // EACH STAT'S 100 MARK: THE COUNT OVER THE LAST 6 MONTHS THAT RATES 100 (ANYTHING ABOVE IS CAPPED)
 const STAT_GAMES = 40;
 const STAT_WEEKS = 20;
@@ -100,8 +101,6 @@ const XP_LEVEL_INFO = [
 
 // THE CAMERA FLASH ON THE INFLUENCER'S CARD (LEVEL 3): THE CARD GOES WHITE AND, WHILE IT IS, THE ART SWAPS TO THIS ONE
 const XP_FLASH_LEVEL = 3;
-// FROM THIS LEVEL THE CARD IS A RARE FOIL (THE HOLO: ORANGE FACE, FOIL, SHINE), EARNED BY PLAYING
-const XP_HOLO_LEVEL = 9;
 const XP_FLASH_IMAGE = "pig_selfie2";
 // THE PHONE'S FLASH IN THE FIRST IMAGE, AS A SHARE OF ITS SIZE: THE #flash CIRCLE IN pig_selfie.svg (92.33, 24.81 OF 677.85 × 858.1)
 const XP_FLASH_SOURCE = { x: 92.33 / 677.85, y: 24.81 / 858.1, ratio: 677.85 / 858.1 };
@@ -218,17 +217,10 @@ function tiltCard(card) {
 function xpCard(xp, diamonds, stats, teaser) {
 	const { level, fill } = xpLevel(xp);
 	const index = level - 1;
-	const info = XP_LEVEL_INFO[index];
 	return `
-		<div class="trading-card${teaser ? " locked" : ""}${level === XP_FLASH_LEVEL ? " flash" : ""}${level >= XP_HOLO_LEVEL ? " holo" : ""}">
+		<div class="trading-card${teaser ? " locked" : ""}${level === XP_FLASH_LEVEL ? " flash" : ""}">
 			<p class="trading-card-level">${MSG_XP_LEVEL(index + 1)}<span>${DIAMOND_ICON} ${diamonds}</span></p>
-			<div class="trading-card-art">
-				<div class="trading-card-frame"${XP_LEVEL_BACKGROUNDS[index] ? ` style="background-image: url('images/${XP_LEVEL_BACKGROUNDS[index]}.svg')"` : ""}></div>
-				<img src="images/${XP_LEVEL_IMAGES[index]}.svg" alt="">
-				${level === XP_FLASH_LEVEL ? `<img src="images/${XP_FLASH_IMAGE}.svg" alt="">` : ""}
-			</div>
-			<p class="trading-card-name">${info.title}</p>
-			<p class="trading-card-text">${info.description}</p>
+			${levelCharacter(index, level === XP_FLASH_LEVEL ? `<img src="images/${XP_FLASH_IMAGE}.svg" alt="">` : "")}
 			<div class="trading-card-stats">${stats.map(stat => `
 				<div class="trading-card-stat">
 					${stat.rating}
@@ -237,7 +229,37 @@ function xpCard(xp, diamonds, stats, teaser) {
 			`).join("")}</div>
 			<div class="xp-bar" style="--fill: ${fill}%"><div></div><span>${MSG_XP(xp)}</span></div>
 			${teaser ? `<p class="trading-card-text">${teaser}</p>` : ""}
-			${level >= XP_HOLO_LEVEL ? `<div class="trading-card-holo"></div>` : ""}
+		</div>
+	`;
+}
+
+// A LEVEL'S CHARACTER: ITS ART (BACKGROUND AND PIG; extra GOES INSIDE THE ART, LIKE THE LEVEL-3 FLASH'S SECOND IMAGE), NAME
+// AND FLAVOUR TEXT — SHARED BY THE CURRENT CARD AND THE COLLECTED LEVEL CARDS. still TAKES THE BACKGROUND'S FROZEN COPY
+// (bg_*_still.svg: THE SAME FILE WITH ITS ANIMATIONS SWITCHED OFF — PAGE CSS CAN'T REACH INSIDE AN SVG USED AS AN IMAGE), FOR
+// THE ALBUM'S PROXIES, WHICH NEVER ANIMATE. A NEW BACKGROUND NEEDS ITS _still COPY
+function levelCharacter(index, extra = "", still = false) {
+	const info = XP_LEVEL_INFO[index];
+	return `
+		<div class="trading-card-art">
+			<div class="trading-card-frame"${XP_LEVEL_BACKGROUNDS[index] ? ` style="background-image: url('images/${XP_LEVEL_BACKGROUNDS[index]}${still ? "_still" : ""}.svg')"` : ""}></div>
+			<img src="images/${XP_LEVEL_IMAGES[index]}.svg" alt="">
+			${extra}
+		</div>
+		<p class="trading-card-name">${info.title}</p>
+		<p class="trading-card-text">${info.description}</p>
+	`;
+}
+
+// A COLLECTED LEVEL CARD: THE LEVEL AND ITS CHARACTER, FROZEN AT THE DAY IT WAS REACHED (collected_cards) — NO STATS, NO XP BAR,
+// THOSE STAY ON THE LIVE CURRENT CARD. ALREADY LIGHT (PLAIN IMAGES), SO THE SAME MARKUP IS ITS OWN PROXY IN THE ALBUM —
+// WITH proxy, ITS BACKGROUND STILL; BEHELD, LIVE.
+// NO collectedAt: THE LOCKED LEVEL-1 TEASER FOR VISITORS AND PLAYERS WHO LEFT THE ONBOARDING HALFWAY, DATED 30/02
+function levelCard(level, collectedAt, proxy = false) {
+	return `
+		<div class="trading-card collected${collectedAt ? "" : " locked"}" data-behold>
+			<p class="trading-card-level">${MSG_XP_LEVEL(level)}</p>
+			${levelCharacter(level - 1, "", proxy)}
+			<p class="trading-card-text">${MSG_LEVEL_REACHED(collectedAt ? new Date(collectedAt).toLocaleDateString("pt-PT") : "30/02")}</p>
 		</div>
 	`;
 }
@@ -253,15 +275,53 @@ async function cromoCard(name, debut) {
 		.replace(/id="/g, 'id="cromo-')
 		.replace(/url\(#/g, "url(#cromo-");
 	return `
-		<div class="trading-card cromo holo">
+		<div class="trading-card collected cromo holo">
 			${svg}
-			<div class="cromo-text">
-				<p class="trading-card-name">${shortName(name)}</p>
-				<p class="trading-card-text">${MSG_CROMO_DEBUT(new Date(debut).toLocaleDateString("pt-PT"))}</p>
-			</div>
+			${cromoText(name, debut)}
 			<div class="trading-card-holo"></div>
 		</div>
 	`;
+}
+
+// THE NAME AND DEBUT DATE, OVER THE DRAWING'S #textarea — SHARED BY THE FULL CARD AND ITS PROXY
+function cromoText(name, debut) {
+	return `
+		<div class="cromo-text">
+			<p class="trading-card-name">${shortName(name)}</p>
+			<p class="trading-card-text">${MSG_CROMO_DEBUT(new Date(debut).toLocaleDateString("pt-PT"))}</p>
+		</div>
+	`;
+}
+
+// THE CROMO CARD'S PROXY IN THE ALBUM: THE DRAWING AS A PLAIN <img> (LOADED ONCE, REUSED) WITH THE SAME TEXT, AND NO
+// HOLO, TILT OR PARALLAX — A PAGE OF LIVE HOLO CARDS, EACH AN INLINED DRAWING, WOULD WEIGH ON THE PROFILE. TAPPING IT
+// BEHOLDS THE FULL CARD (beholdCard)
+function cromoProxy(name, debut) {
+	return `
+		<div class="trading-card collected cromo" data-behold>
+			<img src="images/card_cromo.svg" alt="">
+			${cromoText(name, debut)}
+		</div>
+	`;
+}
+
+// TAP TO BEHOLD: THE FULL CARD — HOLO, TILT, PARALLAX — LIFTED INTO THE MIDDLE OF THE SCREEN ON A SCENE OF ITS OWN, THE SAME
+// CENTRED LAYOUT AND LIFT AS THE ONBOARDING'S REVEAL, WITHOUT THE PARCEL. "FECHAR", OR A TAP OFF THE CARD, PUTS IT AWAY
+function beholdCard(card) {
+	const layer = document.createElement("div");
+	layer.className = "reveal-scene centered opened";
+	layer.innerHTML = `
+		<div class="reveal-stage"><div class="prize-lift"><div class="prize-bob">${card}</div></div></div>
+		<a href="#" class="info-link">Fechar</a>
+	`;
+	document.body.appendChild(layer);
+	const shown = layer.querySelector(".trading-card");
+	tiltCard(shown);
+	layer.addEventListener("click", e => {
+		if (shown.contains(e.target)) return;
+		e.preventDefault();
+		layer.remove();
+	});
 }
 
 // DEBUG (DEV SERVER ONLY, IS_DEV): ?level=N ON profile.html DRAWS THE TRADING CARD AT LEVEL N (1–10), HALFWAY THROUGH IT —
@@ -315,7 +375,9 @@ function tradingCard(xp, stats, teaser) {
 	], teaser);
 }
 
-async function loadProgress(container, gamesPromise, teaserPromise, xpPromise) {
+// album ({ name, debut, cards: a promise of the collected_cards rows }) FILLS THE ALBUM, AFTER THE STAT CARDS; WITHOUT IT
+// (VISITORS, PLAYERS WHO LEFT THE ONBOARDING HALFWAY) THE ALBUM HOLDS THE LEVEL-1 TEASER, LIKE THE TRADING CARD'S
+async function loadProgress(container, gamesPromise, teaserPromise, xpPromise, album = {}) {
 	const games = await gamesPromise;
 	const teaser = await teaserPromise;
 	const xp = DEBUG_LEVEL ? debugLevelXp(DEBUG_LEVEL) : await xpPromise;
@@ -341,6 +403,20 @@ async function loadProgress(container, gamesPromise, teaserPromise, xpPromise) {
 	tiltCard(container.querySelector(".trading-card"));
 	const flashCard = container.querySelector(".trading-card.flash");
 	flashCard?.addEventListener("animationstart", () => aimCameraFlash(flashCard));
+	// THE ALBUM: THE PLAYER'S COLLECTED CARDS AS PROXIES, TWO TO A ROW (LIKE STICKERS IN THE CADERNETA), OLDEST FIRST — ONE
+	// SEQUENCE, NO SECTIONS: THE CROMO CARD, THEN A CARD PER LEVEL REACHED. WITHOUT AN ALBUM (VISITORS, QUITTERS), THE LEVEL-1
+	// TEASER. A TAP BEHOLDS THE FULL CARD. PAGES OF FOUR ARE DECIDED; UNTIL THE PAGE TURN IS BUILT, EVERY CARD SHOWS
+	const cards = album.name ? [{ kind: "cromo" }, ...await album.cards] : [{ kind: "level", ref: "1" }];
+	container.insertAdjacentHTML("beforeend", `
+		<div class="divider"></div>
+		<p class="info-sub1">Caderneta</p>
+		<div class="album">${cards.map(card => card.kind === "cromo" ? cromoProxy(album.name, album.debut) : levelCard(+card.ref, card.collected_at, true)).join("")}</div>
+	`);
+	const proxies = [...container.querySelectorAll(".album [data-behold]")];
+	proxies.forEach((proxy, i) => proxy.addEventListener("click", async () => {
+		const card = cards[i];
+		beholdCard(card.kind === "cromo" ? await cromoCard(album.name, album.debut) : levelCard(+card.ref, card.collected_at));
+	}));
 	appendRulesCard(container, MSG_PROGRESS_INFO, XP_RULES, MSG_PROGRESS_RULES, MSG_PROGRESS_INTRO);
 }
 

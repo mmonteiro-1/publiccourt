@@ -84,6 +84,8 @@ function showTearReveal({ label = MSG_TEAR_LABEL, onBurst, onDone } = {}) {
 	// OF EACH SLICE, THEN STAYS AT 0; THE RIGHT SIDE MIRRORS IT. ONLY SLICE TOPS HAVE NOTCHES (THE TALL BOTTOM SLICE HAS ONE)
 	const boxes = [...overlay.querySelectorAll(".tear-box")];
 	const STRIP_X = (SCREEN_W - STRIP_W) / 2;
+	// FOR THE STRIP'S CARDBOARD (CSS): SHIFTED BY ITS DISTANCE FROM THE SCREEN'S EDGE, ITS LINES CARRY ON THE BOX'S
+	overlay.style.setProperty("--strip-x", `${STRIP_X}px`);
 	const sliceTop = y => Math.min(Math.floor(y / SLICE_H), SLICES - 1) * SLICE_H;
 	const notchX = y => {
 		const t = y - sliceTop(y);
