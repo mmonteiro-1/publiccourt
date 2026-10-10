@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="pt">
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Campo Livre</title>
+	<link rel="preconnect" href="https://fonts.googleapis.com">
+	<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300..700&display=swap" rel="stylesheet">
+	<link rel="stylesheet" href="css/styles.css">
+	<link rel="manifest" href="manifest.json">
+	<meta name="theme-color" content="#e6b5b2">
+	<script defer src="/_vercel/insights/script.js"></script>
+</head>
+
+<body class="page-login">
+
+	<header>
+		<div class="logo">
+			<span>CAMPO</span>
+			<img src="images/pig.svg" class="logo-pig" alt="">
+			<span>LIVRE</span>
+		</div>
+	</header>
+
+	<main id="app">
+		<form id="login-form">
+			<div class="margin-bottom-10">
+				<p class="info-heading" id="login-title"></p>
+				<p class="card-sub" id="login-note" style="font-size: .7em"></p>
+			</div>
+			<input class="form-input" type="email" id="email-input" placeholder="Email" autocomplete="email" required>
+			<button type="submit"><img src="images/icon_mail.svg" alt="">Enviar código</button>
+			<p class="info-sub2 margin-top-5" id="login-switch"></p>
+		</form>
+	</main>
+
+	<a class="info-link" id="back-link" href="index.html">
+		Voltar
+	</a>
+
+	<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+	<script src="js/config.js"></script>
+	<script src="js/utils.js"></script>
+	<script src="js/login.js"></script>
+
+</body>
+
+</html>

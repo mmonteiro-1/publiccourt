@@ -15,7 +15,7 @@ function playBallAnimation(targetEl) {
 	ctx.scale(dpr, dpr);
 
 	const img = new Image();
-	img.src = 'images/icon_ball.svg';
+	img.src = 'images/icon_ball_color.svg';
 
 	const hitmark = new Image();
 	hitmark.src = 'images/hitmark.svg';

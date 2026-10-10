@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="pt">
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Campo Livre — Gestor</title>
+	<link rel="preconnect" href="https://fonts.googleapis.com">
+	<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300..700&display=swap" rel="stylesheet">
+	<link rel="stylesheet" href="css/styles.css">
+	<link rel="manifest" href="manifest.json">
+	<meta name="theme-color" content="#e6b5b2">
+	<script defer src="/_vercel/insights/script.js"></script>
+</head>
+
+<body class="page-admin">
+
+	<header>
+		<div class="logo">
+			<span>CAMPO</span>
+			<img src="images/pig.svg" class="logo-pig" alt="">
+			<span>LIVRE</span>
+		</div>
+		<!-- ADMINS HAVE NO profile.html (AN EMAIL IS EITHER PLAYER OR ADMIN) — THIS OPENS THE DASHBOARD'S OWN PROFILE VIEW -->
+		<a class="header-profile" id="header-profile" href="#" aria-label="Perfil"><img src="images/icon_avatar.svg" alt=""></a>
+	</header>
+
+	<main id="app">
+		<p class="form-sent" id="loading-msg">A carregar...</p>
+
+		<div id="view-bookings" class="admin-view" hidden></div>
+		<div id="view-pending" class="admin-view" hidden></div>
+		<div id="view-members" class="admin-view" hidden></div>
+		<div id="view-rules" class="admin-view" hidden></div>
+		<div id="view-profile" class="admin-view" hidden></div>
+	</main>
+
+	<nav class="admin-nav" hidden>
+		<button class="admin-nav-btn active" data-view="bookings"><img src="images/icon_calendar_tennis.svg" alt=""></button>
+		<button class="admin-nav-btn" data-view="pending"><img src="images/icon_user_exclamation.svg" alt=""></button>
+		<button class="admin-nav-btn" data-view="members"><img src="images/icon_id.svg" alt=""></button>
+		<button class="admin-nav-btn" data-view="rules"><img src="images/icon_court_gear.svg" alt=""></button>	</nav>
+
+	<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+	<script src="js/config.js"></script>
+	<script src="js/utils.js"></script>
+	<script src="js/custom-select.js"></script>
+	<script type="module" src="js/admin.js"></script>
+
+</body>
+
+</html>

@@ -1,0 +1,337 @@
+const app = document.getElementById("app");
+let courtId;
+let selectedDuration = 45;
+
+export function init(id) {
+	courtId = id;
+}
+
+const MAX_DISTANCE_METERS = 500;
+const MAX_ACCURACY_ALLOWANCE = 500;
+const MSG_LOCATION_FAILED = "Parece que não estás no campo, ou então a localização falhou. Tenta ler o QR Code fixado na entrada do campo.";
+// TWO PLACES CAN BLOCK LOCATION ON EACH SYSTEM — THE BROWSER AND THE PHONE ITSELF — SO BOTH ARE LISTED
+const MSG_LOCATION_HINT_IOS = "Se o telefone não pede permissão, o bloqueio pode estar em 2 sítios: 1) Definições → Safari → Localização. 2) Definições → Privacidade → Serviços de Localização → Websites do Safari.";
+const MSG_LOCATION_HINT_ANDROID = "Se o telefone não pede permissão, o bloqueio pode estar em 2 sítios: 1) Definições → Aplicações → Chrome → Permissões → Localização. 2) Chrome → ⋮ → Definições → Definições de sites → Localização.";
+
+function distanceMeters(lat1, lon1, lat2, lon2) {
+	const R = 6371000;
+	const toRad = d => d * Math.PI / 180;
+	const dLat = toRad(lat2 - lat1);
+	const dLon = toRad(lon2 - lon1);
+	const a = Math.sin(dLat / 2) ** 2 +
+		Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
+	return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+function getCurrentPosition() {
+	return new Promise((resolve, reject) => {
+		if (!navigator.geolocation) {
+			reject(new Error("Geolocation not supported"));
+			return;
+		}
+		navigator.geolocation.getCurrentPosition(resolve, reject, {
+			enableHighAccuracy: true,
+			timeout: 10000,
+			maximumAge: 0,
+		});
+	});
+}
+
+export async function fetchActiveReservation() {
+	const now = new Date().toISOString();
+	const { data: rows } = await db
+		.from("walk_ins")
+		.select("*")
+		.eq("court_id", courtId)
+		.is("manual_finished_at", null)
+		.gt("ends_at", now)
+		.order("ends_at", { ascending: false })
+		.limit(1);
+
+	return rows && rows.length > 0 ? rows[0] : null;
+}
+
+export function renderPreview(court, active) {
+	document.body.classList.toggle("inuse", !!active);
+	app.classList.toggle("available", !active);
+	app.classList.toggle("inuse", !!active);
+	const nudge = document.getElementById("install-nudge");
+	if (nudge) {
+		nudge.classList.toggle("available", !active);
+		nudge.classList.toggle("inuse", !!active);
+	}
+
+	const statusBadge = `<span class="badge">LIVRE</span>`;
+	const occupiedBadges = active
+		? `<div class="badge-group">
+			<span class="badge">OCUPADO</span>
+			<span class="badge">${minutesLeft(active.ends_at) > 0 ? `<img src="/images/icon_timer.svg" class="badge-icon">${minutesLeft(active.ends_at)}MIN` : "A TERMINAR"}</span>
+		</div>`
+		: statusBadge;
+
+	const descriptionLine = court.description ? `<p class="card-sub">${court.description}</p>` : "";
+	const flipLink = `<a class="card-sub deck-flip-link" data-action="flip-deck" href="#">Mais informações deste campo<img src="images/icon_info.svg" class="link-icon" alt=""></a>`;
+
+	const isMine = active && active.device_id === getDeviceId();
+	const bodyText = active
+		? isMine
+			? "Podes sempre avisar que o teu jogo vai demorar mais um bocadinho. E caso pares mais cedo, podes avisar que o teu jogo terminou."
+			: "Parece que este campo está ocupado de momento. Caso esteja livre, <b>e se estiveres à beira do campo</b> podes terminar o jogo atual"
+		: "Para minimizar os batotas, não é possível iniciar um jogo sem que o jogador esteja à beira do campo.";
+
+	const actionLabel = active ? "Terminar jogo atual" : "Estou no campo";
+
+	const locationIcon = active
+		? `<img src="images/icon_death.svg" class="link-icon" alt="">`
+		: `<img src="images/icon_flag.svg" class="link-icon" alt="">`;
+
+	app.innerHTML = `
+		<div class="card-header">
+			${cityHtml(court.city)}
+			${occupiedBadges}
+		</div>
+		<p class="card-status">${court.name}</p>
+		${descriptionLine}
+		<div class="divider"></div>
+		<p class="margin-bottom-20 card-sub">${bodyText}</p>
+		${flipLink}
+		${isMine ? `
+		<div class="extend-row">
+			<button class="extend-btn" data-mins="15" ${localStorage.getItem("extended_" + active.id) ? "disabled" : ""}>+ 15MIN</button>
+			<button class="extend-btn" data-mins="30" ${localStorage.getItem("extended_" + active.id) ? "disabled" : ""}>+ 30MIN</button>
+			<button class="extend-btn" data-mins="60" ${localStorage.getItem("extended_" + active.id) ? "disabled" : ""}>+ 60MIN</button>
+		</div>` : ""}
+		<button id="here-btn">${locationIcon} ${actionLabel}</button>
+		<button class="button-shallow margin-top-10" id="back-btn">Voltar</button>
+		${!isMine ? `<p class="card-sub margin-top-10" style="font-size:0.75em">Por favor permite que este browser confirme a tua localização</p>` : ""}
+	`;
+
+	const mapsUrl = court.lat && court.lng
+		? `https://maps.google.com/?daddr=${court.lat},${court.lng}`
+		: `https://maps.google.com/?q=${encodeURIComponent(court.name)}`;
+
+	document.getElementById("court-footer").innerHTML = `
+		<a class="info-link" href="${mapsUrl}" target="_blank" rel="noopener">
+			<img src="images/icon_car.svg" class="link-icon" alt="">
+			Enviar coordenadas ao GPS
+		</a>
+	`;
+
+	document.getElementById("back-btn").addEventListener("click", () => { location.href = "index.html"; });
+	document.getElementById("here-btn").addEventListener("click", () => {
+		if (active && isMine) {
+			finishOwnGame(court, active.id);
+		} else {
+			verifyLocationAndProceed(court);
+		}
+	});
+
+	if (isMine) {
+		document.querySelectorAll(".extend-btn").forEach(btn => {
+			btn.addEventListener("click", () => extendGame(court, active, parseInt(btn.dataset.mins)));
+		});
+	}
+}
+
+function renderLocationBlocked(court, message) {
+	const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+	const isAndroid = /android/i.test(navigator.userAgent);
+	const locationHint = isIOS ? MSG_LOCATION_HINT_IOS : isAndroid ? MSG_LOCATION_HINT_ANDROID : "";
+
+	app.innerHTML = `
+		<p class="court-label">${court.name}</p>
+		<p class="card-status">Tás onde?</p>
+		<p class="card-sub margin-top-10 margin-bottom-20">${message}</p>
+		<button id="retry-btn"><img src="images/icon_location_exclamation.svg" class="link-icon" alt=""> Tentar outra vez</button>
+		<button class="margin-top-10" id="hint-btn"><img src="images/icon_siren.svg" class="link-icon" alt=""> Não há QR Code na entrada</button>
+		<button class="button-shallow margin-top-10" id="back-btn">Voltar</button>
+		${locationHint ? `<p class="card-sub margin-top-10" style="font-size: 0.7em">${locationHint}</p>` : ""}
+	`;
+	document.getElementById("retry-btn").addEventListener("click", () => verifyLocationAndProceed(court));
+	document.getElementById("back-btn").addEventListener("click", () => { location.href = "index.html"; });
+
+	const hintBtn = document.getElementById("hint-btn");
+	hintBtn.addEventListener("click", async () => {
+		hintBtn.disabled = true;
+		const { data } = await db.from("courts").select("missing_qr_hint").eq("id", courtId).single();
+		await db.from("courts").update({ missing_qr_hint: (data?.missing_qr_hint || 0) + 1 }).eq("id", courtId);
+		hintBtn.innerHTML = "Obrigado por avisar";
+	});
+}
+
+function renderAvailable(court) {
+	document.body.classList.remove("inuse");
+	app.classList.add("available");
+	app.classList.remove("inuse");
+
+	const descriptionLine = court.description ? `<p class="card-sub">${court.description}</p>` : "";
+	const flipLink = `<a class="card-sub deck-flip-link" data-action="flip-deck" href="#">Mais informações deste campo<img src="images/icon_info.svg" class="link-icon" alt=""></a>`;
+
+	app.innerHTML = `
+		<div class="card-header">
+			${cityHtml(court.city)}
+			<span class="badge">LIVRE</span>
+		</div>
+		<p class="card-status">${court.name}</p>
+		${descriptionLine}
+		<div class="divider"></div>
+		<p class="margin-bottom-20 card-sub">Informa os outros jogadores quanto tempo pretendes usar o campo</p>
+		${flipLink}
+		<div class="duration-grid margin-bottom-10">
+			<button class="dur-btn selected" data-mins="45">45MIN</button>
+			<button class="dur-btn" data-mins="60">60MIN</button>
+			<button class="dur-btn" data-mins="90">90MIN</button>
+		</div>
+		<button id="checkin-btn"><img src="images/icon_run.svg" class="link-icon" alt=""> Começar jogo</button>
+	`;
+
+	document.getElementById("court-footer").innerHTML = `
+		<a class="info-link" id="back-link" href="#">
+			Voltar
+		</a>
+	`;
+
+	document.querySelectorAll(".dur-btn").forEach(btn => {
+		btn.addEventListener("click", () => {
+			document.querySelectorAll(".dur-btn").forEach(b => b.classList.remove("selected"));
+			btn.classList.add("selected");
+			selectedDuration = parseInt(btn.dataset.mins);
+		});
+	});
+
+	document.getElementById("checkin-btn").addEventListener("click", () => checkIn(court));
+	document.getElementById("back-link").addEventListener("click", e => {
+		e.preventDefault();
+		location.href = "index.html";
+	});
+}
+
+async function extendGame(court, active, minutes) {
+	const btns = document.querySelectorAll(".extend-btn");
+	const clicked = [...btns].find(b => parseInt(b.dataset.mins) === minutes);
+	const originalLabel = clicked.innerHTML;
+
+	clicked.innerHTML = `<img src="images/icon_like.svg" class="link-icon" alt="">`;
+
+	const newEndsAt = new Date(new Date(active.ends_at).getTime() + minutes * 60 * 1000).toISOString();
+
+	const { error } = await db.from("walk_ins")
+		.update({ ends_at: newEndsAt })
+		.eq("id", active.id);
+
+	if (error) {
+		btns.forEach(b => b.disabled = false);
+		clicked.innerHTML = originalLabel;
+		return;
+	}
+
+	localStorage.setItem("extended_" + active.id, "1");
+
+	const timeBadge = app.querySelector(".badge-group .badge:last-child");
+	if (timeBadge) {
+		const currentMins = minutesLeft(active.ends_at);
+		const finalMins = minutesLeft(newEndsAt);
+		const timerIcon = `<img src="/images/icon_timer.svg" class="badge-icon">`;
+		timeBadge.innerHTML = currentMins > 0
+			? `${timerIcon}${currentMins} + ${minutes}MIN`
+			: `${timerIcon}${minutes}MIN`;
+		setTimeout(() => {
+			timeBadge.innerHTML = finalMins > 0
+				? `${timerIcon}${finalMins}MIN`
+				: "A TERMINAR";
+		}, 3000);
+	}
+
+	setTimeout(() => {
+		clicked.innerHTML = originalLabel;
+		btns.forEach(b => b.disabled = true);
+	}, 3000);
+}
+
+async function finishOwnGame(court, reservationId) {
+	const btn = document.getElementById("here-btn");
+	btn.disabled = true;
+
+	const { error } = await db.from("walk_ins")
+		.update({ manual_finished_at: new Date().toISOString() })
+		.eq("id", reservationId);
+
+	if (error) {
+		btn.disabled = false;
+		return;
+	}
+
+	showSuccess(SUCCESS.walkInFinished());
+}
+
+async function finishGame(reservationId) {
+	const { error } = await db.from("walk_ins")
+		.update({ manual_finished_at: new Date().toISOString() })
+		.eq("id", reservationId);
+
+	if (error) alert("Algo correu mal. Tenta outra vez.");
+}
+
+async function checkIn(court) {
+	const btn = document.getElementById("checkin-btn");
+	btn.disabled = true;
+	btn.textContent = "A iniciar...";
+
+	const endsAt = new Date(Date.now() + selectedDuration * 60 * 1000).toISOString();
+
+	// TIE THE WALK-IN TO THE ACCOUNT WHEN THERE IS ONE SO IT REACHES THE PLAYER'S HISTORY ON ANY DEVICE.
+	// VISITORS STAY ANONYMOUS — device_id IS THE ONLY HANDLE WE HAVE, AND WE HAVE NO NAME TO ASK FOR.
+	const { data: { session } } = await db.auth.getSession();
+	const user = session?.user;
+	const { data: profile } = user
+		? await db.from("profiles").select("name").eq("id", user.id).single()
+		: { data: null };
+
+	const { error } = await db.from("walk_ins").insert({
+		court_id: courtId,
+		ends_at: endsAt,
+		device_id: getDeviceId(),
+		player_id: user?.id ?? null,
+		player_name: profile?.name ?? null,
+	});
+
+	if (error) {
+		btn.disabled = false;
+		btn.textContent = "Começar jogo";
+		alert("Algo correu mal. Tenta outra vez.");
+		return;
+	}
+
+	showSuccess(SUCCESS.walkInStarted());
+}
+
+async function verifyLocationAndProceed(court) {
+	app.innerHTML = `<p class="message">A verificar a tua localização...</p>`;
+
+	let position;
+	try {
+		position = await getCurrentPosition();
+	} catch (e) {
+		renderLocationBlocked(court, MSG_LOCATION_FAILED);
+		return;
+	}
+
+	const distance = distanceMeters(
+		position.coords.latitude, position.coords.longitude,
+		court.lat, court.lng
+	);
+	// accuracy is the GPS error radius in meters. We widen the allowed distance by that amount
+	// so a device with a coarse fix (e.g. Wi-Fi triangulation) isn't unfairly rejected,
+	// but cap it so someone far away can't spoof their way in with a deliberately bad signal.
+	const allowance = Math.min(position.coords.accuracy || 0, MAX_ACCURACY_ALLOWANCE);
+	const threshold = MAX_DISTANCE_METERS + allowance;
+
+	if (distance > threshold) {
+		renderLocationBlocked(court, MSG_LOCATION_FAILED);
+		return;
+	}
+
+	const active = await fetchActiveReservation();
+	if (active) await finishGame(active.id);
+	renderAvailable(court);
+}

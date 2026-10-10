@@ -21,6 +21,7 @@
 			<img src="images/pig.svg" class="logo-pig" alt="">
 			<span>LIVRE</span>
 		</div>
+		<a class="header-profile" href="profile.html" aria-label="Perfil"><img src="images/icon_avatar.svg" alt=""></a>
 	</header>
 
 	<div class="deck">
@@ -33,19 +34,31 @@
 			<p class="message">A carregar...</p>
 		</div>
 	</div>
-	<div class="card install-nudge" id="install-nudge">
-		<button class="install-nudge-close" id="install-nudge-close" aria-label="Fechar">
+	<!-- FOR VISITORS ONLY (court-stage.js FILLS AND SHOWS IT): WHAT AN ACCOUNT WOULD GIVE THEM, LEADING TO THE PROFILE -->
+	<div class="card install-nudge visitor-nudge" id="visitor-nudge" hidden>
+		<div class="install-nudge-close" id="visitor-nudge-close">
 			<img src="images/icon_cancel.svg" alt="">
-		</button>
+		</div>
+		<p class="uppercase"></p>
+		<p class="card-sub margin-top-5"></p>
+	</div>
+	<div class="card install-nudge" id="install-nudge">
+		<div class="install-nudge-close" id="install-nudge-close">
+			<img src="images/icon_cancel.svg" alt="">
+		</div>
 		<p class="uppercase">Vais usar a app novamente?</p>
-		<p class="card-sub margin-top-5">Guarda o Campo Livre na tua homescreen para voltares cá com facilidade. <a href="info.html#panel-download">Saiba como</a></p>
+		<p class="card-sub margin-top-5">Guarda o Campo Livre na tua homescreen para voltares cá com facilidade. <a href="#" id="install-howto-link">Saiba como</a></p>
 	</div>
 	<div id="court-footer"></div>
 	<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 	<script src="js/config.js"></script>
 	<script src="js/utils.js"></script>
+	<script src="js/tear-reveal.js"></script>
+	<script src="js/pass-card.js"></script>
+	<script src="js/reveals.js"></script>
 	<script src="js/ball-animation.js"></script>
-	<script src="js/court.js"></script>
+	<script src="js/success.js"></script>
+	<script type="module" src="js/court-stage.js"></script>
 	<script>if ("serviceWorker" in navigator) navigator.serviceWorker.register("/service-worker.js");</script>
 
 </body>

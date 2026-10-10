@@ -117,7 +117,7 @@ function updateMarkerStatus() {
 }
 
 // RENDER A SINGLE COURT CARD, AVAILABLE OR IN USE
-function renderCourtCard(court, res, isOwner = false) {
+function renderCourtCard(court, res, isMine = false) {
 	const sub = court.description ? `<p class="card-sub">${court.description}</p>` : "";
 
 	if (court.unavailable) {
@@ -146,7 +146,7 @@ function renderCourtCard(court, res, isOwner = false) {
           </div>
         </div>
         <p class="card-status inuse">${court.name}</p>
-        ${isOwner ? `<p class="card-sub">Meu jogo</p>` : sub}
+        ${isMine ? `<p class="card-sub">Meu jogo</p>` : sub}
       </a>
     `;
 	}
@@ -237,16 +237,10 @@ function renderGrid() {
 		? [sorted.find(c => c.id === myCourtId), ...sorted.filter(c => c.id !== myCourtId)].filter(Boolean)
 		: sorted;
 
-	const logoPig = document.querySelector(".logo-pig");
-
 	if (finalSorted.length) {
 		grid.innerHTML = finalSorted.map(court => renderCourtCard(court, latestActiveMap[court.id], court.id === myCourtId)).join("");
-		grid.classList.remove("grid--empty");
-		if (logoPig) logoPig.style.opacity = "";
 	} else {
-		grid.innerHTML = `<div class="empty"><img src="images/pig_sitting.svg" class="empty-pig" alt=""> <p>Removeste todos<br> os filtros, Zé.</p></div>`;
-		grid.classList.add("grid--empty");
-		if (logoPig) logoPig.style.opacity = "0";
+		setPigAppearance(grid, "Removeste todos<br> os filtros, Zé.");
 	}
 
 }
@@ -255,7 +249,7 @@ function renderGrid() {
 async function load() {
 	const now = new Date().toISOString();
 
-	const [{ data: courts }, { data: walk_ins }] = await Promise.all([
+	const [{ data: courts }, { data: walkIns }] = await Promise.all([
 		db.from("courts").select("*").eq("active", true).order("id"),
 		db.from("walk_ins").select("*").is("manual_finished_at", null).gt("ends_at", now),
 	]);
@@ -266,7 +260,7 @@ async function load() {
 	}
 
 	const activeMap = {};
-	(walk_ins || []).forEach(r => { activeMap[r.court_id] = r; });
+	(walkIns || []).forEach(r => { activeMap[r.court_id] = r; });
 
 	latestCourts = courts;
 	latestActiveMap = activeMap;
@@ -280,6 +274,6 @@ async function load() {
 load();
 
 // Re-run the full load on any reservation change so card statuses stay live without polling.
-db.channel("walk_ins-live")
+db.channel("walk-ins-live")
   .on("postgres_changes", { event: "*", schema: "public", table: "walk_ins" }, load)
   .subscribe();

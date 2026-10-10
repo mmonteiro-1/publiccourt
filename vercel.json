@@ -1,3 +1,7 @@
 {
-  "cleanUrls": true
+  "cleanUrls": true,
+  "redirects": [
+    { "source": "/owner", "destination": "/admin", "permanent": true },
+    { "source": "/owner.html", "destination": "/admin", "permanent": true }
+  ]
 }

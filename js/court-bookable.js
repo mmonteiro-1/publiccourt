@@ -1,0 +1,297 @@
+import { renderSlotPicker } from './slot-picker.js';
+import { setSecondaryCardInfo } from './secondary-card.js';
+
+const hi = name => `<b>Olá, ${name}.</b>`;
+const MSG_PENDING = "Espetáculo! Enviámos a solicitação para os administradores do campo. <br><br>Vamos avisar no email e aqui quando tivermos novidade.";
+const MSG_DENIED = "A tua solicitação foi recusada.";
+const MSG_MEMBER = "És membro deste campo.";
+// A FUNCTION BECAUSE IT EMBEDS THE LINKED NAMES OF THE GROUP'S OTHER COURTS
+const MSG_SIBLINGS = courtLinks => `Se não encontrares horário aqui, procura em ${courtLinks}.`;
+const MSG_EXPIRED = expiryDate => `O teu passe expirou a ${expiryDate}. Fala com os administradores do campo para o renovar.`;
+const MSG_NO_PASS = "Este campo é exclusivo para membros. Para reservar precisas de um passe, que podes pedir aos administradores.";
+const MSG_VISITOR = `Este campo opera sob o <b>sistema de reservas</b>. <br><br> Para reservares precisas de um <b>passe</b>: o Campo Livre envia as tuas informações aos administradores do campo e, quando aceitarem, já podes reservar e jogar.`;
+
+// ENTRY POINT: RENDERS THE FULL BOOKABLE COURT VIEW, BRANCHING ON AUTH AND PASS STATUS
+export async function renderBookable(court) {
+	const app = document.getElementById("app");
+	app.classList.add("available");
+	app.classList.remove("inuse");
+
+	const { data: { session } } = await db.auth.getSession();
+	const user = session?.user ?? null;
+
+	const descriptionLine = court.description ? `<p class="card-sub">${court.description}</p>` : "";
+	const flipLink = `<a class="card-sub deck-flip-link" data-action="flip-deck" href="#">Mais informações<img src="images/icon_info.svg" class="link-icon" alt=""></a>`;
+
+	const header = `
+		<div class="card-header">
+			${cityHtml(court.city)}
+			<span class="badge">RESERVAS</span>
+		</div>
+		<p class="card-status">${court.name}</p>
+		${descriptionLine}
+		<div class="divider"></div>
+	`;
+
+	document.getElementById("court-footer").innerHTML = `
+		<a class="info-link" id="back-link" href="index.html">
+			Voltar
+		</a>`;
+
+	// FETCH GROUP DATA FOR SECONDARY CARD — DONE UPFRONT SO VISITORS SEE IT TOO
+	let siblingCourts = [];
+	let groupRules = null;
+	let openingHours = [];
+	if (court.group_id) {
+		const [{ data: siblings }, { data: rules }, { data: hours }] = await Promise.all([
+			db.from("courts")
+				.select("id, name")
+				.eq("group_id", court.group_id)
+				.eq("active", true)
+				.neq("id", court.id)
+				.order("group_position"),
+			db.from("court_groups")
+				.select("slot_duration_minutes, min_game_duration_minutes, price_per_slot_cents")
+				.eq("id", court.group_id)
+				.single(),
+			db.from("court_opening_hours")
+				.select("day_of_week, open, close, closed, pause_start, pause_end")
+				.eq("group_id", court.group_id),
+		]);
+		siblingCourts = siblings || [];
+		groupRules = rules;
+		openingHours = hours || [];
+	}
+
+	// FETCH BOOKING DATA — ONLY NEEDED FOR REGISTERED PLAYERS
+	let existingBookings = [];
+	let playerActiveBooking = null;
+	if (user && court.group_id) {
+		const fetchStart = new Date();
+		fetchStart.setHours(0, 0, 0, 0);
+		const fetchEnd = new Date(fetchStart);
+		fetchEnd.setDate(fetchEnd.getDate() + 7);
+
+		const [{ data: bookings }, { data: activeBooking }] = await Promise.all([
+			db.from("bookings")
+				.select("start_at, end_at, player_id")
+				.eq("court_id", court.id)
+				.eq("status", "confirmed")
+				.gte("start_at", fetchStart.toISOString())
+				.lt("start_at", fetchEnd.toISOString()),
+			// CHECK IF THIS PLAYER ALREADY HAS A FUTURE BOOKING ANYWHERE IN THE GROUP
+			// court_id IS NEEDED TO DISTINGUISH "THIS COURT" (SHOW LOCKED PICKER) VS "SIBLING" (BLOCK)
+			db.from("bookings")
+				.select("id, start_at, end_at, court_id")
+				.eq("player_id", user.id)
+				.eq("group_id", court.group_id)
+				.eq("status", "confirmed")
+				.gt("end_at", new Date().toISOString())
+				.order("start_at")
+				.limit(1)
+				.maybeSingle(),
+		]);
+		existingBookings = bookings || [];
+		playerActiveBooking = activeBooking;
+	}
+
+	const rulesHtml = (() => {
+		if (!groupRules) return "";
+		const items = [];
+		if (groupRules.slot_duration_minutes) items.push({ value: `${groupRules.slot_duration_minutes}min`, label: "slots" });
+		// != null SO 0 (FREE COURTS) ISN'T DROPPED BY A TRUTHINESS CHECK
+		if (groupRules.price_per_slot_cents != null) items.push({ value: `€${(groupRules.price_per_slot_cents / 100).toFixed(2)}`, label: "preço por slot" });
+		if (groupRules.min_game_duration_minutes) items.push({ value: `${groupRules.min_game_duration_minutes}min`, label: "duração mínima" });
+		if (items.length === 0) return "";
+		return `<div class="rules-grid">${items.map(i => `<div class="rules-item"><span class="rules-value">${i.value}</span><span class="rules-label">${i.label}</span></div>`).join("")}</div>`;
+	})();
+
+	const siblingSubtitle = siblingCourts.length > 0
+		? `<p class="secondary-card-subtitle">Válido também para o campo: ${siblingCourts.map(c => c.name).join(", ")}.</p>`
+		: "";
+
+	const openingHoursHtml = (() => {
+		if (!openingHours.length) return "";
+		const fmt = t => t ? t.slice(0, 5) : "";
+		const rows = [...openingHours]
+			.sort((a, b) => a.day_of_week - b.day_of_week)
+			.map(h => {
+				const day = WEEKDAYS[h.day_of_week] ?? h.day_of_week;
+				const hours = h.closed
+					? "Fechado"
+					: h.pause_start
+						? `${fmt(h.open)} – ${fmt(h.pause_start)}<br>${fmt(h.pause_end)} – ${fmt(h.close)}`
+						: `${fmt(h.open)} – ${fmt(h.close)}`;
+				return `<div class="hours-item"><div class="hours-day">${day}</div><div class="hours-time">${hours}</div></div>`;
+			});
+		return `<p class="secondary-card-title">Horário</p><div class="hours-grid">${rows.join("")}</div>`;
+	})();
+
+	setSecondaryCardInfo({ siblingSubtitle, rulesHtml, openingHoursHtml });
+
+	// VISITOR → PROMPT TO LOG IN; NO PASS CHECK NEEDED
+	if (!user) {
+		app.innerHTML = `${header}
+			<p class="card-sub margin-bottom-20">${MSG_VISITOR}</p>
+			${flipLink}
+			<button id="login-btn"><img src="images/icon_login.svg" alt=""> Fazer login</button>
+		`;
+		// REMEMBER THIS COURT SO profile.js CAN BRING THE PLAYER BACK HERE ONCE THEIR LOGIN CODE LOGS THEM IN
+		document.getElementById("login-btn").addEventListener("click", () => {
+			try { localStorage.setItem("returnTo", location.href); } catch {}
+			location.href = "login.html";
+		});
+		return;
+	}
+
+	const { data: profile } = await db.from("profiles").select("name").eq("id", user.id).single();
+	const playerName = profile?.name || user.user_metadata?.name || "jogador";
+	const greeting = `<p class="card-sub">${hi(playerName)} ${MSG_MEMBER}</p>`;
+
+	// PASS IS GROUP-SCOPED IF THE COURT BELONGS TO A GROUP, OTHERWISE COURT-SCOPED
+	const passQuery = court.group_id
+		? db.from("passes").select("status, denied_reason, expires_at, created_at").eq("player_id", user.id).eq("group_id", court.group_id)
+		: db.from("passes").select("status, denied_reason, expires_at, created_at").eq("player_id", user.id).eq("court_id", court.id);
+
+	const { data: row } = await passQuery.maybeSingle();
+	// A PENDING OR REFUSED REQUEST OVER A MONTH OLD COUNTS AS NO REQUEST — THE SAME RULE AS THE PASSES VIEWS (requestExpired IN
+	// utils.js). ITS ROW STAYS, AND ASKING AGAIN REVIVES IT RATHER THAN INSERTING A SECOND ONE
+	const pass = row && row.status !== "approved" && requestExpired(row.created_at) ? null : row;
+
+	if (pass?.status === "pending") {
+		app.innerHTML = `${header}
+			<p class="card-sub margin-bottom-20">${MSG_PENDING}</p>
+			${flipLink}
+		`;
+		return;
+	}
+
+	if (pass?.status === "denied") {
+		const reason = pass.denied_reason ? ` Motivo: ${pass.denied_reason}.` : "";
+		app.innerHTML = `${header}
+			<p class="card-sub margin-bottom-20">${hi(playerName)} ${MSG_DENIED}${reason} Podes solicitar novamente.</p>
+			${flipLink}
+			<button id="reapply-btn"><img src="images/icon_praying.svg" class="link-icon" alt="">Solicitar novamente</button>
+		`;
+		document.getElementById("reapply-btn").addEventListener("click", () => requestPass(court, user, app, header, true, true));
+		return;
+	}
+
+	// APPROVED MEMBER → SHOW THE SLOT PICKER, UNLESS THEY ALREADY HAVE AN ACTIVE BOOKING IN THIS GROUP
+	if (pass?.status === "approved") {
+		// PLAYER HAS A FUTURE BOOKING IN THE GROUP — CHECK WHICH COURT
+		if (playerActiveBooking) {
+			const s = new Date(playerActiveBooking.start_at);
+			const e = new Date(playerActiveBooking.end_at);
+			const weekday = s.toLocaleDateString('pt-PT', { weekday: 'long' });
+			const dateLabel = `${String(s.getDate()).padStart(2, '0')}/${String(s.getMonth() + 1).padStart(2, '0')}`;
+			const fmt = d => `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+			const bookingGreeting = `<p class="card-sub">${hi(playerName)} Tens reserva ${weekday} ${dateLabel} às ${fmt(s)}–${fmt(e)}</p>`;
+
+			if (playerActiveBooking.court_id !== court.id) {
+				// BOOKING IS ON A SIBLING COURT — BLOCK ENTIRELY, SHOW DETAILS
+				app.innerHTML = `${header}
+					${bookingGreeting}
+					<p class="card-sub">${siblingCourts.length > 0 ? 'Já tens uma reserva ativa neste grupo de campos.' : 'Já tens uma reserva ativa.'}</p>
+				`;
+				return;
+			}
+
+			// BOOKING IS ON THIS COURT — RENDER LOCKED PICKER SO PLAYER SEES THEIR CONFIRMED SLOT
+			app.innerHTML = `${header}
+				${bookingGreeting}
+				<div id="slot-picker"></div>
+			`;
+			// SETS status TO cancelled; RLS ONLY ALLOWS THIS WHILE start_at IS STILL IN THE FUTURE
+			const onCancel = async () => {
+				const { error } = await db.from("bookings").update({ status: "cancelled" }).eq("id", playerActiveBooking.id);
+				if (!error) showSuccess(SUCCESS.bookingCancelled(gameLabel(playerActiveBooking.start_at, playerActiveBooking.end_at)));
+				return error;
+			};
+			// RLS BLOCKS CANCELLING ONCE start_at HAS PASSED, SO A GAME IN PROGRESS GETS NO CANCEL BUTTON
+			const hasStarted = new Date(playerActiveBooking.start_at) <= new Date();
+			renderSlotPicker(document.getElementById("slot-picker"), groupRules, openingHours, null, existingBookings, user.id, true, hasStarted ? null : onCancel, false, court);
+			return;
+		}
+
+		// EXPIRED PASS: NO NEW BOOKINGS. CHECKED AFTER THE ACTIVE-BOOKING BRANCH SO A GAME BOOKED BEFORE
+		// EXPIRY STAYS VISIBLE AND CANCELLABLE; THE PASS ROW ITSELF IS LEFT UNTOUCHED
+		if (pass.expires_at && new Date(pass.expires_at) <= new Date()) {
+			const expiryDate = new Date(pass.expires_at).toLocaleDateString("pt-PT");
+			app.innerHTML = `${header}
+				<p class="card-sub margin-bottom-20">${hi(playerName)} ${MSG_EXPIRED(expiryDate)}</p>
+				${flipLink}
+			`;
+			return;
+		}
+
+		// THE PICKER ONLY SHOWS THIS COURT, SO POINT OUT THE GROUP'S OTHER COURTS IN CASE A SLOT IS FREE THERE.
+		// REPLACES THE "ÉS MEMBRO" LINE; A COURT WITH NO SIBLINGS KEEPS THE PLAIN GREETING.
+		const siblingLinks = siblingCourts.map(c => `<a href="court?court=${c.id}">${c.name}</a>`);
+		const bookingGreeting = siblingLinks.length > 0
+			? `<p class="card-sub">${hi(playerName)} ${MSG_SIBLINGS(siblingLinks.length > 1 ? `${siblingLinks.slice(0, -1).join(", ")} ou ${siblingLinks.at(-1)}` : siblingLinks[0])}</p>`
+			: greeting;
+
+		app.innerHTML = `${header}
+			${bookingGreeting}
+			<div id="slot-picker"></div>
+		`;
+
+		// INSERT INTO bookings ON CONFIRM; THE SUCCESS VIEW RELOADS WHEN ITS COUNTDOWN ENDS, SO THE PAGE PICKS UP
+		// THE LOCKED STATE. RETURNS error SO THE SLOT PICKER CAN HANDLE RETRY ON FAILURE.
+		const onConfirm = async (startAt, endAt) => {
+			const { error } = await db.from("bookings").insert({
+				group_id: court.group_id,
+				player_id: user.id,
+				court_id: court.id,
+				start_at: startAt,
+				end_at: endAt,
+			});
+			if (!error) showSuccess(SUCCESS.booked(gameLabel(startAt, endAt)));
+			return error;
+		};
+
+		renderSlotPicker(document.getElementById("slot-picker"), groupRules, openingHours, onConfirm, existingBookings, user.id, false, null, false, court);
+		return;
+	}
+
+	// NO PASS YET → OFFER TO REQUEST ONE
+	app.innerHTML = `${header}
+		<p class="card-sub margin-bottom-20">${hi(playerName)} ${MSG_NO_PASS}</p>
+		${flipLink}
+		<button id="pass-btn"><img src="images/icon_asking.svg" class="link-icon" alt="">Solicitar passe</button>
+	`;
+	document.getElementById("pass-btn").addEventListener("click", () => requestPass(court, user, app, header, false, !!row));
+}
+
+// SUBMIT A PASS REQUEST. WITH A ROW ALREADY THERE (REFUSED, OR A PENDING/REFUSED ONE PAST ITS MONTH) IT REVIVES THAT ROW AS A
+// FRESH REQUEST INSTEAD OF DELETING IT — THE DATABASE KEEPS ITS HISTORY, AND THE ONE-ROW-PER-SCOPE UNIQUE CONSTRAINT HOLDS.
+// RLS ONLY LETS A PLAYER SET THEIR ROW TO pending WITH NO APPROVAL DATA, SO THIS CAN NEVER SELF-APPROVE
+async function requestPass(court, user, app, header, isReapply, hasRow) {
+	const btn = document.getElementById("pass-btn") || document.getElementById("reapply-btn");
+	if (btn) { btn.disabled = true; btn.textContent = "A enviar..."; }
+
+	const scope = court.group_id
+		? { player_id: user.id, group_id: court.group_id }
+		: { player_id: user.id, court_id: court.id };
+
+	const { error } = hasRow
+		? await db.from("passes")
+			.update({ status: "pending", created_at: new Date().toISOString(), denied_reason: null, approved_at: null, expires_at: null })
+			.match(scope)
+		: await db.from("passes").insert(scope);
+
+	if (error) {
+		if (btn) {
+			btn.disabled = false;
+			btn.innerHTML = isReapply
+				? '<img src="images/icon_praying.svg" class="link-icon" alt="">Solicitar novamente'
+				: '<img src="images/icon_asking.svg" class="link-icon" alt="">Solicitar passe';
+		}
+		return;
+	}
+
+	app.innerHTML = `${header}
+		<p class="card-sub">${MSG_PENDING}</p>
+	`;
+}
