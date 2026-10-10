@@ -110,6 +110,8 @@ body {
 .margin-top-20 { margin-top: 20px; }
 .margin-top-30 { margin-top: 30px; }
 
+.margin-top-40 { margin-top: 40px; }
+
 .margin-bottom-10 { margin-bottom: 10px; }
 .margin-bottom-20 { margin-bottom: 20px; }
 .margin-bottom-30 { margin-bottom: 30px; }
@@ -1945,23 +1947,52 @@ button.released {
 #cromo-texture path:nth-child(6n + 5) { fill: var(--holo-blue); --dx: -0.5; --dy: -0.85; }
 #cromo-texture path:nth-child(6n + 6) { fill: var(--holo-violet); --dx: 0.5; --dy: -0.85; }
 
-/* THE ALBUM (loadProgress, "CADERNETA" TO PLAYERS): THE COLLECTED CARDS TWO TO A ROW, LIKE STICKERS IN A PANINI CADERNETA. A CARD AT HALF WIDTH HALVES ITS
-   TEXT TOO, SO THE NAME STILL FITS ITS TEXT AREA */
+/* THE ALBUM (loadProgress, "CADERNETA" TO PLAYERS): THE COLLECTED CARDS IN ONE ROW THAT SWIPES SIDEWAYS, RUNNING PAST THE
+   PAGE'S 20px PADDING TO THE SCREEN'S EDGES SO A CARD CUT OFF AT THE SIDE SAYS THERE'S MORE. EACH CARD SNAPS INTO PLACE.
+   40% WIDE, SO TWO AND A BIT SHOW; A CARD THAT SMALL HALVES ITS TEXT TOO, SO THE NAME STILL FITS ITS TEXT AREA. ONLY THE
+   ROW SCROLLS: ITS SCROLLBAR IS HIDDEN, THE CUT-OFF CARD IS THE HINT */
 .album {
-	display: grid;
-	grid-template-columns: 1fr 1fr;
+	display: flex;
 	gap: 10px;
-	/* EACH CARD KEEPS ITS OWN HEIGHT, NONE STRETCHED TO ITS NEIGHBOUR'S */
 	align-items: start;
+	/* THE SIDES RUN TO THE SCREEN'S EDGES; 40px UNDER IT BEFORE "ENTENDE O PROGRESSO" */
+	margin: 0 -20px 40px;
+	padding: 0 20px;
+	overflow-x: auto;
+	scroll-snap-type: x mandatory;
+	scroll-padding: 0 20px;
+	scrollbar-width: none;
 }
 
+.album::-webkit-scrollbar {
+	display: none;
+}
+
+.album > * {
+	flex: 0 0 40%;
+	scroll-snap-align: start;
+	/* THE SWAY (swayAlbum): LEANING ABOUT THE BOTTOM EDGE, SO THE LEGS STAY PUT AND ONLY THE BODY SWINGS */
+	transform: skewX(var(--lean, 0deg));
+	transform-origin: 50% 100%;
+}
+
+/* ALBUM CARDS DON'T TILT, SO THEY GIVE UP THE TRADING CARD'S pan-y — IT WOULD BLOCK A SIDEWAYS SWIPE STARTED ON A CARD */
 .album .trading-card {
 	font-size: 0.5em;
+	touch-action: manipulation;
 }
 
+/* THE ROW'S LAST SLOT, WITHOUT A CARD YET: THE CARD'S SHAPE IN A DASHED OUTLINE, LIKE AN EMPTY SPACE IN THE CADERNETA
+   WAITING FOR ITS STICKER — THE SAME DASHED LINE AS THE DIVIDERS AND THE ONBOARDING'S UNPICKED ANSWERS */
+.album-slot {
+	box-sizing: border-box;
+	aspect-ratio: 5 / 7;
+	border: 2px dashed var(--black);
+	border-radius: 10px;
+}
 
 /* EVERY COLLECTED CARD (cromo AND level CARDS, IN THE ALBUM AND BEHELD) IS CUT TO ONE SHAPE, 5 × 7 — ROUNDED FROM THE CROMO
-   DRAWING'S 716 × 1011 — WITH 10px CORNERS, SO THE ALBUM'S GRID IS EVEN. THE LIVE CURRENT CARD KEEPS ITS OWN SHAPE.
+   DRAWING'S 716 × 1011 — WITH 10px CORNERS, SO THE ALBUM'S ROW IS EVEN. THE LIVE CURRENT CARD KEEPS ITS OWN SHAPE.
    border-box: THE WHOLE CARD, BORDER AND PADDING INCLUDED, TAKES THE SHAPE */
 .trading-card.collected {
 	box-sizing: border-box;
@@ -3081,10 +3112,90 @@ button.released {
 	top: 0;
 }
 
-/* A PRIZE ALREADY IN PLACE, STILL, FOR PLAYERS WHO ASK THEIR PHONE FOR LESS MOTION */
+/* THE BEHELD CROMO CARD'S HEAVEN (beholdCard's heavenly, .heavenly ON THE SCENE): A BANK OF CLOUDS MEETS AT THE TOP OF THE
+   SCREEN AND PARTS, THEN THE CARD RISES INTO THE GAP. THE CLOUDS' RESTING STATE IS PARTED AND THE ANIMATIONS PLAY FROM CLOSED,
+   SO WITHOUT MOTION THE SCENE IS SIMPLY THERE. THE CLOUDS SIT IN FRONT OF THE CARD. transform / translate ONLY.
+   THE HEAVEN OPENS FIRST: THE CARD RISES A SECOND LATER THAN USUAL (THE LIFT'S 0.25s, + 1s), WITH THE FANFARE
+   (player_progress.js), AND SLOWLY — 1.5s, NOT THE PRIZE'S QUICK 0.4s: ASCENDING, NOT LIFTED — RISING A LITTLE PAST ITS SPOT
+   AND SETTLING BACK (heaven-rise; THE PRIZE STOPS DEAD). THE IDLE STARTS AS IT ARRIVES (1.25s + 1.5s) */
+.heavenly .prize-lift {
+	animation-name: heaven-rise;
+	animation-duration: 1.5s;
+	animation-delay: 1.25s;
+}
+
+@keyframes heaven-rise {
+	0% { transform: translateY(var(--lift-from, 100vh)); animation-timing-function: cubic-bezier(0.45, 0.6, 0.4, 1); }
+	75% { transform: translateY(-15px); animation-timing-function: ease-in-out; }
+	100% { transform: translateY(0); }
+}
+
+.heavenly .prize-bob {
+	animation-delay: 2.75s, 2.75s;
+}
+
+.behold-clouds {
+	position: absolute;
+	inset: 0;
+	z-index: 2;
+	pointer-events: none;
+}
+
+/* THE BANK'S TWO SIDES, EACH 60% WIDE AND OVERLAPPING IN THE MIDDLE WHEN CLOSED; PARTED, EACH HAS MOVED 45% OF ITS WIDTH OUT,
+   LEAVING THE GAP THE CARD RISES INTO. ITS RESTING STATE IS PARTED (SEE ABOVE) */
+.behold-clouds > div {
+	position: absolute;
+	top: 0;
+	width: 60%;
+	height: 160px;
+}
+
+.behold-clouds > div:first-child {
+	left: 0;
+	transform: translateX(-45%);
+	animation: behold-cloud-left 0.9s 0.2s ease-out both;
+}
+
+.behold-clouds > div:last-child {
+	right: 0;
+	transform: translateX(45%);
+	animation: behold-cloud-right 0.9s 0.2s ease-out both;
+}
+
+/* EACH CLOUD PLACED IN ITS SIDE, AND DRIFTING ON translate ONCE APART (A SEPARATE PROPERTY, SO IT DOESN'T FIGHT THE PARTING),
+   EACH ON ITS OWN LENGTH AND DIRECTION SO THEY NEVER MOVE IN STEP */
+.behold-clouds img {
+	position: absolute;
+	animation: behold-drift 3s 1.1s ease-in-out infinite alternate;
+}
+
+.behold-clouds > div:first-child img:nth-child(1) { top: 5px; left: -15%; width: 115%; animation-duration: 3.4s; }
+.behold-clouds > div:first-child img:nth-child(2) { top: 75px; left: 40%; width: 55%; animation-duration: 2.9s; animation-direction: alternate-reverse; }
+.behold-clouds > div:first-child img:nth-child(3) { top: 0; left: 55%; width: 45%; animation-duration: 4.1s; }
+.behold-clouds > div:last-child img:nth-child(1) { top: 10px; right: -15%; width: 120%; animation-duration: 3.7s; animation-direction: alternate-reverse; }
+.behold-clouds > div:last-child img:nth-child(2) { top: 80px; right: 40%; width: 55%; animation-duration: 3.1s; }
+
+@keyframes behold-cloud-left {
+	from { transform: translateX(0); }
+	to { transform: translateX(-45%); }
+}
+
+@keyframes behold-cloud-right {
+	from { transform: translateX(0); }
+	to { transform: translateX(45%); }
+}
+
+@keyframes behold-drift {
+	from { translate: -10px 0; }
+	to { translate: 10px 0; }
+}
+
+/* A PRIZE ALREADY IN PLACE, STILL, FOR PLAYERS WHO ASK THEIR PHONE FOR LESS MOTION — AND THE CROMO'S HEAVEN ALREADY OPEN */
 @media (prefers-reduced-motion: reduce) {
 	.prize-lift,
-	.prize-bob {
+	.prize-bob,
+	.behold-clouds > div,
+	.behold-clouds img {
 		animation: none;
 	}
 }

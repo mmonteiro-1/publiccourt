@@ -9,7 +9,7 @@ const MSG_STAT_RATING = n => `${n}%`;
 const MSG_STAT_HINT = "nos últimos 6 meses";
 const MSG_XP_LEVEL = n => `Nível ${n}`;
 const MSG_CROMO_DEBUT = date => `Estreia: ${date}`;
-const MSG_LEVEL_REACHED = date => `Alcançado a ${date}`;
+const MSG_LEVEL_REACHED = date => `Conquista: ${date}`;
 // EACH STAT'S 100 MARK: THE COUNT OVER THE LAST 6 MONTHS THAT RATES 100 (ANYTHING ABOVE IS CAPPED)
 const STAT_GAMES = 40;
 const STAT_WEEKS = 20;
@@ -24,7 +24,7 @@ const MSG_PROGRESS_INFO = "Entende o progresso";
 // "ENTENDE O PROGRESSO": XP ABOVE THE ROWS; BELOW THEM ESTILO DE JOGO AND DIAMONDS — THREE SEPARATE THINGS THAT NEVER FEED
 // EACH OTHER (SEE "THE PROGRESS MODEL" IN CLAUDE.md)
 const MSG_PROGRESS_INTRO = `Cada partida dá-te XP, e acumular XP faz-te subir do nível 1 ao 10. Estas são as formas de ganhar XP:`;
-const MSG_PROGRESS_RULES = `<b>Estilo de jogo:</b> mostra como tens jogado nos últimos 6 meses. <img src="images/icon_fire_color.svg" class="link-icon" alt="">Frequência, <img src="images/icon_repeat_color.svg" class="link-icon" alt="">Consistência e <img src="images/icon_globe_color.svg" class="link-icon" alt="">Território são medidos aqui. Cada um recebe uma nota de 0 a 100%.<br><br><b>Diamantes:</b> são as conquistas mais valiosas do Campo Livre: 100 partidas, ou 10 campos diferentes, ou jogar todas as semanas durante 6 meses, ou vencer uma <a href="#" data-pane-link="ranking">época</a>.<br><br>Partidas com menos de 10 min não são registadas.`;
+const MSG_PROGRESS_RULES = `<b>Estilo de jogo:</b> mostra como tens jogado nos últimos 6 meses. <img src="images/icon_fire_color.svg" class="link-icon" alt="">Frequência, <img src="images/icon_repeat_color.svg" class="link-icon" alt="">Consistência e <img src="images/icon_globe_color.svg" class="link-icon" alt="">Território são medidos aqui. Cada um recebe uma nota de 0 a 100%.<br><br><b>Diamantes:</b> são as conquistas mais valiosas do Campo Livre: 100 partidas, ou 10 campos diferentes, ou jogar todas as semanas durante 6 meses, ou vencer uma <a href="#" data-pane-link="ranking">época</a>.<br><br><b>Caderneta:</b> ao longo da tua jornada no Campo Livre vais acumular cromos. Visita a caderneta quando ficares nostálgico.<br><br>Partidas com menos de 10 min não são registadas.`;
 // THE WAYS TO EARN XP, ONE LIST FOR BOTH "ENTENDE O PROGRESSO" AND "ENTENDE O RANKING" (ranking.js), SO THE TWO CAN NEVER WORD THEM
 // DIFFERENTLY. DISPLAY ONLY — THE RULES LIVE IN games_xp (supabase/sql/xp.sql). THE PASS IS POSTPONED, SO ITS ROW SAYS "EM BREVE"
 const XP_RULES = [
@@ -123,6 +123,44 @@ function aimCameraFlash(card) {
 	card.style.setProperty("--flash-x", `${x}px`);
 	card.style.setProperty("--flash-y", `${y}px`);
 	card.style.setProperty("--flash-r", `${reach / 0.6}px`);
+}
+
+// THE ALBUM'S CARDS LEAN AS THE ROW SWIPES, CARTOON STYLE: THE LEGS (THE BOTTOM EDGE) GO WITH THE FINGER, THE LAZY BODY (THE
+// TOP) LAGS BEHIND, THEN CATCHES UP — AND WHEN THE ROW STOPS IT SWINGS PAST UPRIGHT AND SWAYS BACK. THE SCROLL SPEED SETS HOW
+// FAR THE CARDS SHOULD LEAN; AN UNDERDAMPED SPRING FOLLOWS IT, WHICH IS WHAT LAGS AND OVERSHOOTS. ONE --lean ON THE ROW, A
+// skewX ON EACH CARD (CSS), transform ONLY. THE LOOP RUNS ONLY WHILE SOMETHING MOVES; NONE UNDER REDUCED MOTION
+// DEGREES OF LEAN PER PX/ms OF SCROLL, AND THE MOST IT LEANS
+const SWAY_PER_SPEED = 6;
+const SWAY_MAX = 12;
+const SWAY_STIFFNESS = 180;
+const SWAY_DAMPING = 20;
+
+function swayAlbum(row) {
+	if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+	let lean = 0, speed = 0, target = 0, lastScroll = row.scrollLeft, frame = null, last = 0;
+
+	function step(time) {
+		// CAPPED SO A BACKGROUND TAB COMING BACK DOESN'T FLING THE CARDS
+		const dt = Math.min(time - last, 50);
+		last = time;
+		// SCROLLING RIGHT (CARDS MOVING LEFT) LEAVES THE TOPS BEHIND, TO THE RIGHT: A NEGATIVE skewX ABOUT THE BOTTOM EDGE.
+		// SMOOTHED, SO ONE JUMPY FRAME DOESN'T JERK THE CARDS
+		const scrolled = row.scrollLeft - lastScroll;
+		lastScroll = row.scrollLeft;
+		const wanted = Math.max(-SWAY_MAX, Math.min(SWAY_MAX, -scrolled / (dt || 16) * SWAY_PER_SPEED));
+		target += (wanted - target) * 0.3;
+		speed += (SWAY_STIFFNESS * (target - lean) - SWAY_DAMPING * speed) * dt / 1000;
+		lean += speed * dt / 1000;
+		row.style.setProperty("--lean", `${lean}deg`);
+		const still = !scrolled && Math.abs(target) < 0.05 && Math.abs(lean) < 0.05 && Math.abs(speed) < 0.05;
+		frame = still ? null : requestAnimationFrame(step);
+	}
+
+	row.addEventListener("scroll", () => {
+		if (frame) return;
+		last = performance.now();
+		frame = requestAnimationFrame(step);
+	}, { passive: true });
 }
 
 // THE CARD TILTS LIKE A REAL ONE: A PRESS PUSHES THAT SPOT AWAY, AND LETTING GO DROPS IT BACK ON A SPRING, SO IT WOBBLES
@@ -234,32 +272,34 @@ function xpCard(xp, diamonds, stats, teaser) {
 }
 
 // A LEVEL'S CHARACTER: ITS ART (BACKGROUND AND PIG; extra GOES INSIDE THE ART, LIKE THE LEVEL-3 FLASH'S SECOND IMAGE), NAME
-// AND FLAVOUR TEXT — SHARED BY THE CURRENT CARD AND THE COLLECTED LEVEL CARDS. still TAKES THE BACKGROUND'S FROZEN COPY
-// (bg_*_still.svg: THE SAME FILE WITH ITS ANIMATIONS SWITCHED OFF — PAGE CSS CAN'T REACH INSIDE AN SVG USED AS AN IMAGE), FOR
-// THE ALBUM'S PROXIES, WHICH NEVER ANIMATE. A NEW BACKGROUND NEEDS ITS _still COPY
-function levelCharacter(index, extra = "", still = false) {
+// AND FLAVOUR TEXT — SHARED BY THE CURRENT CARD AND THE COLLECTED LEVEL CARDS. proxy IS THE ALBUM'S VERSION: THE BACKGROUND'S
+// FROZEN COPY (bg_*_still.svg: THE SAME FILE WITH ITS ANIMATIONS SWITCHED OFF — PAGE CSS CAN'T REACH INSIDE AN SVG USED AS AN
+// IMAGE), SINCE PROXIES NEVER ANIMATE, AND NO FLAVOUR TEXT — UNREADABLE AT THAT SIZE, AND IT LEFT THE PIG NO ROOM; BEHELD, THE
+// CARD HAS IT. A NEW BACKGROUND NEEDS ITS _still COPY
+function levelCharacter(index, extra = "", proxy = false) {
 	const info = XP_LEVEL_INFO[index];
 	return `
 		<div class="trading-card-art">
-			<div class="trading-card-frame"${XP_LEVEL_BACKGROUNDS[index] ? ` style="background-image: url('images/${XP_LEVEL_BACKGROUNDS[index]}${still ? "_still" : ""}.svg')"` : ""}></div>
+			<div class="trading-card-frame"${XP_LEVEL_BACKGROUNDS[index] ? ` style="background-image: url('images/${XP_LEVEL_BACKGROUNDS[index]}${proxy ? "_still" : ""}.svg')"` : ""}></div>
 			<img src="images/${XP_LEVEL_IMAGES[index]}.svg" alt="">
 			${extra}
 		</div>
 		<p class="trading-card-name">${info.title}</p>
-		<p class="trading-card-text">${info.description}</p>
+		${proxy ? "" : `<p class="trading-card-text">${info.description}</p>`}
 	`;
 }
 
 // A COLLECTED LEVEL CARD: THE LEVEL AND ITS CHARACTER, FROZEN AT THE DAY IT WAS REACHED (collected_cards) — NO STATS, NO XP BAR,
 // THOSE STAY ON THE LIVE CURRENT CARD. ALREADY LIGHT (PLAIN IMAGES), SO THE SAME MARKUP IS ITS OWN PROXY IN THE ALBUM —
-// WITH proxy, ITS BACKGROUND STILL; BEHELD, LIVE.
+// WITH proxy, ITS BACKGROUND STILL AND NO FLAVOUR TEXT OR DATE — THE LEVEL, THE PIG AND THE NAME ARE WHAT READS THAT SMALL;
+// BEHELD, LIVE AND WHOLE.
 // NO collectedAt: THE LOCKED LEVEL-1 TEASER FOR VISITORS AND PLAYERS WHO LEFT THE ONBOARDING HALFWAY, DATED 30/02
 function levelCard(level, collectedAt, proxy = false) {
 	return `
 		<div class="trading-card collected${collectedAt ? "" : " locked"}" data-behold>
 			<p class="trading-card-level">${MSG_XP_LEVEL(level)}</p>
 			${levelCharacter(level - 1, "", proxy)}
-			<p class="trading-card-text">${MSG_LEVEL_REACHED(collectedAt ? new Date(collectedAt).toLocaleDateString("pt-PT") : "30/02")}</p>
+			${proxy ? "" : `<p class="trading-card-text">${MSG_LEVEL_REACHED(collectedAt ? new Date(collectedAt).toLocaleDateString("pt-PT") : "30/02")}</p>`}
 		</div>
 	`;
 }
@@ -305,20 +345,27 @@ function cromoProxy(name, debut) {
 	`;
 }
 
+// THE CLOUD BANK OVER THE BEHELD CROMO CARD: THE DRAWN CLOUDS (images/cloud26–30.svg) IN TWO SIDES THAT PART — THREE ON THE LEFT,
+// TWO ON THE RIGHT, AT DIFFERENT HEIGHTS AND SIZES SO THEY READ AS A BANK. PLACED AND MOVED IN CSS (.behold-clouds)
+const BEHOLD_CLOUDS = [[26, 29, 27], [28, 30]]
+	.map(side => `<div>${side.map(n => `<img src="images/cloud${n}.svg" alt="">`).join("")}</div>`).join("");
+
 // TAP TO BEHOLD: THE FULL CARD — HOLO, TILT, PARALLAX — LIFTED INTO THE MIDDLE OF THE SCREEN ON A SCENE OF ITS OWN, THE SAME
-// CENTRED LAYOUT AND LIFT AS THE ONBOARDING'S REVEAL, WITHOUT THE PARCEL. "FECHAR", OR A TAP OFF THE CARD, PUTS IT AWAY
-function beholdCard(card) {
+// CENTRED LAYOUT AND LIFT AS THE ONBOARDING'S REVEAL, WITHOUT THE PARCEL. ONLY "FECHAR" PUTS IT AWAY — A TAP OFF THE CARD
+// CLOSED IT BY MISTAKE MID-TILT.
+// heavenly (THE CROMO CARD): A BANK OF CLOUDS MEETS AT THE TOP OF THE SCREEN AND PARTS, THEN THE CARD RISES INTO THE GAP AND
+// THE CLOUDS DRIFT. CSS DOES THE MOTION (.heavenly, .behold-clouds)
+function beholdCard(card, heavenly = false) {
 	const layer = document.createElement("div");
-	layer.className = "reveal-scene centered opened";
+	layer.className = `reveal-scene centered opened${heavenly ? " heavenly" : ""}`;
 	layer.innerHTML = `
+		${heavenly ? `<div class="behold-clouds">${BEHOLD_CLOUDS}</div>` : ""}
 		<div class="reveal-stage"><div class="prize-lift"><div class="prize-bob">${card}</div></div></div>
-		<a href="#" class="info-link">Fechar</a>
+		<a href="#" data-action="behold-close" class="info-link">Fechar</a>
 	`;
 	document.body.appendChild(layer);
-	const shown = layer.querySelector(".trading-card");
-	tiltCard(shown);
-	layer.addEventListener("click", e => {
-		if (shown.contains(e.target)) return;
+	tiltCard(layer.querySelector(".trading-card"));
+	layer.querySelector('[data-action="behold-close"]').addEventListener("click", e => {
 		e.preventDefault();
 		layer.remove();
 	});
@@ -326,6 +373,10 @@ function beholdCard(card) {
 
 // DEBUG (DEV SERVER ONLY, IS_DEV): ?level=N ON profile.html DRAWS THE TRADING CARD AT LEVEL N (1–10), HALFWAY THROUGH IT —
 // ITS PIG, CHARACTER, BACKGROUND AND XP. ONLY THE XP IS FAKED, NOTHING IS SAVED; THE STATS STAY THE PLAYER'S OWN
+// profile.html#album OPENS ON THE ALBUM. READ AS THE PAGE LOADS: THE FOLDER TABS (profile.js) CLEAR THE HASH BEFORE THE
+// ALBUM IS DRAWN
+const OPEN_ON_ALBUM = location.hash === "#album";
+
 const DEBUG_LEVEL = IS_DEV ? Math.min(Math.max(parseInt(new URLSearchParams(location.search).get("level")) || 0, 0), 10) : 0;
 
 function debugLevelXp(level) {
@@ -403,20 +454,39 @@ async function loadProgress(container, gamesPromise, teaserPromise, xpPromise, a
 	tiltCard(container.querySelector(".trading-card"));
 	const flashCard = container.querySelector(".trading-card.flash");
 	flashCard?.addEventListener("animationstart", () => aimCameraFlash(flashCard));
-	// THE ALBUM: THE PLAYER'S COLLECTED CARDS AS PROXIES, TWO TO A ROW (LIKE STICKERS IN THE CADERNETA), OLDEST FIRST — ONE
-	// SEQUENCE, NO SECTIONS: THE CROMO CARD, THEN A CARD PER LEVEL REACHED. WITHOUT AN ALBUM (VISITORS, QUITTERS), THE LEVEL-1
-	// TEASER. A TAP BEHOLDS THE FULL CARD. PAGES OF FOUR ARE DECIDED; UNTIL THE PAGE TURN IS BUILT, EVERY CARD SHOWS
-	const cards = album.name ? [{ kind: "cromo" }, ...await album.cards] : [{ kind: "level", ref: "1" }];
+	// THE ALBUM: THE PLAYER'S COLLECTED CARDS AS PROXIES IN ONE ROW, NEWEST ON THE LEFT, OLDER TO THE RIGHT — ONE SEQUENCE, NO
+	// SECTIONS: A CARD PER LEVEL REACHED, BACK TO THE CROMO CARD. WITHOUT AN ALBUM (VISITORS, QUITTERS), THE LEVEL-1 TEASER. THE
+	// ROW SWIPES SIDEWAYS AND STARTS ON AN EMPTY SLOT (THE CARD'S DASHED OUTLINE), THE NEXT CARD TO COME, SO EVEN A SHORT ROW
+	// SAYS MORE IS COMING — AND IT OPENS ON WHAT CHANGED, NO SCROLLING. A TAP ON A CARD BEHOLDS THE FULL CARD
+	const cards = (album.name ? [{ kind: "cromo" }, ...await album.cards] : [{ kind: "level", ref: "1" }]).reverse();
 	container.insertAdjacentHTML("beforeend", `
-		<div class="divider"></div>
-		<p class="info-sub1">Caderneta</p>
-		<div class="album">${cards.map(card => card.kind === "cromo" ? cromoProxy(album.name, album.debut) : levelCard(+card.ref, card.collected_at, true)).join("")}</div>
+		<p class="info-heading margin-top-40">Caderneta</p>
+		<div class="album">
+			<div class="album-slot"></div>
+			${cards.map(card => card.kind === "cromo" ? cromoProxy(album.name, album.debut) : levelCard(+card.ref, card.collected_at, true)).join("")}
+		</div>
 	`);
-	const proxies = [...container.querySelectorAll(".album [data-behold]")];
-	proxies.forEach((proxy, i) => proxy.addEventListener("click", async () => {
+	const row = container.querySelector(".album");
+	row.querySelectorAll("[data-behold]").forEach((proxy, i) => proxy.addEventListener("click", async () => {
 		const card = cards[i];
-		beholdCard(card.kind === "cromo" ? await cromoCard(album.name, album.debut) : levelCard(+card.ref, card.collected_at));
+		// THE CROMO CARD, THE RAREST, BEHELD WITH THE FANFARE (utils.js) — PRIMED ON THE TAP ITSELF, BEFORE THE DRAWING LOADS,
+		// SO SAFARI LETS IT PLAY LATER — HALF A SECOND MORE THAN USUAL (0.8s), AS THE CLOUDS PART, JUST BEFORE THE CARD RISES (styles.css)
+		if (card.kind === "cromo") {
+			primeFanfare();
+			playFanfare(500);
+		}
+		if (card.kind === "cromo") beholdCard(await cromoCard(album.name, album.debut), true);
+		else beholdCard(levelCard(+card.ref, card.collected_at));
 	}));
+	swayAlbum(row);
+	// "COLAR CROMO NA CADERNETA" (THE ONBOARDING'S REVEAL) LANDS HERE: SCROLLED TO THE ALBUM, THEN THE HASH GOES SO A RELOAD
+	// STARTS AT THE TOP. ONCE THE PAGE HAS LOADED: THE CARD'S PICTURES ABOVE, STILL LOADING, WOULD PUSH THE ALBUM DOWN AFTER
+	if (OPEN_ON_ALBUM) {
+		history.replaceState(null, "", location.pathname + location.search);
+		const toAlbum = () => row.previousElementSibling.scrollIntoView({ behavior: "smooth", block: "start" });
+		if (document.readyState === "complete") toAlbum();
+		else addEventListener("load", toAlbum, { once: true });
+	}
 	appendRulesCard(container, MSG_PROGRESS_INFO, XP_RULES, MSG_PROGRESS_RULES, MSG_PROGRESS_INTRO);
 }
 

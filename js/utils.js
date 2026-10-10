@@ -51,6 +51,37 @@ function shortName(fullName) {
 	return parts?.length > 1 ? `${parts[0].charAt(0)}. ${parts[parts.length - 1]}` : parts?.[0];
 }
 
+// THE FANFARE: A SOUND FOR THE RAREST MOMENTS ONLY — A SURPRISE BURSTING OPEN, THE CROMO CARD BEHELD. A BONUS, NEVER THE CUE:
+// AN iPHONE ON SILENT PLAYS NOTHING
+const FANFARE = "sounds/choir1.mp3";
+let primedFanfare = null;
+
+// SAFARI ONLY PLAYS SOUND STARTED BY A TAP. A SURPRISE BURSTS A MOMENT AFTER THE FINGER LETS GO, SO THE FIRST TOUCH ON THE
+// PARCEL PRIMES ITS SOUND — PLAYED SILENT AND STOPPED, WHICH UNLOCKS IT — AND THE BURST PLAYS THAT SAME ONE
+function primeFanfare() {
+	if (primedFanfare) return;
+	// ITS OWN REFERENCE: playFanfare MAY TAKE IT (AND CLEAR primedFanfare) BEFORE THIS SILENT PLAY HAS STOPPED
+	const sound = primedFanfare = new Audio(FANFARE);
+	sound.muted = true;
+	sound.play().then(() => {
+		sound.pause();
+		sound.currentTime = 0;
+	}).catch(() => {});
+}
+
+// A BEAT (0.3s) AFTER THE MOMENT, AS THE CARD RISES — NOT ON TOP OF THE BURST OR THE TAP. THE DELAY TAKES IT PAST THE TAP THAT
+// LETS SAFARI PLAY IT, SO CALLERS PRIME IT FIRST (primeFanfare), ON THE TAP ITSELF. later ADDS TO IT, FOR A CARD THAT RISES LATER
+const FANFARE_DELAY_MS = 300;
+
+function playFanfare(later = 0) {
+	const sound = primedFanfare || new Audio(FANFARE);
+	primedFanfare = null;
+	setTimeout(() => {
+		sound.muted = false;
+		sound.play().catch(() => {});
+	}, FANFARE_DELAY_MS + later);
+}
+
 // MINUTES REMAINING UNTIL A RESERVATION ENDS, SHARED BY EVERY PAGE
 function minutesLeft(endsAt) {
 	const ms = new Date(endsAt) - Date.now();

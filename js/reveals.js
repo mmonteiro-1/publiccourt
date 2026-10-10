@@ -27,7 +27,7 @@ const REVEALS = {
 		text: "",
 		prize: `<div class="prize-lift"><div class="prize-bob">${card}</div></div>`,
 		next: null,
-		exit: { label: "Colar cromo na caderneta", icon: "icon_hand_rock", href: "profile.html", button: true },
+		exit: { label: "Colar cromo na caderneta", icon: "icon_hand_rock", href: "profile.html#album", button: true },
 		// NO TEXT AND NO HAND RUNNING OFF THE BOTTOM: THE CARD AND ITS BUTTON SIT IN THE MIDDLE OF THE SCREEN
 		centered: true,
 	}),
@@ -90,10 +90,14 @@ function showReveal({ kind, ref, text, prize, next, exit = null, centered = fals
 	// AWAITED: A SUPABASE QUERY ONLY GOES OUT WHEN SOMETHING WAITS FOR IT — A BARE .insert() IS NEVER SENT
 	// .opened STARTS THE SCENE'S MOTION THE INSTANT THE BOX BURSTS — BUILT UNDER THE SEALED PARCEL, IT WOULD OTHERWISE HAVE BEEN
 	// PLAYING FOR AS LONG AS THE PLAYER TOOK TO TEAR THE STRIP. THE SCENE'S OWN CSS DELAYS TIME EACH BEAT FROM THAT MOMENT
+	// THE FANFARE (utils.js) PLAYS AT THE BURST; THE FIRST TOUCH ON THE PARCEL PRIMES IT, OR SAFARI WOULD BLOCK A SOUND THAT
+	// STARTS AFTER THE FINGER HAS LET GO
+	addEventListener("pointerdown", primeFanfare, { once: true, capture: true });
 	showTearReveal({
 		onBurst: () => {
 			layer.classList.add("opened");
 			rainPeanuts(layer);
+			playFanfare();
 		},
 		onDone: async () => { if (record) await db.from("revealed_surprises").insert({ kind, ref }); },
 	});
