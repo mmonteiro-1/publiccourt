@@ -30,6 +30,8 @@ const REVEALS = {
 		exit: { label: "Colar cromo na caderneta", icon: "icon_hand_rock", href: "profile.html#album", button: true },
 		// NO TEXT AND NO HAND RUNNING OFF THE BOTTOM: THE CARD AND ITS BUTTON SIT IN THE MIDDLE OF THE SCREEN
 		centered: true,
+		// THE SAME HEAVEN AS BEHOLDING THE CROMO CARD IN THE ALBUM (beholdCard): THE CLOUDS PART, THE CARD ASCENDS — FROM THE BURST
+		heavenly: true,
 	}),
 	// THE PIG LIFTS THE PASS TICKET — EXACTLY AS THE PROFILE DRAWS IT — LIKE A CHAMPION. A PRESET GIVES ITS text AND ITS prize
 	// SEPARATELY; showReveal LAYS THEM OUT (TEXT, THEN THE NEXT-STEP BUTTON, THEN THE PRIZE)
@@ -54,14 +56,15 @@ const PARCEL_ARRIVE_MS = 2200;
 // UNDER THE PRIZE
 // push SLIDES THE PARCEL IN FROM THE RIGHT, PUSHING THE PAGE OUT TO THE LEFT (THE ONBOARDING'S LAST STEP), INSTEAD OF A CUT.
 // .parcel-arriving ON body RUNS IT (CSS) AND KEEPS THE STRIP FROM BEING GRABBED UNTIL THE BOX HAS STOPPED
-function showReveal({ kind, ref, text, prize, next, exit = null, centered = false }, { record = true, push = false } = {}) {
+function showReveal({ kind, ref, text, prize, next, exit = null, centered = false, heavenly = false }, { record = true, push = false } = {}) {
 	if (push && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
 		document.body.classList.add("parcel-arriving");
 		setTimeout(() => document.body.classList.remove("parcel-arriving"), PARCEL_ARRIVE_MS);
 	}
 	const layer = document.createElement("div");
-	layer.className = `reveal-scene${centered ? " centered" : ""}`;
+	layer.className = `reveal-scene${centered ? " centered" : ""}${heavenly ? " heavenly" : ""}`;
 	layer.innerHTML = `
+		${heavenly ? `<div class="behold-clouds">${BEHOLD_CLOUDS}</div>` : ""}
 		<div class="reveal-stage">${text}</div>
 		${next ? `<button data-action="reveal-next" class="margin-top-10"><img src="images/${next.icon}.svg" class="link-icon" alt="">${next.label}</button>` : ""}
 		<div class="reveal-stage margin-top-30">${prize}</div>
@@ -97,7 +100,8 @@ function showReveal({ kind, ref, text, prize, next, exit = null, centered = fals
 		onBurst: () => {
 			layer.classList.add("opened");
 			rainPeanuts(layer);
-			playFanfare();
+			// IN THE HEAVEN, AS LATE AS ON THE ALBUM'S BEHOLD: THE CLOUDS PART FIRST
+			playFanfare(heavenly ? 500 : 0);
 		},
 		onDone: async () => { if (record) await db.from("revealed_surprises").insert({ kind, ref }); },
 	});

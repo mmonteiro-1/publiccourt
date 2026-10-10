@@ -345,6 +345,12 @@ function cromoProxy(name, debut) {
 	`;
 }
 
+// A BEHELD LEVEL CARD'S SOUND, ONE PER BAND OF THE CHARACTER ARC (CLAUDE.md): THE CLUELESS (1–4) GET A FART — FAILURE AND
+// CONFUSION, THE CHOIR'S OPPOSITE. THE OTHER BANDS (KEEN AMATEUR, COMPETENT, PRO) ARE SILENT UNTIL THEY HAVE THEIRS
+function levelSound(level) {
+	return level <= 4 ? "sounds/poop3.mp3" : null;
+}
+
 // THE CLOUD BANK OVER THE BEHELD CROMO CARD: THE DRAWN CLOUDS (images/cloud26–30.svg) IN TWO SIDES THAT PART — THREE ON THE LEFT,
 // TWO ON THE RIGHT, AT DIFFERENT HEIGHTS AND SIZES SO THEY READ AS A BANK. PLACED AND MOVED IN CSS (.behold-clouds)
 const BEHOLD_CLOUDS = [[26, 29, 27], [28, 30]]
@@ -476,18 +482,24 @@ async function loadProgress(container, gamesPromise, teaserPromise, xpPromise, a
 			playFanfare(500);
 		}
 		if (card.kind === "cromo") beholdCard(await cromoCard(album.name, album.debut), true);
-		else beholdCard(levelCard(+card.ref, card.collected_at));
+		else {
+			// ON THE TAP ITSELF, SO SAFARI PLAYS IT WITHOUT PRIMING
+			const sound = levelSound(+card.ref);
+			if (sound) new Audio(sound).play().catch(() => {});
+			beholdCard(levelCard(+card.ref, card.collected_at));
+		}
 	}));
 	swayAlbum(row);
-	// "COLAR CROMO NA CADERNETA" (THE ONBOARDING'S REVEAL) LANDS HERE: SCROLLED TO THE ALBUM, THEN THE HASH GOES SO A RELOAD
-	// STARTS AT THE TOP. ONCE THE PAGE HAS LOADED: THE CARD'S PICTURES ABOVE, STILL LOADING, WOULD PUSH THE ALBUM DOWN AFTER
+	appendRulesCard(container, MSG_PROGRESS_INFO, XP_RULES, MSG_PROGRESS_RULES, MSG_PROGRESS_INTRO);
+	// "COLAR CROMO NA CADERNETA" (THE ONBOARDING'S REVEAL) LANDS HERE: SCROLLED ALL THE WAY DOWN, THE ALBUM IN VIEW, THEN THE HASH
+	// GOES SO A RELOAD STARTS AT THE TOP. AFTER THE RULES CARD IS IN, AND ONCE THE PAGE HAS LOADED: THE CARD'S PICTURES ABOVE,
+	// STILL LOADING, WOULD MAKE THE PAGE LONGER AFTER
 	if (OPEN_ON_ALBUM) {
 		history.replaceState(null, "", location.pathname + location.search);
-		const toAlbum = () => row.previousElementSibling.scrollIntoView({ behavior: "smooth", block: "start" });
-		if (document.readyState === "complete") toAlbum();
-		else addEventListener("load", toAlbum, { once: true });
+		const toBottom = () => scrollTo({ top: document.documentElement.scrollHeight, behavior: "smooth" });
+		if (document.readyState === "complete") toBottom();
+		else addEventListener("load", toBottom, { once: true });
 	}
-	appendRulesCard(container, MSG_PROGRESS_INFO, XP_RULES, MSG_PROGRESS_RULES, MSG_PROGRESS_INTRO);
 }
 
 // "ENTENDE O …": THE RULES OF A TAB, FOLDED AWAY UNTIL ASKED FOR — THE SAME COLLAPSIBLE CARD AS THE ADMIN'S COURT RULES

@@ -3090,7 +3090,9 @@ button.released {
 
 /* HELD BELOW THE SCREEN UNTIL THE BOX BURSTS (reveals.js ADDS .opened FROM tear-reveal's onBurst); THE DELAYS ABOVE COUNT FROM THEN */
 .reveal-scene:not(.opened) .prize-lift,
-.reveal-scene:not(.opened) .prize-bob {
+.reveal-scene:not(.opened) .prize-bob,
+.reveal-scene:not(.opened) .behold-clouds > div,
+.reveal-scene:not(.opened) .behold-clouds img {
 	animation-play-state: paused;
 }
 
